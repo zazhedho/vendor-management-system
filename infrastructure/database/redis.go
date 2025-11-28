@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"starter-kit/pkg/logger"
-	"starter-kit/utils"
 	"time"
+	"vendor-management-system/pkg/logger"
+	"vendor-management-system/utils"
 
 	"github.com/redis/go-redis/v9"
 )

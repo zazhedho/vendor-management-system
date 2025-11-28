@@ -6,10 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"starter-kit/pkg/logger"
-	"starter-kit/utils"
 	"strings"
 	"time"
+	"vendor-management-system/pkg/logger"
+	"vendor-management-system/utils"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"

@@ -91,14 +91,19 @@ CREATE INDEX IF NOT EXISTS idx_users_role_id ON users(role_id);
 INSERT INTO roles (id, name, display_name, description, is_system) VALUES
     (gen_random_uuid(), 'superadmin', 'Super Administrator', 'Full system access with highest privileges', TRUE),
     (gen_random_uuid(), 'admin', 'Administrator', 'Full system access', TRUE),
-    (gen_random_uuid(), 'staff', 'Staff', 'Staff access with limited permissions', TRUE),
-    (gen_random_uuid(), 'viewer', 'Viewer', 'Read-only access', TRUE)
+    (gen_random_uuid(), 'client', 'Client', 'Client access for Manager/SPV to monitor vendor performance and evaluate events', TRUE),
+    (gen_random_uuid(), 'vendor', 'Vendor', 'Vendor access to manage profile and submissions', TRUE)
 ON CONFLICT (name) DO NOTHING;
 
 -- Insert menu items
 INSERT INTO menu_items (id, name, display_name, path, icon, order_index) VALUES
     (gen_random_uuid(), 'dashboard', 'Dashboard', '/dashboard', 'bi-speedometer2', 1),
     (gen_random_uuid(), 'profile', 'Profile', '/profile', 'bi-person-circle', 2),
+    (gen_random_uuid(), 'vendor_profile', 'Vendor Profile', '/vendor/profile', 'bi-building', 3),
+    (gen_random_uuid(), 'vendor_submissions', 'My Submissions', '/vendor/submissions', 'bi-file-earmark-text', 4),
+    (gen_random_uuid(), 'events', 'Events', '/events', 'bi-calendar-event', 5),
+    (gen_random_uuid(), 'evaluations', 'Evaluations', '/evaluations', 'bi-star', 6),
+    (gen_random_uuid(), 'payments', 'Payments', '/payments', 'bi-credit-card', 7),
     (gen_random_uuid(), 'users', 'Users', '/users', 'bi-people', 900),
     (gen_random_uuid(), 'roles', 'Roles', '/roles', 'bi-shield-lock', 901),
     (gen_random_uuid(), 'menus', 'Menus', '/menus', 'bi-list-ul', 902)
@@ -125,8 +130,46 @@ INSERT INTO permissions (id, name, display_name, resource, action) VALUES
 
     -- Profile permissions
     (gen_random_uuid(), 'view_profile', 'View Profile', 'profile', 'view'),
-    (gen_random_uuid(), 'update_profile', 'Update Profile', 'profile', 'update')
+    (gen_random_uuid(), 'update_profile', 'Update Profile', 'profile', 'update'),
+
+    -- Vendor permissions
+    (gen_random_uuid(), 'view_vendor_profile', 'View Vendor Profile', 'vendor', 'view'),
+    (gen_random_uuid(), 'update_vendor_profile', 'Update Vendor Profile', 'vendor', 'update'),
+    (gen_random_uuid(), 'view_vendor_submissions', 'View Vendor Submissions', 'vendor', 'view_submissions'),
+    (gen_random_uuid(), 'create_vendor_submission', 'Create Vendor Submission', 'vendor', 'create_submission'),
+
+    -- Event permissions
+    (gen_random_uuid(), 'view_events', 'View Events', 'event', 'view'),
+    (gen_random_uuid(), 'create_event', 'Create Event', 'event', 'create'),
+    (gen_random_uuid(), 'update_event', 'Update Event', 'event', 'update'),
+    (gen_random_uuid(), 'delete_event', 'Delete Event', 'event', 'delete'),
+    (gen_random_uuid(), 'view_submissions', 'View Event Submissions', 'event', 'view_submissions'),
+    (gen_random_uuid(), 'score_submission', 'Score Event Submission', 'event', 'score'),
+    (gen_random_uuid(), 'select_winner', 'Select Event Winner', 'event', 'select_winner'),
+    (gen_random_uuid(), 'submit_pitch', 'Submit Pitch Deck', 'event', 'submit_pitch'),
+
+    -- Evaluation permissions
+    (gen_random_uuid(), 'view_evaluations', 'View Evaluations', 'evaluation', 'view'),
+    (gen_random_uuid(), 'create_evaluation', 'Create Evaluation', 'evaluation', 'create'),
+    (gen_random_uuid(), 'update_evaluation', 'Update Evaluation', 'evaluation', 'update'),
+    (gen_random_uuid(), 'delete_evaluation', 'Delete Evaluation', 'evaluation', 'delete'),
+    (gen_random_uuid(), 'upload_evaluation_photo', 'Upload Evaluation Photo', 'evaluation', 'upload_photo'),
+    (gen_random_uuid(), 'review_photo', 'Review Evaluation Photo', 'evaluation', 'review_photo'),
+
+    -- Payment permissions
+    (gen_random_uuid(), 'view_payments', 'View Payments', 'payment', 'view'),
+    (gen_random_uuid(), 'create_payment', 'Create Payment', 'payment', 'create'),
+    (gen_random_uuid(), 'update_payment', 'Update Payment', 'payment', 'update'),
+    (gen_random_uuid(), 'delete_payment', 'Delete Payment', 'payment', 'delete')
 ON CONFLICT (name) DO NOTHING;
+
+-- Assign all permissions to superadmin role
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+CROSS JOIN permissions p
+WHERE r.name = 'superadmin'
+ON CONFLICT DO NOTHING;
 
 -- Assign all permissions to admin role
 INSERT INTO role_permissions (role_id, permission_id)
@@ -136,50 +179,31 @@ CROSS JOIN permissions p
 WHERE r.name = 'admin'
 ON CONFLICT DO NOTHING;
 
--- Assign read and write permissions to staff role
+-- Assign permissions to client role
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r
 CROSS JOIN permissions p
-WHERE r.name = 'staff'
-AND p.action IN ('view', 'create', 'update')
-AND p.resource NOT IN ('users', 'roles')
+WHERE r.name = 'client'
+AND p.name IN (
+    'view_profile', 'update_profile', 'view_dashboard',
+    'view_events', 'create_event', 'update_event',
+    'view_submissions', 'score_submission', 'select_winner',
+    'view_evaluations', 'create_evaluation', 'update_evaluation', 'review_photo'
+)
 ON CONFLICT DO NOTHING;
 
--- Assign view profile permission to staff
+-- Assign permissions to vendor role
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r
 CROSS JOIN permissions p
-WHERE r.name = 'staff'
-AND p.name IN ('view_profile', 'update_profile', 'view_dashboard')
-ON CONFLICT DO NOTHING;
-
--- Assign only view permissions to viewer role
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id
-FROM roles r
-CROSS JOIN permissions p
-WHERE r.name = 'viewer'
-AND p.action = 'view'
-AND p.resource NOT IN ('users', 'roles')
-ON CONFLICT DO NOTHING;
-
--- Assign view profile permission to viewer
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id
-FROM roles r
-CROSS JOIN permissions p
-WHERE r.name = 'viewer'
-AND p.name IN ('view_profile', 'view_dashboard')
-ON CONFLICT DO NOTHING;
-
--- Assign all permissions to superadmin role
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id
-FROM roles r
-CROSS JOIN permissions p
-WHERE r.name = 'superadmin'
+WHERE r.name = 'vendor'
+AND p.name IN (
+    'view_profile', 'update_profile', 'view_dashboard',
+    'view_vendor_profile', 'update_vendor_profile', 'view_vendor_submissions', 'create_vendor_submission',
+    'view_events', 'submit_pitch', 'view_payments', 'upload_evaluation_photo', 'view_evaluations'
+)
 ON CONFLICT DO NOTHING;
 
 -- Assign all menus to superadmin role
@@ -198,20 +222,20 @@ CROSS JOIN menu_items m
 WHERE r.name = 'admin'
 ON CONFLICT DO NOTHING;
 
--- Assign menus to staff role (all except users, roles, menus)
+-- Assign menus to client role
 INSERT INTO role_menus (role_id, menu_item_id)
 SELECT r.id, m.id
 FROM roles r
 CROSS JOIN menu_items m
-WHERE r.name = 'staff'
-AND m.name NOT IN ('users', 'roles', 'menus')
+WHERE r.name = 'client'
+AND m.name IN ('dashboard', 'profile', 'events', 'evaluations')
 ON CONFLICT DO NOTHING;
 
--- Assign menus to viewer role (all except users, roles, menus)
+-- Assign menus to vendor role
 INSERT INTO role_menus (role_id, menu_item_id)
 SELECT r.id, m.id
 FROM roles r
 CROSS JOIN menu_items m
-WHERE r.name = 'viewer'
-AND m.name NOT IN ('users', 'roles', 'menus')
+WHERE r.name = 'vendor'
+AND m.name IN ('dashboard', 'profile', 'vendor_profile', 'vendor_submissions', 'events', 'evaluations', 'payments')
 ON CONFLICT DO NOTHING;

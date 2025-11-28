@@ -1,8 +1,8 @@
 package interfacemenu
 
 import (
-	domainmenu "starter-kit/internal/domain/menu"
-	"starter-kit/pkg/filter"
+	domainmenu "vendor-management-system/internal/domain/menu"
+	"vendor-management-system/pkg/filter"
 )
 
 type RepoMenuInterface interface {

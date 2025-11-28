@@ -3,11 +3,11 @@ package servicesession
 import (
 	"context"
 	"fmt"
-	domainsession "starter-kit/internal/domain/session"
-	domainuser "starter-kit/internal/domain/user"
-	interfacesession "starter-kit/internal/interfaces/session"
-	"starter-kit/utils"
 	"time"
+	domainsession "vendor-management-system/internal/domain/session"
+	domainuser "vendor-management-system/internal/domain/user"
+	interfacesession "vendor-management-system/internal/interfaces/session"
+	"vendor-management-system/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"

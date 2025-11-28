@@ -3,8 +3,8 @@ package interfacesession
 import (
 	"context"
 
-	domainsession "starter-kit/internal/domain/session"
-	domainuser "starter-kit/internal/domain/user"
+	domainsession "vendor-management-system/internal/domain/session"
+	domainuser "vendor-management-system/internal/domain/user"
 
 	"github.com/gin-gonic/gin"
 )

@@ -2,12 +2,12 @@ package servicemenu
 
 import (
 	"errors"
-	domainmenu "starter-kit/internal/domain/menu"
-	"starter-kit/internal/dto"
-	interfacemenu "starter-kit/internal/interfaces/menu"
-	"starter-kit/pkg/filter"
-	"starter-kit/utils"
 	"time"
+	domainmenu "vendor-management-system/internal/domain/menu"
+	"vendor-management-system/internal/dto"
+	interfacemenu "vendor-management-system/internal/interfaces/menu"
+	"vendor-management-system/pkg/filter"
+	"vendor-management-system/utils"
 )
 
 type MenuService struct {

@@ -7,27 +7,39 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	"starter-kit/infrastructure/database"
-	menuHandler "starter-kit/internal/handlers/http/menu"
-	permissionHandler "starter-kit/internal/handlers/http/permission"
-	roleHandler "starter-kit/internal/handlers/http/role"
-	sessionHandler "starter-kit/internal/handlers/http/session"
-	userHandler "starter-kit/internal/handlers/http/user"
-	authRepo "starter-kit/internal/repositories/auth"
-	menuRepo "starter-kit/internal/repositories/menu"
-	permissionRepo "starter-kit/internal/repositories/permission"
-	roleRepo "starter-kit/internal/repositories/role"
-	sessionRepo "starter-kit/internal/repositories/session"
-	userRepo "starter-kit/internal/repositories/user"
-	menuSvc "starter-kit/internal/services/menu"
-	permissionSvc "starter-kit/internal/services/permission"
-	roleSvc "starter-kit/internal/services/role"
-	sessionSvc "starter-kit/internal/services/session"
-	userSvc "starter-kit/internal/services/user"
-	"starter-kit/middlewares"
-	"starter-kit/pkg/logger"
-	"starter-kit/pkg/security"
-	"starter-kit/utils"
+	"vendor-management-system/infrastructure/database"
+	evaluationHandler "vendor-management-system/internal/handlers/http/evaluations"
+	eventHandler "vendor-management-system/internal/handlers/http/events"
+	menuHandler "vendor-management-system/internal/handlers/http/menu"
+	paymentHandler "vendor-management-system/internal/handlers/http/payments"
+	permissionHandler "vendor-management-system/internal/handlers/http/permission"
+	roleHandler "vendor-management-system/internal/handlers/http/role"
+	sessionHandler "vendor-management-system/internal/handlers/http/session"
+	userHandler "vendor-management-system/internal/handlers/http/user"
+	vendorHandler "vendor-management-system/internal/handlers/http/vendors"
+	authRepo "vendor-management-system/internal/repositories/auth"
+	evaluationRepo "vendor-management-system/internal/repositories/evaluations"
+	eventRepo "vendor-management-system/internal/repositories/events"
+	menuRepo "vendor-management-system/internal/repositories/menu"
+	paymentRepo "vendor-management-system/internal/repositories/payments"
+	permissionRepo "vendor-management-system/internal/repositories/permission"
+	roleRepo "vendor-management-system/internal/repositories/role"
+	sessionRepo "vendor-management-system/internal/repositories/session"
+	userRepo "vendor-management-system/internal/repositories/user"
+	vendorRepo "vendor-management-system/internal/repositories/vendors"
+	evaluationSvc "vendor-management-system/internal/services/evaluations"
+	eventSvc "vendor-management-system/internal/services/events"
+	menuSvc "vendor-management-system/internal/services/menu"
+	paymentSvc "vendor-management-system/internal/services/payments"
+	permissionSvc "vendor-management-system/internal/services/permission"
+	roleSvc "vendor-management-system/internal/services/role"
+	sessionSvc "vendor-management-system/internal/services/session"
+	userSvc "vendor-management-system/internal/services/user"
+	vendorSvc "vendor-management-system/internal/services/vendors"
+	"vendor-management-system/middlewares"
+	"vendor-management-system/pkg/logger"
+	"vendor-management-system/pkg/security"
+	"vendor-management-system/utils"
 )
 
 type Routes struct {
@@ -100,7 +112,7 @@ func (r *Routes) UserRoutes() {
 		{
 			userPriv.POST("/logout", h.Logout)
 			userPriv.GET("", h.GetUserByAuth)
-			userPriv.GET("/:id", mdw.RoleMiddleware(utils.RoleAdmin, utils.RoleStaff), h.GetUserById)
+			userPriv.GET("/:id", mdw.RoleMiddleware(utils.RoleAdmin), h.GetUserById)
 			userPriv.PUT("", h.Update)
 			userPriv.PUT("/:id", mdw.RoleMiddleware(utils.RoleAdmin), h.UpdateUserById)
 			userPriv.PUT("/change/password", h.ChangePassword)
@@ -109,7 +121,7 @@ func (r *Routes) UserRoutes() {
 		}
 	}
 
-	r.App.GET("/api/users", mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleSuperAdmin, utils.RoleAdmin, utils.RoleStaff), h.GetAllUsers)
+	r.App.GET("/api/users", mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleSuperAdmin, utils.RoleAdmin), h.GetAllUsers)
 }
 
 func (r *Routes) RoleRoutes() {
@@ -191,4 +203,110 @@ func (r *Routes) SessionRoutes() {
 	}
 
 	logger.WriteLog(logger.LogLevelInfo, "Session management routes registered")
+}
+
+func (r *Routes) VendorRoutes() {
+	repo := vendorRepo.NewVendorRepo(r.DB)
+	svc := vendorSvc.NewVendorService(repo)
+	h := vendorHandler.NewVendorHandler(svc)
+	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB))
+
+	vendor := r.App.Group("/api/vendor").Use(mdw.AuthMiddleware())
+	{
+		vendor.GET("/profile", mdw.RoleMiddleware(utils.RoleVendor), h.GetVendorProfile)
+		vendor.POST("/profile", mdw.RoleMiddleware(utils.RoleVendor), h.CreateOrUpdateVendorProfile)
+	}
+
+	vendorAdmin := r.App.Group("/api/vendors").Use(mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin))
+	{
+		vendorAdmin.GET("", h.GetAllVendors)
+		vendorAdmin.PUT("/:id/status", h.UpdateVendorStatus)
+		vendorAdmin.DELETE("/:id", mdw.RoleMiddleware(utils.RoleAdmin), h.DeleteVendor)
+	}
+}
+
+func (r *Routes) EventRoutes() {
+	vRepo := vendorRepo.NewVendorRepo(r.DB)
+	eRepo := eventRepo.NewEventRepo(r.DB)
+	svc := eventSvc.NewEventService(eRepo, vRepo)
+	h := eventHandler.NewEventHandler(svc, vRepo)
+	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB))
+
+	// Public event list (for vendors to see open events)
+	r.App.GET("/api/events", mdw.AuthMiddleware(), h.GetAllEvents)
+	r.App.GET("/api/event/:id", mdw.AuthMiddleware(), h.GetEventByID)
+
+	// Client/Admin event management
+	eventAdmin := r.App.Group("/api/event").Use(mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin, utils.RoleClient))
+	{
+		eventAdmin.POST("", h.CreateEvent)
+		eventAdmin.PUT("/:id", h.UpdateEvent)
+		eventAdmin.DELETE("/:id", mdw.RoleMiddleware(utils.RoleAdmin), h.DeleteEvent)
+		eventAdmin.GET("/:id/submissions", h.GetSubmissionsByEventID)
+		eventAdmin.PUT("/submission/:id/score", h.ScoreSubmission)
+		eventAdmin.PUT("/submission/:id/shortlist", h.ShortlistSubmission)
+		eventAdmin.POST("/:id/winner", h.SelectWinner)
+		eventAdmin.GET("/:id/result", h.GetEventResultForAdmin)
+	}
+
+	// Vendor submission routes
+	vendorEvent := r.App.Group("/api/vendor/event").Use(mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleVendor))
+	{
+		vendorEvent.POST("/:id/submit", h.SubmitPitch)
+		vendorEvent.GET("/submissions", h.GetMySubmissions)
+		vendorEvent.GET("/:id/result", h.GetEventResult)
+	}
+}
+
+func (r *Routes) PaymentRoutes() {
+	vRepo := vendorRepo.NewVendorRepo(r.DB)
+	pRepo := paymentRepo.NewPaymentRepo(r.DB)
+	svc := paymentSvc.NewPaymentService(pRepo, vRepo)
+	h := paymentHandler.NewPaymentHandler(svc, vRepo)
+	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB))
+
+	// Vendor can only view their payments
+	r.App.GET("/api/vendor/payments", mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleVendor), h.GetMyPayments)
+
+	// Admin payment management
+	paymentAdmin := r.App.Group("/api/payment").Use(mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin))
+	{
+		paymentAdmin.POST("", h.CreatePayment)
+		paymentAdmin.GET("/:id", h.GetPaymentByID)
+		paymentAdmin.PUT("/:id", h.UpdatePayment)
+		paymentAdmin.PUT("/:id/status", h.UpdatePaymentStatus)
+		paymentAdmin.DELETE("/:id", h.DeletePayment)
+	}
+
+	r.App.GET("/api/payments", mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin), h.GetAllPayments)
+}
+
+func (r *Routes) EvaluationRoutes() {
+	vRepo := vendorRepo.NewVendorRepo(r.DB)
+	eRepo := eventRepo.NewEventRepo(r.DB)
+	evRepo := evaluationRepo.NewEvaluationRepo(r.DB)
+	svc := evaluationSvc.NewEvaluationService(evRepo, eRepo, vRepo)
+	h := evaluationHandler.NewEvaluationHandler(svc, vRepo)
+	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB))
+
+	// View evaluations (shared access)
+	r.App.GET("/api/evaluations", mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin, utils.RoleClient, utils.RoleVendor), h.GetAllEvaluations)
+	r.App.GET("/api/evaluation/:id", mdw.AuthMiddleware(), h.GetEvaluationByID)
+	r.App.GET("/api/event/:id/evaluations", mdw.AuthMiddleware(), h.GetEvaluationsByEventID)
+
+	// Vendor can view their own evaluations
+	r.App.GET("/api/vendor/evaluations", mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleVendor), h.GetMyEvaluations)
+
+	// Vendor can upload photos for their evaluations
+	r.App.POST("/api/evaluation/:id/photo", mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleVendor), h.UploadPhoto)
+
+	// Client/Admin evaluation management
+	evalAdmin := r.App.Group("/api/evaluation").Use(mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin, utils.RoleClient))
+	{
+		evalAdmin.POST("", h.CreateEvaluation)
+		evalAdmin.PUT("/:id", h.UpdateEvaluation)
+		evalAdmin.DELETE("/:id", mdw.RoleMiddleware(utils.RoleAdmin), h.DeleteEvaluation)
+		evalAdmin.PUT("/photo/:id/review", h.ReviewPhoto)
+		evalAdmin.DELETE("/photo/:id", h.DeletePhoto)
+	}
 }

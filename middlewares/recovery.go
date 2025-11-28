@@ -3,10 +3,10 @@ package middlewares
 import (
 	"fmt"
 	"net/http"
-	"starter-kit/pkg/logger"
-	"starter-kit/pkg/messages"
-	"starter-kit/pkg/response"
-	"starter-kit/utils"
+	"vendor-management-system/pkg/logger"
+	"vendor-management-system/pkg/messages"
+	"vendor-management-system/pkg/response"
+	"vendor-management-system/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"

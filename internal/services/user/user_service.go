@@ -3,17 +3,17 @@ package serviceuser
 import (
 	"errors"
 	"regexp"
-	domainauth "starter-kit/internal/domain/auth"
-	domainuser "starter-kit/internal/domain/user"
-	"starter-kit/internal/dto"
-	interfaceauth "starter-kit/internal/interfaces/auth"
-	interfacepermission "starter-kit/internal/interfaces/permission"
-	interfacerole "starter-kit/internal/interfaces/role"
-	interfaceuser "starter-kit/internal/interfaces/user"
-	"starter-kit/pkg/filter"
-	"starter-kit/utils"
 	"strings"
 	"time"
+	domainauth "vendor-management-system/internal/domain/auth"
+	domainuser "vendor-management-system/internal/domain/user"
+	"vendor-management-system/internal/dto"
+	interfaceauth "vendor-management-system/internal/interfaces/auth"
+	interfacepermission "vendor-management-system/internal/interfaces/permission"
+	interfacerole "vendor-management-system/internal/interfaces/role"
+	interfaceuser "vendor-management-system/internal/interfaces/user"
+	"vendor-management-system/pkg/filter"
+	"vendor-management-system/utils"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -83,7 +83,7 @@ func (s *ServiceUser) RegisterUser(req dto.UserRegister) (domainuser.Users, erro
 	if err != nil {
 		return domainuser.Users{}, err
 	}
-	var roleName = utils.RoleViewer
+	var roleName = utils.RoleVendor
 	if strings.TrimSpace(req.Role) != "" {
 		roleName = strings.ToLower(req.Role)
 	}
@@ -93,9 +93,9 @@ func (s *ServiceUser) RegisterUser(req dto.UserRegister) (domainuser.Users, erro
 	if err == nil && roleEntity.Id != "" {
 		roleId = &roleEntity.Id
 	} else {
-		roleName = utils.RoleViewer
-		if viewerRole, errViewer := s.RoleRepo.GetByName(utils.RoleViewer); errViewer == nil && viewerRole.Id != "" {
-			roleId = &viewerRole.Id
+		roleName = utils.RoleVendor
+		if vendorRole, errVendor := s.RoleRepo.GetByName(utils.RoleVendor); errVendor == nil && vendorRole.Id != "" {
+			roleId = &vendorRole.Id
 		}
 	}
 

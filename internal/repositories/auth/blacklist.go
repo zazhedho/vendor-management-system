@@ -1,8 +1,8 @@
 package repositoryauth
 
 import (
-	domainauth "starter-kit/internal/domain/auth"
-	interfaceauth "starter-kit/internal/interfaces/auth"
+	domainauth "vendor-management-system/internal/domain/auth"
+	interfaceauth "vendor-management-system/internal/interfaces/auth"
 
 	"gorm.io/gorm"
 )

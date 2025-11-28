@@ -2,8 +2,8 @@ package interfacesession
 
 import (
 	"context"
-	domainsession "starter-kit/internal/domain/session"
 	"time"
+	domainsession "vendor-management-system/internal/domain/session"
 )
 
 type RepoSessionInterface interface {

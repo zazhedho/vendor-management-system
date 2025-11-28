@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	domainuser "starter-kit/internal/domain/user"
 	"strings"
 	"time"
+	domainuser "vendor-management-system/internal/domain/user"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"

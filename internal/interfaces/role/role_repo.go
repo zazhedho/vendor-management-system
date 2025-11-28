@@ -1,8 +1,8 @@
 package interfacerole
 
 import (
-	domainrole "starter-kit/internal/domain/role"
-	"starter-kit/pkg/filter"
+	domainrole "vendor-management-system/internal/domain/role"
+	"vendor-management-system/pkg/filter"
 )
 
 type RepoRoleInterface interface {

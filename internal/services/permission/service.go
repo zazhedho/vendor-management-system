@@ -2,12 +2,12 @@ package servicepermission
 
 import (
 	"errors"
-	domainpermission "starter-kit/internal/domain/permission"
-	"starter-kit/internal/dto"
-	interfacepermission "starter-kit/internal/interfaces/permission"
-	"starter-kit/pkg/filter"
-	"starter-kit/utils"
 	"time"
+	domainpermission "vendor-management-system/internal/domain/permission"
+	"vendor-management-system/internal/dto"
+	interfacepermission "vendor-management-system/internal/interfaces/permission"
+	"vendor-management-system/pkg/filter"
+	"vendor-management-system/utils"
 )
 
 type PermissionService struct {

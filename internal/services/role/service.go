@@ -2,14 +2,14 @@ package servicerole
 
 import (
 	"errors"
-	domainrole "starter-kit/internal/domain/role"
-	"starter-kit/internal/dto"
-	interfacemenu "starter-kit/internal/interfaces/menu"
-	interfacepermission "starter-kit/internal/interfaces/permission"
-	interfacerole "starter-kit/internal/interfaces/role"
-	"starter-kit/pkg/filter"
-	"starter-kit/utils"
 	"time"
+	domainrole "vendor-management-system/internal/domain/role"
+	"vendor-management-system/internal/dto"
+	interfacemenu "vendor-management-system/internal/interfaces/menu"
+	interfacepermission "vendor-management-system/internal/interfaces/permission"
+	interfacerole "vendor-management-system/internal/interfaces/role"
+	"vendor-management-system/pkg/filter"
+	"vendor-management-system/utils"
 )
 
 type RoleService struct {

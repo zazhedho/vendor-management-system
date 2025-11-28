@@ -7,13 +7,13 @@ import (
 	"log"
 	"net"
 	"os"
-	"starter-kit/infrastructure/database"
-	"starter-kit/internal/router"
-	"starter-kit/pkg/config"
-	"starter-kit/pkg/logger"
-	"starter-kit/utils"
 	"strings"
 	"time"
+	"vendor-management-system/infrastructure/database"
+	"vendor-management-system/internal/router"
+	"vendor-management-system/pkg/config"
+	"vendor-management-system/pkg/logger"
+	"vendor-management-system/utils"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -87,6 +87,10 @@ func main() {
 	routes.RoleRoutes()
 	routes.PermissionRoutes()
 	routes.MenuRoutes()
+	routes.VendorRoutes()
+	routes.EventRoutes()
+	routes.PaymentRoutes()
+	routes.EvaluationRoutes()
 
 	// Register session routes if Redis is available
 	if redisClient != nil {

@@ -3,9 +3,9 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"starter-kit/pkg/logger"
-	"starter-kit/utils"
 	"time"
+	"vendor-management-system/pkg/logger"
+	"vendor-management-system/utils"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
