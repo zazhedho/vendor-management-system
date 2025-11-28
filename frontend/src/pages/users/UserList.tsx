@@ -1,7 +1,7 @@
 import React from 'react';
 import { Users as UsersIcon, Plus, Search } from 'lucide-react';
 
-export const Users: React.FC = () => {
+export const UserList: React.FC = () => {
   return (
     <div>
       <div className="flex items-center justify-between mb-8">

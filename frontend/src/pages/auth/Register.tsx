@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { authApi } from '../api/auth';
+import { authApi } from '../../api/auth';
 import { UserPlus } from 'lucide-react';
 
 export const Register: React.FC = () => {

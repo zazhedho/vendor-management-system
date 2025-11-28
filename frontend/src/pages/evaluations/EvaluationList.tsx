@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { evaluationsApi } from '../api/evaluations';
-import { Evaluation } from '../types';
+import { evaluationsApi } from '../../api/evaluations';
+import { Evaluation } from '../../types';
 import { Plus, Search, Star } from 'lucide-react';
 
-export const Evaluations: React.FC = () => {
+export const EvaluationList: React.FC = () => {
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');

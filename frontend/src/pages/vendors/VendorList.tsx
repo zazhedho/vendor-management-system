@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { vendorsApi } from '../api/vendors';
-import { Vendor } from '../types';
-import { Plus, Search, ShoppingBag } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { vendorsApi } from '../../api/vendors';
+import { Vendor } from '../../types';
+import { Plus, Search, ShoppingBag, Eye, Edit, Trash2 } from 'lucide-react';
 
-export const Vendors: React.FC = () => {
+export const VendorList: React.FC = () => {
+  const navigate = useNavigate();
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,6 +36,17 @@ export const Vendors: React.FC = () => {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this vendor?')) return;
+
+    try {
+      await vendorsApi.delete(id);
+      fetchVendors();
+    } catch (error) {
+      console.error('Failed to delete vendor:', error);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'active':
@@ -54,7 +67,10 @@ export const Vendors: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-900">Vendors</h1>
           <p className="text-gray-600 mt-2">Manage vendor information and profiles</p>
         </div>
-        <button className="btn btn-primary flex items-center space-x-2">
+        <button
+          onClick={() => navigate('/vendors/new')}
+          className="btn btn-primary flex items-center space-x-2"
+        >
           <Plus size={20} />
           <span>Add Vendor</span>
         </button>
@@ -81,7 +97,14 @@ export const Vendors: React.FC = () => {
         <div className="card text-center py-12">
           <ShoppingBag className="mx-auto text-gray-400 mb-4" size={48} />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No vendors found</h3>
-          <p className="text-gray-600">Start by adding your first vendor</p>
+          <p className="text-gray-600 mb-4">Start by adding your first vendor</p>
+          <button
+            onClick={() => navigate('/vendors/new')}
+            className="btn btn-primary inline-flex items-center space-x-2"
+          >
+            <Plus size={20} />
+            <span>Add Vendor</span>
+          </button>
         </div>
       ) : (
         <>
@@ -117,8 +140,26 @@ export const Vendors: React.FC = () => {
                 </div>
 
                 <div className="flex space-x-2">
-                  <button className="flex-1 btn btn-secondary text-sm py-2">View Profile</button>
-                  <button className="flex-1 btn btn-primary text-sm py-2">Edit</button>
+                  <button
+                    onClick={() => navigate(`/vendors/${vendor.id}`)}
+                    className="flex-1 btn btn-secondary text-sm py-2 flex items-center justify-center space-x-1"
+                  >
+                    <Eye size={16} />
+                    <span>View</span>
+                  </button>
+                  <button
+                    onClick={() => navigate(`/vendors/${vendor.id}/edit`)}
+                    className="flex-1 btn btn-primary text-sm py-2 flex items-center justify-center space-x-1"
+                  >
+                    <Edit size={16} />
+                    <span>Edit</span>
+                  </button>
+                  <button
+                    onClick={() => handleDelete(vendor.id)}
+                    className="btn bg-red-50 text-red-600 hover:bg-red-100 text-sm py-2 px-3"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
             ))}

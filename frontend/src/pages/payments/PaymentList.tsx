@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { paymentsApi } from '../api/payments';
-import { Payment } from '../types';
+import { paymentsApi } from '../../api/payments';
+import { Payment } from '../../types';
 import { Plus, Search, CreditCard, DollarSign } from 'lucide-react';
 
-export const Payments: React.FC = () => {
+export const PaymentList: React.FC = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
