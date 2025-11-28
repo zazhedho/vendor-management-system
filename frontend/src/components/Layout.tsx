@@ -12,6 +12,8 @@ import {
   LogOut,
   User,
   ShoppingBag,
+  Shield,
+  List as ListIcon,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -19,7 +21,7 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, userMenus, hasRole } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -29,16 +31,49 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     navigate('/login');
   };
 
-  const menuItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: Home },
-    { path: '/events', label: 'Events', icon: Calendar },
-    { path: '/vendors', label: 'Vendors', icon: ShoppingBag },
-    { path: '/payments', label: 'Payments', icon: CreditCard },
-    { path: '/evaluations', label: 'Evaluations', icon: Star },
-    { path: '/users', label: 'Users', icon: Users },
+  const iconMap: Record<string, any> = {
+    Home,
+    Calendar,
+    Users,
+    CreditCard,
+    Star,
+    ShoppingBag,
+    Shield,
+    List: ListIcon,
+  };
+
+  const defaultMenuItems = [
+    { path: '/dashboard', label: 'Dashboard', icon: 'Home' },
+    { path: '/events', label: 'Events', icon: 'Calendar' },
+    { path: '/vendors', label: 'Vendors', icon: 'ShoppingBag' },
+    { path: '/payments', label: 'Payments', icon: 'CreditCard' },
+    { path: '/evaluations', label: 'Evaluations', icon: 'Star' },
+    { path: '/users', label: 'Users', icon: 'Users' },
   ];
 
-  const isActive = (path: string) => location.pathname === path;
+  const adminMenuItems = [
+    { path: '/roles', label: 'Roles', icon: 'Shield' },
+    { path: '/menus', label: 'Menus', icon: 'List' },
+  ];
+
+  const menuItems = userMenus.length > 0
+    ? userMenus
+        .filter((menu) => menu.is_active)
+        .sort((a, b) => a.order_index - b.order_index)
+        .map((menu) => ({
+          path: menu.url || `/${menu.name}`,
+          label: menu.display_name,
+          icon: menu.icon || 'Home',
+        }))
+    : defaultMenuItems;
+
+  const isAdminOrSuperAdmin = hasRole(['admin', 'superadmin']);
+
+  const allMenuItems = isAdminOrSuperAdmin
+    ? [...menuItems, ...adminMenuItems]
+    : menuItems;
+
+  const isActive = (path: string) => location.pathname.startsWith(path);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -87,8 +122,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         >
           <nav className="h-full overflow-y-auto py-6 px-3">
             <ul className="space-y-1">
-              {menuItems.map((item) => {
-                const Icon = item.icon;
+              {allMenuItems.map((item) => {
+                const IconComponent = iconMap[item.icon] || Home;
                 return (
                   <li key={item.path}>
                     <Link
@@ -100,7 +135,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                           : 'text-gray-700 hover:bg-gray-100'
                       }`}
                     >
-                      <Icon size={20} />
+                      <IconComponent size={20} />
                       <span>{item.label}</span>
                     </Link>
                   </li>

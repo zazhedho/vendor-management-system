@@ -9,6 +9,8 @@ import { VendorList, VendorForm, VendorDetail } from './pages/vendors';
 import { PaymentList, PaymentDetail } from './pages/payments';
 import { EvaluationList } from './pages/evaluations';
 import { UserList } from './pages/users';
+import { RoleList, RoleForm } from './pages/roles';
+import { MenuList, MenuForm } from './pages/menus';
 
 function App() {
   return (
@@ -149,6 +151,68 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <UserList />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/roles"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <RoleList />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/roles/new"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <RoleForm />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/roles/:id/edit"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <RoleForm />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/menus"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <MenuList />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/menus/new"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <MenuForm />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/menus/:id/edit"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <MenuForm />
                 </Layout>
               </ProtectedRoute>
             }

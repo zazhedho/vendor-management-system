@@ -154,3 +154,29 @@ export interface Permission {
   created_at: string;
   updated_at?: string;
 }
+
+export interface Menu {
+  id: string;
+  name: string;
+  display_name: string;
+  url?: string;
+  icon?: string;
+  parent_id?: string;
+  order_index: number;
+  is_active: boolean;
+  description?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface RolePermission {
+  role_id: string;
+  permission_id: string;
+  permission?: Permission;
+}
+
+export interface RoleMenu {
+  role_id: string;
+  menu_id: string;
+  menu?: Menu;
+}
