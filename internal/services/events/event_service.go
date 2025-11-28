@@ -53,7 +53,7 @@ func (s *ServiceEvent) CreateEvent(userId string, req dto.CreateEventRequest) (d
 		StartDate:       startDate,
 		EndDate:         endDate,
 		TermsFilePath:   req.TermsFilePath,
-		Status:          "draft",
+		Status:          utils.EventDraft,
 		CreatedByUserID: userId,
 		CreatedAt:       time.Now(),
 	}
@@ -251,7 +251,7 @@ func (s *ServiceEvent) SelectWinner(eventId, submissionId string) (domainevents.
 	}
 
 	event.WinnerVendorID = &submission.VendorID
-	event.Status = "completed"
+	event.Status = utils.EventCompleted
 	event.UpdatedAt = &now
 	if err := s.EventRepo.UpdateEvent(event); err != nil {
 		return domainevents.Event{}, err
@@ -275,7 +275,7 @@ func (s *ServiceEvent) GetEventResult(eventId, vendorId string) (map[string]inte
 	hasSubmitted := submission.Id != ""
 
 	// Event not yet completed
-	if event.Status != "completed" {
+	if event.Status != utils.EventCompleted {
 		result := map[string]interface{}{
 			"event":         event,
 			"has_submitted": hasSubmitted,

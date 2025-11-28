@@ -16,3 +16,10 @@ const (
 	RoleClient     = "client"
 	RoleVendor     = "vendor"
 )
+
+const (
+	EventDraft     = "draft"
+	EventPending   = "pending"
+	EventCompleted = "completed"
+	EventCancelled = "cancelled"
+)
