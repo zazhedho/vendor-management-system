@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import { ApiResponse, PaginatedResponse, Event, EventSubmission } from '../types';
+import { ApiResponse, PaginatedResponse, Event, EventSubmission, EventFile, EventSubmissionFile } from '../types';
 
 export const eventsApi = {
   getAll: async (params?: { page?: number; limit?: number; search?: string }) => {
@@ -12,13 +12,19 @@ export const eventsApi = {
     return response.data;
   },
 
-  create: async (data: Partial<Event>) => {
-    const response = await apiClient.post<ApiResponse<Event>>('/event', data);
+  create: async (data: Partial<Event> | FormData) => {
+    const config = data instanceof FormData ? {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    } : {};
+    const response = await apiClient.post<ApiResponse<Event>>('/event', data, config);
     return response.data;
   },
 
-  update: async (id: string, data: Partial<Event>) => {
-    const response = await apiClient.put<ApiResponse<Event>>(`/event/${id}`, data);
+  update: async (id: string, data: Partial<Event> | FormData) => {
+    const config = data instanceof FormData ? {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    } : {};
+    const response = await apiClient.put<ApiResponse<Event>>(`/event/${id}`, data, config);
     return response.data;
   },
 
@@ -27,8 +33,52 @@ export const eventsApi = {
     return response.data;
   },
 
-  submitPitch: async (eventId: string, data: { pitch_file_path: string; proposal_details?: string; additional_materials?: string }) => {
-    const response = await apiClient.post<ApiResponse<EventSubmission>>(`/vendor/event/${eventId}/submit`, data);
+  // Event Files Management
+  uploadFile: async (eventId: string, file: File, fileType: string, caption?: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('file_type', fileType);
+    if (caption) formData.append('caption', caption);
+
+    const response = await apiClient.post<ApiResponse<EventFile>>(
+      `/event/${eventId}/files`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+    return response.data;
+  },
+
+  deleteFile: async (eventId: string, fileId: string) => {
+    const response = await apiClient.delete<ApiResponse>(`/event/${eventId}/files/${fileId}`);
+    return response.data;
+  },
+
+  submitPitch: async (eventId: string, data: FormData) => {
+    const response = await apiClient.post<ApiResponse<EventSubmission>>(
+      `/vendor/event/${eventId}/submit`,
+      data,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+    return response.data;
+  },
+
+  // Event Submission Files Management
+  uploadSubmissionFile: async (submissionId: string, file: File, fileType: string, caption?: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('file_type', fileType);
+    if (caption) formData.append('caption', caption);
+
+    const response = await apiClient.post<ApiResponse<EventSubmissionFile>>(
+      `/event/submission/${submissionId}/files`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+    return response.data;
+  },
+
+  deleteSubmissionFile: async (submissionId: string, fileId: string) => {
+    const response = await apiClient.delete<ApiResponse>(`/event/submission/${submissionId}/files/${fileId}`);
     return response.data;
   },
 

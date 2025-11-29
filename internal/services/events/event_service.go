@@ -1,8 +1,12 @@
 package serviceevents
 
 import (
+	"context"
 	"errors"
+	"fmt"
+	"mime/multipart"
 	"time"
+	"vendor-management-system/pkg/storage"
 
 	domainevents "vendor-management-system/internal/domain/events"
 	"vendor-management-system/internal/dto"
@@ -15,14 +19,16 @@ import (
 )
 
 type ServiceEvent struct {
-	EventRepo  interfaceevents.RepoEventInterface
-	VendorRepo interfacevendors.RepoVendorInterface
+	EventRepo       interfaceevents.RepoEventInterface
+	VendorRepo      interfacevendors.RepoVendorInterface
+	StorageProvider storage.StorageProvider
 }
 
-func NewEventService(eventRepo interfaceevents.RepoEventInterface, vendorRepo interfacevendors.RepoVendorInterface) *ServiceEvent {
+func NewEventService(eventRepo interfaceevents.RepoEventInterface, vendorRepo interfacevendors.RepoVendorInterface, storageProvider storage.StorageProvider) *ServiceEvent {
 	return &ServiceEvent{
-		EventRepo:  eventRepo,
-		VendorRepo: vendorRepo,
+		EventRepo:       eventRepo,
+		VendorRepo:      vendorRepo,
+		StorageProvider: storageProvider,
 	}
 }
 
@@ -45,17 +51,19 @@ func (s *ServiceEvent) CreateEvent(userId string, req dto.CreateEventRequest) (d
 		endDate = &t
 	}
 
+	now := time.Now()
 	event := domainevents.Event{
-		Id:              utils.CreateUUID(),
-		Title:           req.Title,
-		Description:     req.Description,
-		Category:        req.Category,
-		StartDate:       startDate,
-		EndDate:         endDate,
-		TermsFilePath:   req.TermsFilePath,
-		Status:          utils.EventDraft,
-		CreatedByUserID: userId,
-		CreatedAt:       time.Now(),
+		Id:          utils.CreateUUID(),
+		Title:       req.Title,
+		Description: req.Description,
+		Category:    req.Category,
+		StartDate:   startDate,
+		EndDate:     endDate,
+		Status:      utils.EventDraft,
+		CreatedAt:   now,
+		CreatedBy:   userId,
+		UpdatedAt:   now,
+		UpdatedBy:   userId,
 	}
 
 	if err := s.EventRepo.CreateEvent(event); err != nil {
@@ -102,15 +110,11 @@ func (s *ServiceEvent) UpdateEvent(id string, req dto.UpdateEventRequest) (domai
 		}
 		event.EndDate = &t
 	}
-	if req.TermsFilePath != "" {
-		event.TermsFilePath = req.TermsFilePath
-	}
 	if req.Status != "" {
 		event.Status = req.Status
 	}
 
-	now := time.Now()
-	event.UpdatedAt = &now
+	event.UpdatedAt = time.Now()
 
 	if err := s.EventRepo.UpdateEvent(event); err != nil {
 		return domainevents.Event{}, err
@@ -140,11 +144,8 @@ func (s *ServiceEvent) SubmitPitch(eventId, vendorId string, req dto.SubmitPitch
 
 	existing, err := s.EventRepo.GetSubmissionByEventAndVendor(eventId, vendorId)
 	if err == nil && existing.Id != "" {
-		existing.PitchFilePath = req.PitchFilePath
 		existing.ProposalDetails = req.ProposalDetails
-		existing.AdditionalMaterials = req.AdditionalMaterials
-		now := time.Now()
-		existing.UpdatedAt = &now
+		existing.UpdatedAt = time.Now()
 
 		if err := s.EventRepo.UpdateSubmission(existing); err != nil {
 			return domainevents.EventSubmission{}, err
@@ -152,16 +153,18 @@ func (s *ServiceEvent) SubmitPitch(eventId, vendorId string, req dto.SubmitPitch
 		return existing, nil
 	}
 
+	now := time.Now()
 	submission := domainevents.EventSubmission{
-		Id:                  utils.CreateUUID(),
-		EventID:             eventId,
-		VendorID:            vendorId,
-		PitchFilePath:       req.PitchFilePath,
-		ProposalDetails:     req.ProposalDetails,
-		AdditionalMaterials: req.AdditionalMaterials,
-		IsShortlisted:       false,
-		IsWinner:            false,
-		CreatedAt:           time.Now(),
+		Id:              utils.CreateUUID(),
+		EventID:         eventId,
+		VendorID:        vendorId,
+		ProposalDetails: req.ProposalDetails,
+		IsShortlisted:   false,
+		IsWinner:        false,
+		CreatedAt:       now,
+		CreatedBy:       vendorId,
+		UpdatedAt:       now,
+		UpdatedBy:       vendorId,
 	}
 
 	if err := s.EventRepo.CreateSubmission(submission); err != nil {
@@ -187,8 +190,7 @@ func (s *ServiceEvent) ScoreSubmission(submissionId string, req dto.ScoreSubmiss
 
 	submission.Score = &req.Score
 	submission.Comments = req.Comments
-	now := time.Now()
-	submission.UpdatedAt = &now
+	submission.UpdatedAt = time.Now()
 
 	if err := s.EventRepo.UpdateSubmission(submission); err != nil {
 		return domainevents.EventSubmission{}, err
@@ -204,8 +206,7 @@ func (s *ServiceEvent) ShortlistSubmission(submissionId string, isShortlisted bo
 	}
 
 	submission.IsShortlisted = isShortlisted
-	now := time.Now()
-	submission.UpdatedAt = &now
+	submission.UpdatedAt = time.Now()
 
 	if err := s.EventRepo.UpdateSubmission(submission); err != nil {
 		return domainevents.EventSubmission{}, err
@@ -238,21 +239,21 @@ func (s *ServiceEvent) SelectWinner(eventId, submissionId string) (domainevents.
 	for _, sub := range submissions {
 		if sub.IsWinner {
 			sub.IsWinner = false
-			sub.UpdatedAt = &now
+			sub.UpdatedAt = now
 			s.EventRepo.UpdateSubmission(sub)
 		}
 	}
 
 	submission.IsWinner = true
 	submission.IsShortlisted = true
-	submission.UpdatedAt = &now
+	submission.UpdatedAt = now
 	if err := s.EventRepo.UpdateSubmission(submission); err != nil {
 		return domainevents.Event{}, err
 	}
 
 	event.WinnerVendorID = &submission.VendorID
 	event.Status = utils.EventCompleted
-	event.UpdatedAt = &now
+	event.UpdatedAt = now
 	if err := s.EventRepo.UpdateEvent(event); err != nil {
 		return domainevents.Event{}, err
 	}
@@ -336,6 +337,141 @@ func (s *ServiceEvent) GetEventResultForAdmin(eventId string) (map[string]interf
 	}
 
 	return result, nil
+}
+
+func (s *ServiceEvent) UploadEventFile(ctx context.Context, eventId string, userId string, fileHeader *multipart.FileHeader, req dto.UploadEventFileRequest) (domainevents.EventFile, error) {
+	// Verify event exists
+	_, err := s.EventRepo.GetEventByID(eventId)
+	if err != nil {
+		return domainevents.EventFile{}, errors.New("event not found")
+	}
+
+	// Validate file size
+	maxPhotoSize := utils.GetEnv("MAX_PHOTO_SIZE_EVENT", 5).(int)
+	if err := utils.ValidateFileSize(fileHeader, maxPhotoSize); err != nil {
+		return domainevents.EventFile{}, err
+	}
+
+	// Open file
+	file, err := fileHeader.Open()
+	if err != nil {
+		return domainevents.EventFile{}, fmt.Errorf("failed to open file %s: %w", fileHeader.Filename, err)
+	}
+	defer file.Close()
+
+	// Upload to storage provider (MinIO or R2)
+	fileUrl, err := s.StorageProvider.UploadFile(ctx, file, fileHeader, "event-files")
+	if err != nil {
+		return domainevents.EventFile{}, fmt.Errorf("failed to upload file %s to storage: %w", fileHeader.Filename, err)
+	}
+
+	now := time.Now()
+	eventFile := domainevents.EventFile{
+		ID:        utils.CreateUUID(),
+		EventId:   eventId,
+		FileType:  req.FileType,
+		FileUrl:   fileUrl,
+		Caption:   req.Caption,
+		CreatedAt: now,
+		CreatedBy: userId,
+	}
+
+	if err := s.EventRepo.CreateEventFile(eventFile); err != nil {
+		// Cleanup uploaded file if database save fails
+		_ = s.StorageProvider.DeleteFile(ctx, fileUrl)
+		return domainevents.EventFile{}, err
+	}
+
+	return eventFile, nil
+}
+
+func (s *ServiceEvent) DeleteEventFile(ctx context.Context, fileId string) error {
+	// Get file record to get the URL for storage deletion
+	eventFile, err := s.EventRepo.GetEventFileByID(fileId)
+	if err != nil {
+		return err
+	}
+
+	// Delete from database first
+	if err = s.EventRepo.DeleteEventFile(fileId); err == nil {
+		// Delete from storage if database deletion succeeds
+		_ = s.StorageProvider.DeleteFile(ctx, eventFile.FileUrl)
+	}
+
+	return err
+}
+
+func (s *ServiceEvent) UploadSubmissionFile(ctx context.Context, submissionId string, userId string, fileHeader *multipart.FileHeader, req dto.UploadSubmissionFileRequest) (domainevents.EventSubmissionFile, error) {
+	// Verify submission exists
+	_, err := s.EventRepo.GetSubmissionByID(submissionId)
+	if err != nil {
+		return domainevents.EventSubmissionFile{}, errors.New("submission not found")
+	}
+
+	// Check file limit (max 1 file per submission)
+	count, err := s.EventRepo.CountSubmissionFilesBySubmissionID(submissionId)
+	if err != nil {
+		return domainevents.EventSubmissionFile{}, err
+	}
+
+	if count >= int64(utils.MaxFileLimit) {
+		return domainevents.EventSubmissionFile{}, fmt.Errorf("maximum %d file allowed per submission", utils.MaxFileLimit)
+	}
+
+	// Validate file size
+	maxFileSize := utils.GetEnv("MAX_FILE_SIZE", 20).(int)
+	if err := utils.ValidateFileSize(fileHeader, maxFileSize); err != nil {
+		return domainevents.EventSubmissionFile{}, err
+	}
+
+	// Open file
+	file, err := fileHeader.Open()
+	if err != nil {
+		return domainevents.EventSubmissionFile{}, fmt.Errorf("failed to open file %s: %w", fileHeader.Filename, err)
+	}
+	defer file.Close()
+
+	// Upload to storage provider (MinIO or R2)
+	fileUrl, err := s.StorageProvider.UploadFile(ctx, file, fileHeader, "event-submission-files")
+	if err != nil {
+		return domainevents.EventSubmissionFile{}, fmt.Errorf("failed to upload file %s to storage: %w", fileHeader.Filename, err)
+	}
+
+	now := time.Now()
+	submissionFile := domainevents.EventSubmissionFile{
+		ID:                utils.CreateUUID(),
+		EventSubmissionId: submissionId,
+		FileType:          req.FileType,
+		FileUrl:           fileUrl,
+		Caption:           req.Caption,
+		FileOrder:         0, // Will be calculated by repo if needed
+		CreatedAt:         now,
+		CreatedBy:         userId,
+	}
+
+	if err := s.EventRepo.CreateSubmissionFile(submissionFile); err != nil {
+		// Cleanup uploaded file if database save fails
+		_ = s.StorageProvider.DeleteFile(ctx, fileUrl)
+		return domainevents.EventSubmissionFile{}, err
+	}
+
+	return submissionFile, nil
+}
+
+func (s *ServiceEvent) DeleteSubmissionFile(ctx context.Context, fileId string) error {
+	// Get file record to get the URL for storage deletion
+	submissionFile, err := s.EventRepo.GetSubmissionFileByID(fileId)
+	if err != nil {
+		return err
+	}
+
+	// Delete from database first
+	if err = s.EventRepo.DeleteSubmissionFile(fileId); err == nil {
+		// Delete from storage if database deletion succeeds
+		_ = s.StorageProvider.DeleteFile(ctx, submissionFile.FileUrl)
+	}
+
+	return err
 }
 
 var _ interfaceevents.ServiceEventInterface = (*ServiceEvent)(nil)

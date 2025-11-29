@@ -121,3 +121,19 @@ func (r *repo) UpdateVendorProfile(m domainvendors.VendorProfile) error {
 func (r *repo) DeleteVendorProfile(id string) error {
 	return r.DB.Where("id = ?", id).Delete(&domainvendors.VendorProfile{}).Error
 }
+
+// VendorProfile file operations
+func (r *repo) CreateVendorProfileFile(m domainvendors.VendorProfileFile) error {
+	return r.DB.Create(&m).Error
+}
+
+func (r *repo) GetVendorProfileFileByID(id string) (ret domainvendors.VendorProfileFile, err error) {
+	if err = r.DB.Where("id = ?", id).First(&ret).Error; err != nil {
+		return domainvendors.VendorProfileFile{}, err
+	}
+	return ret, nil
+}
+
+func (r *repo) DeleteVendorProfileFile(id string) error {
+	return r.DB.Where("id = ?", id).Delete(&domainvendors.VendorProfileFile{}).Error
+}

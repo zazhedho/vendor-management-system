@@ -6,7 +6,7 @@ type CreateEventRequest struct {
 	Category      string `json:"category" binding:"omitempty,max=100"`
 	StartDate     string `json:"start_date" binding:"omitempty"`
 	EndDate       string `json:"end_date" binding:"omitempty"`
-	TermsFilePath string `json:"terms_file_path" binding:"omitempty,max=500"`
+	TermsFilePath string `json:"terms_file_path" binding:"omitempty,max=500"` // Kept for backward compatibility, use EventFiles table for multi-file
 }
 
 type UpdateEventRequest struct {
@@ -15,14 +15,24 @@ type UpdateEventRequest struct {
 	Category      string `json:"category" binding:"omitempty,max=100"`
 	StartDate     string `json:"start_date" binding:"omitempty"`
 	EndDate       string `json:"end_date" binding:"omitempty"`
-	TermsFilePath string `json:"terms_file_path" binding:"omitempty,max=500"`
+	TermsFilePath string `json:"terms_file_path" binding:"omitempty,max=500"` // Kept for backward compatibility
 	Status        string `json:"status" binding:"omitempty,oneof=draft open closed completed cancelled"`
 }
 
+// For file uploads - separate from event creation
+type UploadEventFileRequest struct {
+	FileType string `json:"file_type" binding:"required,oneof=terms image document"`
+	Caption  string `json:"caption" binding:"omitempty,max=255"`
+}
+
 type SubmitPitchRequest struct {
-	PitchFilePath       string `json:"pitch_file_path" binding:"required,max=500"`
-	ProposalDetails     string `json:"proposal_details" binding:"omitempty"`
-	AdditionalMaterials string `json:"additional_materials" binding:"omitempty"`
+	ProposalDetails string `json:"proposal_details" binding:"omitempty"`
+}
+
+// For submission file uploads - separate from submission creation
+type UploadSubmissionFileRequest struct {
+	FileType string `json:"file_type" binding:"required,oneof=pitch proposal document"`
+	Caption  string `json:"caption" binding:"omitempty,max=255"`
 }
 
 type ScoreSubmissionRequest struct {

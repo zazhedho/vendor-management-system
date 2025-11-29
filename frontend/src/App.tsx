@@ -1,24 +1,41 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
-import { Login, Register } from './pages/auth';
+import { Login, Register, ForgotPassword, ResetPassword, ChangePassword } from './pages/auth';
 import { Dashboard } from './pages/Dashboard';
 import { EventList, EventForm, EventDetail } from './pages/events';
 import { VendorList, VendorForm, VendorDetail } from './pages/vendors';
 import { PaymentList, PaymentDetail } from './pages/payments';
 import { EvaluationList } from './pages/evaluations';
-import { UserList } from './pages/users';
+import { UserList, UserForm } from './pages/users';
 import { RoleList, RoleForm } from './pages/roles';
 import { MenuList, MenuForm } from './pages/menus';
 
 function App() {
   return (
     <AuthProvider>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/change-password" element={<ChangePassword />} />
 
           <Route
             path="/dashboard"
@@ -151,6 +168,26 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <UserList />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/users/new"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <UserForm />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/users/:id/edit"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <UserForm />
                 </Layout>
               </ProtectedRoute>
             }

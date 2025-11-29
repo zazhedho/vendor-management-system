@@ -12,4 +12,9 @@ type RepoPaymentInterface interface {
 	GetAllPayments(params filter.BaseParams) ([]domainpayments.Payment, int64, error)
 	UpdatePayment(m domainpayments.Payment) error
 	DeletePayment(id string) error
+
+	// Payment file operations
+	CreatePaymentFile(m domainpayments.PaymentFile) error
+	GetPaymentFileByID(id string) (domainpayments.PaymentFile, error)
+	DeletePaymentFile(id string) error
 }

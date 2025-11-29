@@ -97,3 +97,19 @@ func (r *repo) UpdatePayment(m domainpayments.Payment) error {
 func (r *repo) DeletePayment(id string) error {
 	return r.DB.Where("id = ?", id).Delete(&domainpayments.Payment{}).Error
 }
+
+// Payment file operations
+func (r *repo) CreatePaymentFile(m domainpayments.PaymentFile) error {
+	return r.DB.Create(&m).Error
+}
+
+func (r *repo) GetPaymentFileByID(id string) (ret domainpayments.PaymentFile, err error) {
+	if err = r.DB.Where("id = ?", id).First(&ret).Error; err != nil {
+		return domainpayments.PaymentFile{}, err
+	}
+	return ret, nil
+}
+
+func (r *repo) DeletePaymentFile(id string) error {
+	return r.DB.Where("id = ?", id).Delete(&domainpayments.PaymentFile{}).Error
+}

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { paymentsApi } from '../../api/payments';
 import { Payment } from '../../types';
-import { ArrowLeft, DollarSign, FileText, Calendar } from 'lucide-react';
+import { ArrowLeft, DollarSign, FileText, Calendar, Download, Upload } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 export const PaymentDetail: React.FC = () => {
   const navigate = useNavigate();
@@ -108,10 +109,35 @@ export const PaymentDetail: React.FC = () => {
             )}
           </div>
 
-          {payment.transfer_proof_path && (
+          {payment.files && payment.files.length > 0 && (
             <div className="card">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Transfer Proof</h2>
-              <p className="text-sm text-gray-600">{payment.transfer_proof_path}</p>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Payment Files</h2>
+              <div className="space-y-2">
+                {payment.files.map((file) => (
+                  <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                    <div className="flex items-center flex-1">
+                      <FileText size={18} className="text-gray-600 mr-3" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">
+                          {file.file_type.toUpperCase()}
+                        </p>
+                        <p className="text-xs text-gray-600">{file.file_url.split('/').pop()}</p>
+                        {file.caption && (
+                          <p className="text-xs text-gray-500 mt-1">{file.caption}</p>
+                        )}
+                      </div>
+                    </div>
+                    <a
+                      href={file.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-2 p-2 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded"
+                    >
+                      <Download size={16} />
+                    </a>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

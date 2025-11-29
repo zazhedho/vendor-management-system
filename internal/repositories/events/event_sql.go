@@ -92,6 +92,22 @@ func (r *repo) DeleteEvent(id string) error {
 	return r.DB.Where("id = ?", id).Delete(&domainevents.Event{}).Error
 }
 
+// Event file operations
+func (r *repo) CreateEventFile(m domainevents.EventFile) error {
+	return r.DB.Create(&m).Error
+}
+
+func (r *repo) GetEventFileByID(id string) (ret domainevents.EventFile, err error) {
+	if err = r.DB.Where("id = ?", id).First(&ret).Error; err != nil {
+		return domainevents.EventFile{}, err
+	}
+	return ret, nil
+}
+
+func (r *repo) DeleteEventFile(id string) error {
+	return r.DB.Where("id = ?", id).Delete(&domainevents.EventFile{}).Error
+}
+
 // Submission operations
 func (r *repo) CreateSubmission(m domainevents.EventSubmission) error {
 	return r.DB.Create(&m).Error
@@ -131,4 +147,26 @@ func (r *repo) UpdateSubmission(m domainevents.EventSubmission) error {
 
 func (r *repo) DeleteSubmission(id string) error {
 	return r.DB.Where("id = ?", id).Delete(&domainevents.EventSubmission{}).Error
+}
+
+// Submission file operations
+func (r *repo) CreateSubmissionFile(m domainevents.EventSubmissionFile) error {
+	return r.DB.Create(&m).Error
+}
+
+func (r *repo) GetSubmissionFileByID(id string) (ret domainevents.EventSubmissionFile, err error) {
+	if err = r.DB.Where("id = ?", id).First(&ret).Error; err != nil {
+		return domainevents.EventSubmissionFile{}, err
+	}
+	return ret, nil
+}
+
+func (r *repo) CountSubmissionFilesBySubmissionID(submissionId string) (int64, error) {
+	var count int64
+	err := r.DB.Model(&domainevents.EventSubmissionFile{}).Where("event_submission_id = ?", submissionId).Count(&count).Error
+	return count, err
+}
+
+func (r *repo) DeleteSubmissionFile(id string) error {
+	return r.DB.Where("id = ?", id).Delete(&domainevents.EventSubmissionFile{}).Error
 }

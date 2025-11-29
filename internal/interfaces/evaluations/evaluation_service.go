@@ -1,6 +1,9 @@
 package interfaceevaluations
 
 import (
+	"context"
+	"mime/multipart"
+
 	domainevaluations "vendor-management-system/internal/domain/evaluations"
 	"vendor-management-system/internal/dto"
 	"vendor-management-system/pkg/filter"
@@ -17,7 +20,7 @@ type ServiceEvaluationInterface interface {
 	DeleteEvaluation(id string) error
 
 	// Photo operations
-	UploadPhoto(evaluationId string, req dto.UploadPhotoRequest) (domainevaluations.EvaluationPhoto, error)
-	ReviewPhoto(photoId string, req dto.ReviewPhotoRequest) (domainevaluations.EvaluationPhoto, error)
-	DeletePhoto(photoId string) error
+	UploadPhoto(ctx context.Context, evaluationId string, file *multipart.FileHeader, req dto.UploadEvaluationPhotoRequest) (domainevaluations.EvaluationPhoto, error)
+	UpdatePhoto(photoId string, req dto.UpdateEvaluationPhotoRequest) (domainevaluations.EvaluationPhoto, error)
+	DeletePhoto(ctx context.Context, photoId string) error
 }

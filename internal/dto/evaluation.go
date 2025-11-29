@@ -1,11 +1,10 @@
 package dto
 
 type CreateEvaluationRequest struct {
-	EventID       string   `json:"event_id" binding:"required,uuid"`
-	VendorID      string   `json:"vendor_id" binding:"required,uuid"`
-	OverallRating float64  `json:"overall_rating" binding:"omitempty,min=0,max=5"`
-	Comments      string   `json:"comments" binding:"omitempty"`
-	PhotoPaths    []string `json:"photo_paths" binding:"omitempty,max=5,dive,max=500"`
+	EventID       string  `json:"event_id" binding:"required,uuid"`
+	VendorID      string  `json:"vendor_id" binding:"required,uuid"`
+	OverallRating float64 `json:"overall_rating" binding:"omitempty,min=0,max=5"`
+	Comments      string  `json:"comments" binding:"omitempty"`
 }
 
 type UpdateEvaluationRequest struct {
@@ -13,11 +12,13 @@ type UpdateEvaluationRequest struct {
 	Comments      string  `json:"comments" binding:"omitempty"`
 }
 
-type UploadPhotoRequest struct {
-	PhotoPath string `json:"photo_path" binding:"required,max=500"`
+// For photo uploads - separate from evaluation creation
+type UploadEvaluationPhotoRequest struct {
+	Review string  `json:"review" binding:"omitempty"`
+	Rating float64 `json:"rating" binding:"omitempty,min=0,max=5"`
 }
 
-type ReviewPhotoRequest struct {
+type UpdateEvaluationPhotoRequest struct {
 	Review string  `json:"review" binding:"omitempty"`
-	Rating float64 `json:"rating" binding:"required,min=0,max=5"`
+	Rating float64 `json:"rating" binding:"omitempty,min=0,max=5"`
 }

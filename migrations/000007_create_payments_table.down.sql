@@ -1,1 +1,2 @@
+DROP TABLE IF EXISTS payment_files;
 DROP TABLE IF EXISTS payments;

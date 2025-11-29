@@ -87,6 +87,7 @@ func main() {
 	routes.RoleRoutes()
 	routes.PermissionRoutes()
 	routes.MenuRoutes()
+	routes.LocationRoutes()
 	routes.VendorRoutes()
 	routes.EventRoutes()
 	routes.PaymentRoutes()

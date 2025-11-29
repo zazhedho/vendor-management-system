@@ -50,9 +50,19 @@ export interface Vendor {
   id: string;
   user_id: string;
   vendor_type: string;
-  status: string;
+  status: string; // pending, verified, rejected, active, suspended
+  verified_at?: string;
+  verified_by?: string;
+  deactivate_at?: string;
+  reject_reason?: string;
+  reverify_at?: string;
+  expired_at?: string;
   created_at: string;
+  created_by: string;
   updated_at?: string;
+  updated_by?: string;
+  deleted_at?: string;
+  deleted_by?: string;
 }
 
 export interface VendorProfile {
@@ -67,9 +77,58 @@ export interface VendorProfile {
   city?: string;
   district?: string;
   business_field?: string;
+
+  // KTP fields
+  ktp_number?: string;
+  ktp_name?: string;
+  ktp_file_url?: string;
+
+  // NPWP fields
   npwp_number?: string;
+  npwp_name?: string;
+  npwp_address?: string;
+  npwp_file_url?: string;
+
+  // Bank fields
+  bank_name?: string;
+  bank_account_number?: string;
+  bank_account_name?: string;
+  bank_book_file_url?: string;
+
+  // NIB fields
+  nib_number?: string;
+  nib_file_url?: string;
+
+  // Other documents
+  siup_file_url?: string;
+  akta_file_url?: string;
+
+  // File relationships
+  files?: VendorProfileFile[];
+
   created_at: string;
+  created_by: string;
   updated_at?: string;
+  updated_by?: string;
+  deleted_at?: string;
+  deleted_by?: string;
+}
+
+export interface VendorProfileFile {
+  id: string;
+  vendor_profile_id: string;
+  file_type: string; // ktp, npwp, bank_book, nib, siup, akta
+  file_url: string;
+  file_order?: number;
+  caption?: string;
+  status: string; // pending, approved, rejected
+  verified_at?: string;
+  verified_by?: string;
+  issued_at?: string;
+  expired_at?: string;
+  created_at: string;
+  created_by: string;
+  deleted_at?: string;
 }
 
 export interface Event {
@@ -79,24 +138,64 @@ export interface Event {
   category?: string;
   start_date?: string;
   end_date?: string;
-  status: string;
+  status: string; // draft, open, closed, completed, cancelled
+  terms_file_path?: string;
   created_by_user_id: string;
   winner_vendor_id?: string;
+
+  // File relationships
+  files?: EventFile[];
+
   created_at: string;
+  created_by: string;
   updated_at?: string;
+  updated_by?: string;
+  deleted_at?: string;
+  deleted_by?: string;
+}
+
+export interface EventFile {
+  id: string;
+  event_id: string;
+  file_type: string; // terms, image, document
+  file_url: string;
+  file_order?: number;
+  caption?: string;
+  created_at: string;
+  created_by: string;
+  deleted_at?: string;
 }
 
 export interface EventSubmission {
   id: string;
   event_id: string;
   vendor_id: string;
-  pitch_file_path?: string;
   proposal_details?: string;
   score?: number;
   is_shortlisted: boolean;
   is_winner: boolean;
+
+  // File relationships
+  files?: EventSubmissionFile[];
+
   created_at: string;
+  created_by: string;
   updated_at?: string;
+  updated_by?: string;
+  deleted_at?: string;
+  deleted_by?: string;
+}
+
+export interface EventSubmissionFile {
+  id: string;
+  event_submission_id: string;
+  file_type: string; // pitch, proposal, document
+  file_url: string;
+  file_order?: number;
+  caption?: string;
+  created_at: string;
+  created_by: string;
+  deleted_at?: string;
 }
 
 export interface Payment {
@@ -104,12 +203,30 @@ export interface Payment {
   invoice_number: string;
   vendor_id: string;
   amount: string;
-  status: string;
+  status: string; // pending, paid, cancelled
   payment_date?: string;
-  transfer_proof_path?: string;
   description?: string;
+
+  // File relationships
+  files?: PaymentFile[];
+
   created_at: string;
+  created_by: string;
   updated_at?: string;
+  updated_by?: string;
+  deleted_at?: string;
+  deleted_by?: string;
+}
+
+export interface PaymentFile {
+  id: string;
+  payment_id: string;
+  file_type: string; // proof, invoice, receipt
+  file_url: string;
+  caption?: string;
+  created_at: string;
+  created_by: string;
+  deleted_at?: string;
 }
 
 export interface Evaluation {
@@ -119,19 +236,27 @@ export interface Evaluation {
   evaluator_user_id: string;
   overall_rating?: number;
   comments?: string;
+
+  // Photo relationships
   photos?: EvaluationPhoto[];
+
   created_at: string;
+  created_by: string;
   updated_at?: string;
+  updated_by?: string;
+  deleted_at?: string;
+  deleted_by?: string;
 }
 
 export interface EvaluationPhoto {
   id: string;
   evaluation_id: string;
-  photo_path: string;
+  photo_url: string;
   review?: string;
   rating?: number;
   created_at: string;
   updated_at?: string;
+  deleted_at?: string;
 }
 
 export interface Role {

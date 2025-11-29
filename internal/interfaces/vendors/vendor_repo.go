@@ -20,4 +20,9 @@ type RepoVendorInterface interface {
 	GetVendorProfileByVendorID(vendorId string) (domainvendors.VendorProfile, error)
 	UpdateVendorProfile(m domainvendors.VendorProfile) error
 	DeleteVendorProfile(id string) error
+
+	// VendorProfile file operations
+	CreateVendorProfileFile(m domainvendors.VendorProfileFile) error
+	GetVendorProfileFileByID(id string) (domainvendors.VendorProfileFile, error)
+	DeleteVendorProfileFile(id string) error
 }

@@ -1,24 +1,30 @@
 package servicevendors
 
 import (
+	"context"
 	"errors"
+	"fmt"
+	"mime/multipart"
 	"time"
 	domainvendors "vendor-management-system/internal/domain/vendors"
 	"vendor-management-system/internal/dto"
 	interfacevendors "vendor-management-system/internal/interfaces/vendors"
 	"vendor-management-system/pkg/filter"
+	"vendor-management-system/pkg/storage"
 	"vendor-management-system/utils"
 
 	"gorm.io/gorm"
 )
 
 type ServiceVendor struct {
-	VendorRepo interfacevendors.RepoVendorInterface
+	VendorRepo      interfacevendors.RepoVendorInterface
+	StorageProvider storage.StorageProvider
 }
 
-func NewVendorService(vendorRepo interfacevendors.RepoVendorInterface) *ServiceVendor {
+func NewVendorService(vendorRepo interfacevendors.RepoVendorInterface, storageProvider storage.StorageProvider) *ServiceVendor {
 	return &ServiceVendor{
-		VendorRepo: vendorRepo,
+		VendorRepo:      vendorRepo,
+		StorageProvider: storageProvider,
 	}
 }
 
@@ -56,16 +62,16 @@ func (s *ServiceVendor) CreateOrUpdateVendorProfile(userId string, req dto.Vendo
 	vendor, err := s.VendorRepo.GetVendorByUserID(userId)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			vendorType := "perusahaan"
-			if req.VendorType != "" {
-				vendorType = req.VendorType
-			}
+			// Create vendor if not exists - vendor_type will be set later or default to empty
+			now := time.Now()
 			vendor = domainvendors.Vendor{
-				Id:         utils.CreateUUID(),
-				UserId:     userId,
-				VendorType: vendorType,
-				Status:     "pending",
-				CreatedAt:  time.Now(),
+				Id:        utils.CreateUUID(),
+				UserId:    userId,
+				Status:    utils.VendorPending,
+				CreatedAt: now,
+				CreatedBy: userId,
+				UpdatedAt: now,
+				UpdatedBy: userId,
 			}
 			if err := s.VendorRepo.CreateVendor(vendor); err != nil {
 				return nil, err
@@ -87,29 +93,30 @@ func (s *ServiceVendor) CreateOrUpdateVendorProfile(userId string, req dto.Vendo
 			VendorId:          vendor.Id,
 			VendorName:        req.VendorName,
 			Email:             req.Email,
-			Phone:             req.Telephone,
+			Telephone:         req.Telephone,
 			Fax:               req.Fax,
-			Mobile:            utils.NormalizePhoneTo62(req.Mobile),
-			Province:          req.Province,
-			City:              req.City,
-			District:          req.District,
+			Phone:             req.Phone,
+			DistrictId:        req.DistrictId,
+			DistrictName:      req.DistrictName,
+			CityId:            req.CityId,
+			CityName:          req.CityName,
+			ProvinceId:        req.ProvinceId,
+			ProvinceName:      req.ProvinceName,
+			PostalCode:        req.PostalCode,
 			Address:           req.Address,
 			BusinessField:     req.BusinessField,
+			KTPNumber:         req.KtpNumber,
+			KTPName:           req.KtpName,
 			NpwpNumber:        req.NpwpNumber,
 			NpwpName:          req.NpwpName,
 			NpwpAddress:       req.NpwpAddress,
-			NpwpFilePath:      req.NpwpFilePath,
 			BankName:          req.BankName,
-			BankBranch:        req.BankBranch,
-			AccountNumber:     req.AccountNumber,
-			AccountHolderName: req.AccountHolderName,
-			BankBookFilePath:  req.BankBookFilePath,
-			TransactionType:   req.TransactionType,
-			PurchGroup:        req.PurchGroup,
-			RegionOrSo:        req.RegionOrSo,
-			Nik:               req.NIK,
-			KtpFilePath:       req.KtpFilePath,
+			AccountNumber:     req.BankAccountNumber,
+			AccountHolderName: req.BankAccountName,
 			CreatedAt:         now,
+			CreatedBy:         userId,
+			UpdatedAt:         now,
+			UpdatedBy:         userId,
 		}
 		if err := s.VendorRepo.CreateVendorProfile(profile); err != nil {
 			return nil, err
@@ -117,35 +124,28 @@ func (s *ServiceVendor) CreateOrUpdateVendorProfile(userId string, req dto.Vendo
 	} else {
 		profile.VendorName = req.VendorName
 		profile.Email = req.Email
-		profile.Phone = req.Telephone
+		profile.Telephone = req.Telephone
 		profile.Fax = req.Fax
-		profile.Mobile = utils.NormalizePhoneTo62(req.Mobile)
-		profile.Province = req.Province
-		profile.City = req.City
-		profile.District = req.District
+		profile.Phone = req.Phone
+		profile.DistrictId = req.DistrictId
+		profile.DistrictName = req.DistrictName
+		profile.CityId = req.CityId
+		profile.CityName = req.CityName
+		profile.ProvinceId = req.ProvinceId
+		profile.ProvinceName = req.ProvinceName
+		profile.PostalCode = req.PostalCode
 		profile.Address = req.Address
 		profile.BusinessField = req.BusinessField
+		profile.KTPNumber = req.KtpNumber
+		profile.KTPName = req.KtpName
 		profile.NpwpNumber = req.NpwpNumber
 		profile.NpwpName = req.NpwpName
 		profile.NpwpAddress = req.NpwpAddress
-		if req.NpwpFilePath != "" {
-			profile.NpwpFilePath = req.NpwpFilePath
-		}
 		profile.BankName = req.BankName
-		profile.BankBranch = req.BankBranch
-		profile.AccountNumber = req.AccountNumber
-		profile.AccountHolderName = req.AccountHolderName
-		if req.BankBookFilePath != "" {
-			profile.BankBookFilePath = req.BankBookFilePath
-		}
-		profile.TransactionType = req.TransactionType
-		profile.PurchGroup = req.PurchGroup
-		profile.RegionOrSo = req.RegionOrSo
-		profile.Nik = req.NIK
-		if req.KtpFilePath != "" {
-			profile.KtpFilePath = req.KtpFilePath
-		}
-		profile.UpdatedAt = &now
+		profile.AccountNumber = req.BankAccountNumber
+		profile.AccountHolderName = req.BankAccountName
+		profile.UpdatedAt = now
+		profile.UpdatedBy = userId
 
 		if err := s.VendorRepo.UpdateVendorProfile(profile); err != nil {
 			return nil, err
@@ -191,7 +191,7 @@ func (s *ServiceVendor) UpdateVendorStatus(vendorId string, status string) (doma
 
 	vendor.Status = status
 	now := time.Now()
-	vendor.UpdatedAt = &now
+	vendor.UpdatedAt = now
 
 	if err := s.VendorRepo.UpdateVendor(vendor); err != nil {
 		return domainvendors.Vendor{}, err
@@ -214,6 +214,96 @@ func (s *ServiceVendor) DeleteVendor(vendorId string) error {
 	}
 
 	return s.VendorRepo.DeleteVendor(vendorId)
+}
+
+func (s *ServiceVendor) UploadVendorProfileFile(ctx context.Context, vendorId string, userId string, fileHeader *multipart.FileHeader, req dto.UploadVendorProfileFileRequest) (domainvendors.VendorProfileFile, error) {
+	// Verify vendor exists
+	vendor, err := s.VendorRepo.GetVendorByID(vendorId)
+	if err != nil {
+		return domainvendors.VendorProfileFile{}, errors.New("vendor not found")
+	}
+
+	// Verify vendor profile exists
+	profile, err := s.VendorRepo.GetVendorProfileByVendorID(vendor.Id)
+	if err != nil {
+		return domainvendors.VendorProfileFile{}, errors.New("vendor profile not found")
+	}
+
+	// Validate file size
+	maxPhotoSize := utils.GetEnv("MAX_PHOTO_SIZE_VENDOR", 5).(int)
+	if err := utils.ValidateFileSize(fileHeader, maxPhotoSize); err != nil {
+		return domainvendors.VendorProfileFile{}, err
+	}
+
+	// Open file
+	file, err := fileHeader.Open()
+	if err != nil {
+		return domainvendors.VendorProfileFile{}, fmt.Errorf("failed to open file %s: %w", fileHeader.Filename, err)
+	}
+	defer file.Close()
+
+	// Upload to storage provider (MinIO or R2)
+	fileUrl, err := s.StorageProvider.UploadFile(ctx, file, fileHeader, "vendor-profile-files")
+	if err != nil {
+		return domainvendors.VendorProfileFile{}, fmt.Errorf("failed to upload file %s to storage: %w", fileHeader.Filename, err)
+	}
+
+	// Parse dates if provided
+	var issuedAt, expiredAt *time.Time
+	if req.IssuedAt != "" {
+		t, err := time.Parse("2006-01-02", req.IssuedAt)
+		if err != nil {
+			_ = s.StorageProvider.DeleteFile(ctx, fileUrl)
+			return domainvendors.VendorProfileFile{}, errors.New("invalid issued_at format, use YYYY-MM-DD")
+		}
+		issuedAt = &t
+	}
+
+	if req.ExpiredAt != "" {
+		t, err := time.Parse("2006-01-02", req.ExpiredAt)
+		if err != nil {
+			_ = s.StorageProvider.DeleteFile(ctx, fileUrl)
+			return domainvendors.VendorProfileFile{}, errors.New("invalid expired_at format, use YYYY-MM-DD")
+		}
+		expiredAt = &t
+	}
+
+	now := time.Now()
+	vendorFile := domainvendors.VendorProfileFile{
+		ID:              utils.CreateUUID(),
+		VendorProfileId: profile.Id,
+		FileType:        req.FileType,
+		FileURL:         fileUrl,
+		IssuedAt:        issuedAt,
+		ExpiredAt:       expiredAt,
+		Status:          "pending",
+		CreatedAt:       now,
+		CreatedBy:       userId,
+	}
+
+	if err := s.VendorRepo.CreateVendorProfileFile(vendorFile); err != nil {
+		// Cleanup uploaded file if database save fails
+		_ = s.StorageProvider.DeleteFile(ctx, fileUrl)
+		return domainvendors.VendorProfileFile{}, err
+	}
+
+	return vendorFile, nil
+}
+
+func (s *ServiceVendor) DeleteVendorProfileFile(ctx context.Context, fileId string) error {
+	// Get file record to get the URL for storage deletion
+	vendorFile, err := s.VendorRepo.GetVendorProfileFileByID(fileId)
+	if err != nil {
+		return err
+	}
+
+	// Delete from database first
+	if err = s.VendorRepo.DeleteVendorProfileFile(fileId); err == nil {
+		// Delete from storage if database deletion succeeds
+		_ = s.StorageProvider.DeleteFile(ctx, vendorFile.FileURL)
+	}
+
+	return err
 }
 
 var _ interfacevendors.ServiceVendorInterface = (*ServiceVendor)(nil)

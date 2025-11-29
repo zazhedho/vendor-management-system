@@ -3,6 +3,7 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"mime/multipart"
 	"net/http"
 	"reflect"
 	"vendor-management-system/pkg/response"
@@ -75,4 +76,18 @@ func ValidateUUID(ctx *gin.Context, logID uuid.UUID) (string, error) {
 	}
 
 	return id, nil
+}
+
+func ValidateFileSize(fileHeader *multipart.FileHeader, maxMB int) error {
+	if fileHeader == nil {
+		return fmt.Errorf("invalid file header")
+	}
+
+	maxBytes := int64(maxMB * 1024 * 1024)
+	if fileHeader.Size > maxBytes {
+		return fmt.Errorf("file %s exceeds maximum size of %dMB (current: %.2fMB)",
+			fileHeader.Filename, maxMB, float64(fileHeader.Size)/(1024*1024))
+	}
+
+	return nil
 }

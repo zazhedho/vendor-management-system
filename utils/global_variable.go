@@ -23,3 +23,22 @@ const (
 	EventCompleted = "completed"
 	EventCancelled = "cancelled"
 )
+
+const (
+	VendorPending  = "pending"
+	VendorVerified = "verified"
+	VendorActive   = "active"
+	VendorReject   = "rejected"
+	VendorSuspend  = "suspended"
+)
+
+const (
+	VendorDocPending  = "pending"
+	VendorDocApproved = "approved"
+	VendorDocReject   = "rejected"
+)
+
+var (
+	MaxFileLimit  = GetEnv("MAX_FILE_LIMIT", 1).(int)
+	MaxPhotoLimit = GetEnv("MAX_PHOTO_LIMIT", 5).(int)
+)

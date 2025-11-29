@@ -3,6 +3,7 @@ package router
 import (
 	"net/http"
 	"time"
+	"vendor-management-system/infrastructure/media"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -10,6 +11,7 @@ import (
 	"vendor-management-system/infrastructure/database"
 	evaluationHandler "vendor-management-system/internal/handlers/http/evaluations"
 	eventHandler "vendor-management-system/internal/handlers/http/events"
+	locationHandler "vendor-management-system/internal/handlers/http/location"
 	menuHandler "vendor-management-system/internal/handlers/http/menu"
 	paymentHandler "vendor-management-system/internal/handlers/http/payments"
 	permissionHandler "vendor-management-system/internal/handlers/http/permission"
@@ -29,6 +31,7 @@ import (
 	vendorRepo "vendor-management-system/internal/repositories/vendors"
 	evaluationSvc "vendor-management-system/internal/services/evaluations"
 	eventSvc "vendor-management-system/internal/services/events"
+	locationSvc "vendor-management-system/internal/services/location"
 	menuSvc "vendor-management-system/internal/services/menu"
 	paymentSvc "vendor-management-system/internal/services/payments"
 	permissionSvc "vendor-management-system/internal/services/permission"
@@ -205,9 +208,28 @@ func (r *Routes) SessionRoutes() {
 	logger.WriteLog(logger.LogLevelInfo, "Session management routes registered")
 }
 
+func (r *Routes) LocationRoutes() {
+	svc := locationSvc.NewLocationService()
+	h := locationHandler.NewLocationHandler(svc)
+
+	location := r.App.Group("/api")
+	{
+		location.GET("/province", h.GetProvince)
+		location.GET("/city", h.GetCity)
+		location.GET("district", h.GetDistrict)
+	}
+}
+
 func (r *Routes) VendorRoutes() {
+	// Initialize storage provider (MinIO or R2) from infrastructure
+	storageProvider, err := media.InitStorage()
+	if err != nil {
+		logger.WriteLog(logger.LogLevelError, "Failed to initialize storage provider: "+err.Error())
+		panic("Failed to initialize storage provider: " + err.Error())
+	}
+
 	repo := vendorRepo.NewVendorRepo(r.DB)
-	svc := vendorSvc.NewVendorService(repo)
+	svc := vendorSvc.NewVendorService(repo, storageProvider)
 	h := vendorHandler.NewVendorHandler(svc)
 	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB))
 
@@ -220,15 +242,23 @@ func (r *Routes) VendorRoutes() {
 	vendorAdmin := r.App.Group("/api/vendors").Use(mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin))
 	{
 		vendorAdmin.GET("", h.GetAllVendors)
+		vendorAdmin.GET("/:id", h.GetVendorDetail)
 		vendorAdmin.PUT("/:id/status", h.UpdateVendorStatus)
 		vendorAdmin.DELETE("/:id", mdw.RoleMiddleware(utils.RoleAdmin), h.DeleteVendor)
 	}
 }
 
 func (r *Routes) EventRoutes() {
+	// Initialize storage provider (MinIO or R2) from infrastructure
+	storageProvider, err := media.InitStorage()
+	if err != nil {
+		logger.WriteLog(logger.LogLevelError, "Failed to initialize storage provider: "+err.Error())
+		panic("Failed to initialize storage provider: " + err.Error())
+	}
+
 	vRepo := vendorRepo.NewVendorRepo(r.DB)
 	eRepo := eventRepo.NewEventRepo(r.DB)
-	svc := eventSvc.NewEventService(eRepo, vRepo)
+	svc := eventSvc.NewEventService(eRepo, vRepo, storageProvider)
 	h := eventHandler.NewEventHandler(svc, vRepo)
 	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB))
 
@@ -259,9 +289,16 @@ func (r *Routes) EventRoutes() {
 }
 
 func (r *Routes) PaymentRoutes() {
+	// Initialize storage provider (MinIO or R2) from infrastructure
+	storageProvider, err := media.InitStorage()
+	if err != nil {
+		logger.WriteLog(logger.LogLevelError, "Failed to initialize storage provider: "+err.Error())
+		panic("Failed to initialize storage provider: " + err.Error())
+	}
+
 	vRepo := vendorRepo.NewVendorRepo(r.DB)
 	pRepo := paymentRepo.NewPaymentRepo(r.DB)
-	svc := paymentSvc.NewPaymentService(pRepo, vRepo)
+	svc := paymentSvc.NewPaymentService(pRepo, vRepo, storageProvider)
 	h := paymentHandler.NewPaymentHandler(svc, vRepo)
 	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB))
 
@@ -282,10 +319,17 @@ func (r *Routes) PaymentRoutes() {
 }
 
 func (r *Routes) EvaluationRoutes() {
+	// Initialize storage provider (MinIO or R2) from infrastructure
+	storageProvider, err := media.InitStorage()
+	if err != nil {
+		logger.WriteLog(logger.LogLevelError, "Failed to initialize storage provider: "+err.Error())
+		panic("Failed to initialize storage provider: " + err.Error())
+	}
+
 	vRepo := vendorRepo.NewVendorRepo(r.DB)
 	eRepo := eventRepo.NewEventRepo(r.DB)
 	evRepo := evaluationRepo.NewEvaluationRepo(r.DB)
-	svc := evaluationSvc.NewEvaluationService(evRepo, eRepo, vRepo)
+	svc := evaluationSvc.NewEvaluationService(evRepo, eRepo, vRepo, storageProvider)
 	h := evaluationHandler.NewEvaluationHandler(svc, vRepo)
 	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB))
 

@@ -24,10 +24,10 @@ class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {
+        // Don't automatically redirect on 401
+        // Let the component/context handle it
         if (error.response?.status === 401) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          window.location.href = '/login';
+          console.warn('Unauthorized request detected:', error.config?.url);
         }
         return Promise.reject(error);
       }

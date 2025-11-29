@@ -1,6 +1,9 @@
 package interfaceevents
 
 import (
+	"context"
+	"mime/multipart"
+
 	domainevents "vendor-management-system/internal/domain/events"
 	"vendor-management-system/internal/dto"
 	"vendor-management-system/pkg/filter"
@@ -14,6 +17,10 @@ type ServiceEventInterface interface {
 	UpdateEvent(id string, req dto.UpdateEventRequest) (domainevents.Event, error)
 	DeleteEvent(id string) error
 
+	// Event file operations
+	UploadEventFile(ctx context.Context, eventId string, userId string, file *multipart.FileHeader, req dto.UploadEventFileRequest) (domainevents.EventFile, error)
+	DeleteEventFile(ctx context.Context, fileId string) error
+
 	// Submission operations
 	SubmitPitch(eventId, vendorId string, req dto.SubmitPitchRequest) (domainevents.EventSubmission, error)
 	GetSubmissionsByEventID(eventId string) ([]domainevents.EventSubmission, error)
@@ -23,4 +30,8 @@ type ServiceEventInterface interface {
 	SelectWinner(eventId, submissionId string) (domainevents.Event, error)
 	GetEventResult(eventId, vendorId string) (map[string]interface{}, error)
 	GetEventResultForAdmin(eventId string) (map[string]interface{}, error)
+
+	// Submission file operations
+	UploadSubmissionFile(ctx context.Context, submissionId string, userId string, file *multipart.FileHeader, req dto.UploadSubmissionFileRequest) (domainevents.EventSubmissionFile, error)
+	DeleteSubmissionFile(ctx context.Context, fileId string) error
 }

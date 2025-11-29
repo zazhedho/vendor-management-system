@@ -1,10 +1,12 @@
 package handlerevaluations
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
+	"strconv"
 
 	"vendor-management-system/internal/dto"
 	interfaceevaluations "vendor-management-system/internal/interfaces/evaluations"
@@ -224,7 +226,6 @@ func (h *HandlerEvaluation) DeleteEvaluation(ctx *gin.Context) {
 }
 
 func (h *HandlerEvaluation) UploadPhoto(ctx *gin.Context) {
-	var req dto.UploadPhotoRequest
 	logId := utils.GenerateLogId(ctx)
 	logPrefix := fmt.Sprintf("[%s][EvaluationHandler][UploadPhoto]", logId)
 
@@ -233,15 +234,32 @@ func (h *HandlerEvaluation) UploadPhoto(ctx *gin.Context) {
 		return
 	}
 
-	if err := ctx.BindJSON(&req); err != nil {
-		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; BindJSON ERROR: %s;", logPrefix, err.Error()))
-		res := response.Response(http.StatusBadRequest, messages.InvalidRequest, logId, nil)
-		res.Error = utils.ValidateError(err, reflect.TypeOf(req), "json")
+	// Get file from multipart form
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; FormFile ERROR: %s;", logPrefix, err.Error()))
+		res := response.Response(http.StatusBadRequest, "File is required", logId, nil)
 		ctx.JSON(http.StatusBadRequest, res)
 		return
 	}
 
-	data, err := h.Service.UploadPhoto(evaluationId, req)
+	// Get optional fields from form
+	review := ctx.PostForm("review")
+	ratingStr := ctx.PostForm("rating")
+
+	var rating float64
+	if ratingStr != "" {
+		if r, err := strconv.ParseFloat(ratingStr, 64); err == nil {
+			rating = r
+		}
+	}
+
+	req := dto.UploadEvaluationPhotoRequest{
+		Review: review,
+		Rating: rating,
+	}
+
+	data, err := h.Service.UploadPhoto(ctx.Request.Context(), evaluationId, file, req)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.UploadPhoto; ERROR: %s;", logPrefix, err))
 		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
@@ -251,13 +269,14 @@ func (h *HandlerEvaluation) UploadPhoto(ctx *gin.Context) {
 	}
 
 	res := response.Response(http.StatusOK, "Photo uploaded successfully", logId, data)
+	logger.WriteLog(logger.LogLevelDebug, fmt.Sprintf("%s; Response: %+v;", logPrefix, utils.JsonEncode(data)))
 	ctx.JSON(http.StatusOK, res)
 }
 
 func (h *HandlerEvaluation) ReviewPhoto(ctx *gin.Context) {
-	var req dto.ReviewPhotoRequest
+	var req dto.UpdateEvaluationPhotoRequest
 	logId := utils.GenerateLogId(ctx)
-	logPrefix := fmt.Sprintf("[%s][EvaluationHandler][ReviewPhoto]", logId)
+	logPrefix := fmt.Sprintf("[%s][EvaluationHandler][UpdatePhoto]", logId)
 
 	photoId, err := utils.ValidateUUID(ctx, logId)
 	if err != nil {
@@ -272,7 +291,7 @@ func (h *HandlerEvaluation) ReviewPhoto(ctx *gin.Context) {
 		return
 	}
 
-	data, err := h.Service.ReviewPhoto(photoId, req)
+	data, err := h.Service.UpdatePhoto(photoId, req)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.ReviewPhoto; ERROR: %s;", logPrefix, err))
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -300,7 +319,8 @@ func (h *HandlerEvaluation) DeletePhoto(ctx *gin.Context) {
 		return
 	}
 
-	if err := h.Service.DeletePhoto(photoId); err != nil {
+	// TODO: Pass proper context from request
+	if err := h.Service.DeletePhoto(context.Background(), photoId); err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.DeletePhoto; ERROR: %s;", logPrefix, err))
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			res := response.Response(http.StatusNotFound, messages.MsgNotFound, logId, nil)

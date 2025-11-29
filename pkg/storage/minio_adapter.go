@@ -31,16 +31,29 @@ func NewMinIOAdapter(config Config) (StorageProvider, error) {
 		return nil, fmt.Errorf("failed to create MinIO client: %w", err)
 	}
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	exists, err := minioClient.BucketExists(ctx, config.BucketName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check bucket existence: %w", err)
+		// Return adapter without bucket check for development
+		// Bucket will be created on first upload if needed
+		return &MinIOAdapter{
+			client:     minioClient,
+			bucketName: config.BucketName,
+			baseURL:    config.BaseURL,
+		}, nil
 	}
 
 	if !exists {
 		err = minioClient.MakeBucket(ctx, config.BucketName, minio.MakeBucketOptions{})
 		if err != nil {
-			return nil, fmt.Errorf("failed to create bucket: %w", err)
+			// Ignore error, bucket will be created on first upload
+			return &MinIOAdapter{
+				client:     minioClient,
+				bucketName: config.BucketName,
+				baseURL:    config.BaseURL,
+			}, nil
 		}
 
 		policy := fmt.Sprintf(`{
@@ -53,10 +66,7 @@ func NewMinIOAdapter(config Config) (StorageProvider, error) {
 			}]
 		}`, config.BucketName)
 
-		err = minioClient.SetBucketPolicy(ctx, config.BucketName, policy)
-		if err != nil {
-			return nil, fmt.Errorf("failed to set bucket policy: %w", err)
-		}
+		_ = minioClient.SetBucketPolicy(ctx, config.BucketName, policy)
 	}
 
 	return &MinIOAdapter{
@@ -67,6 +77,9 @@ func NewMinIOAdapter(config Config) (StorageProvider, error) {
 }
 
 func (m *MinIOAdapter) UploadFile(ctx context.Context, file multipart.File, fileHeader *multipart.FileHeader, folder string) (string, error) {
+	// Ensure bucket exists before uploading
+	m.ensureBucket(ctx)
+
 	ext := filepath.Ext(fileHeader.Filename)
 	filename := fmt.Sprintf("%s_%s%s", time.Now().Format("20060102_150405"), uuid.New().String()[:8], ext)
 
@@ -94,6 +107,9 @@ func (m *MinIOAdapter) UploadFile(ctx context.Context, file multipart.File, file
 }
 
 func (m *MinIOAdapter) UploadFileFromBytes(ctx context.Context, data []byte, filename string, folder string, contentType string) (string, error) {
+	// Ensure bucket exists before uploading
+	m.ensureBucket(ctx)
+
 	ext := filepath.Ext(filename)
 	uniqueFilename := fmt.Sprintf("%s_%s%s", time.Now().Format("20060102_150405"), uuid.New().String()[:8], ext)
 
@@ -142,6 +158,32 @@ func (m *MinIOAdapter) DownloadFile(ctx context.Context, objectName string) (io.
 		return nil, fmt.Errorf("failed to download file: %w", err)
 	}
 	return object, nil
+}
+
+func (m *MinIOAdapter) ensureBucket(ctx context.Context) {
+	exists, err := m.client.BucketExists(ctx, m.bucketName)
+	if err != nil || exists {
+		return
+	}
+
+	// Create bucket if it doesn't exist
+	err = m.client.MakeBucket(ctx, m.bucketName, minio.MakeBucketOptions{})
+	if err != nil {
+		return
+	}
+
+	// Set public read policy
+	policy := fmt.Sprintf(`{
+		"Version": "2012-10-17",
+		"Statement": [{
+			"Effect": "Allow",
+			"Principal": {"AWS": ["*"]},
+			"Action": ["s3:GetObject"],
+			"Resource": ["arn:aws:s3:::%s/*"]
+		}]
+	}`, m.bucketName)
+
+	_ = m.client.SetBucketPolicy(ctx, m.bucketName, policy)
 }
 
 func (m *MinIOAdapter) extractObjectName(fileURL string) string {

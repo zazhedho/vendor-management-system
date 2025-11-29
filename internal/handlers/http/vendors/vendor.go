@@ -106,6 +106,36 @@ func (h *HandlerVendor) GetAllVendors(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, res)
 }
 
+func (h *HandlerVendor) GetVendorDetail(ctx *gin.Context) {
+	logId := utils.GenerateLogId(ctx)
+	logPrefix := fmt.Sprintf("[%s][VendorHandler][GetVendorDetail]", logId)
+
+	id, err := utils.ValidateUUID(ctx, logId)
+	if err != nil {
+		return
+	}
+
+	vendor, err := h.Service.GetVendorProfileByVendorID(id)
+	if err != nil {
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetVendorDetail; ERROR: %s;", logPrefix, err))
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			res := response.Response(http.StatusNotFound, messages.MsgNotFound, logId, nil)
+			res.Error = response.Errors{Code: http.StatusNotFound, Message: "vendor not found"}
+			ctx.JSON(http.StatusNotFound, res)
+			return
+		}
+
+		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
+		res.Error = err.Error()
+		ctx.JSON(http.StatusInternalServerError, res)
+		return
+	}
+
+	res := response.Response(http.StatusOK, "Get Vendor Detail successfully", logId, vendor)
+	logger.WriteLog(logger.LogLevelDebug, fmt.Sprintf("%s; Response: %+v;", logPrefix, utils.JsonEncode(vendor)))
+	ctx.JSON(http.StatusOK, res)
+}
+
 func (h *HandlerVendor) UpdateVendorStatus(ctx *gin.Context) {
 	var req dto.UpdateVendorStatusRequest
 	logId := utils.GenerateLogId(ctx)

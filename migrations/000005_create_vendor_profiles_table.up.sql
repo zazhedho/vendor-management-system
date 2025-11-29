@@ -1,40 +1,161 @@
+-- ================================
+-- ENUM tax_status
+-- ================================
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_type WHERE typname = 'tax_status'
+    ) THEN
+        CREATE TYPE tax_status AS ENUM ('PKP', 'non-PKP');
+    END IF;
+END$$;
+
+-- ================================
+-- ENUM file_status
+-- ================================
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_type WHERE typname = 'file_status'
+    ) THEN
+        CREATE TYPE file_status AS ENUM ('pending', 'approved', 'rejected');
+    END IF;
+END$$;
+
+
+-- ================================
+-- vendor_profiles table
+-- ================================
 CREATE TABLE IF NOT EXISTS vendor_profiles (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    vendor_id UUID NOT NULL,
+    id VARCHAR(36) PRIMARY KEY,
+    vendor_id VARCHAR(36) NOT NULL,
     vendor_name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
-    phone VARCHAR(20),
-    fax VARCHAR(20),
-    mobile VARCHAR(20),
-    province VARCHAR(100),
-    city VARCHAR(100),
-    district VARCHAR(100),
-    address TEXT,
-    business_field VARCHAR(255),
-    npwp_number VARCHAR(50),
-    npwp_name VARCHAR(255),
-    npwp_address TEXT,
-    npwp_file_path VARCHAR(500),
-    bank_name VARCHAR(100),
-    bank_branch VARCHAR(100),
-    account_number VARCHAR(50),
-    account_holder_name VARCHAR(255),
-    bank_book_file_path VARCHAR(500),
-    transaction_type TEXT,
-    purch_group VARCHAR(100),
-    region_or_so VARCHAR(255),
-    nik VARCHAR(20),
-    ktp_file_path VARCHAR(500),
+    telephone VARCHAR(50) NULL,
+    fax VARCHAR(50) NULL,
+    phone VARCHAR(50) NULL,
+    province VARCHAR(100) NULL,
+    city VARCHAR(100) NULL,
+    district VARCHAR(100) NULL,
+    address TEXT NULL,
+    business_field VARCHAR(255) NULL,
 
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    created_by VARCHAR(50),
-    updated_at TIMESTAMP,
-    updated_by VARCHAR(50),
-    deleted_at TIMESTAMP,
-    deleted_by VARCHAR(50),
-    CONSTRAINT fk_vendor_profiles_vendor FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE CASCADE
+    ktp_name VARCHAR(255) NOT NULL,
+    ktp_number VARCHAR(50) NULL,
+    npwp_name VARCHAR(255) NULL,
+    npwp_number VARCHAR(50) NULL,
+    npwp_address TEXT NULL,
+    tax_status tax_status NULL,
+
+    bank_name VARCHAR(100) NULL,
+    bank_branch VARCHAR(100) NULL,
+    account_number VARCHAR(50) NULL,
+    account_holder_name VARCHAR(255) NULL,
+
+    transaction_type VARCHAR(100) NULL,
+    purch_group VARCHAR(100) NULL,
+    region_or_so VARCHAR(100) NULL,
+
+    contact_person VARCHAR(255) NULL,
+    contact_email VARCHAR(255) NULL,
+    contact_phone VARCHAR(50) NULL,
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(36) NOT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by VARCHAR(36) NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    deleted_by VARCHAR(36) NULL,
+
+    CONSTRAINT fk_vendor_profiles_vendor
+        FOREIGN KEY (vendor_id)
+        REFERENCES vendors(id)
+        ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_vendor_profiles_vendor_id ON vendor_profiles(vendor_id);
-CREATE INDEX IF NOT EXISTS idx_vendor_profiles_npwp ON vendor_profiles(npwp_number);
-CREATE INDEX IF NOT EXISTS idx_vendor_profiles_nik ON vendor_profiles(nik);
+
+-- ================================
+-- Column comments
+-- ================================
+COMMENT ON COLUMN vendor_profiles.tax_status IS 'PKP, non-PKP';
+
+
+-- ================================
+-- Indexes
+-- ================================
+CREATE INDEX IF NOT EXISTS idx_vendor_profiles_vendor_id
+    ON vendor_profiles(vendor_id);
+
+CREATE INDEX IF NOT EXISTS idx_vendor_profiles_email
+    ON vendor_profiles(email);
+
+CREATE INDEX IF NOT EXISTS idx_vendor_profiles_deleted_at
+    ON vendor_profiles(deleted_at);
+
+
+-- ================================
+-- updated_at trigger
+-- ================================
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_trigger t
+        JOIN pg_class c ON c.oid = t.tgrelid
+        WHERE t.tgname = 'trg_vendor_profiles_set_updated_at'
+          AND c.relname = 'vendor_profiles'
+    ) THEN
+        CREATE TRIGGER trg_vendor_profiles_set_updated_at
+            BEFORE UPDATE ON vendor_profiles
+            FOR EACH ROW
+            EXECUTE FUNCTION set_updated_at();
+    END IF;
+END$$;
+
+
+-- ================================
+-- vendor_profile_files table
+-- ================================
+CREATE TABLE IF NOT EXISTS vendor_profile_files (
+    id VARCHAR(36) PRIMARY KEY,
+    vendor_profile_id VARCHAR(36) NOT NULL,
+    file_type VARCHAR(50) NOT NULL,
+    file_url TEXT NOT NULL,
+    issued_at TIMESTAMP NULL,
+    expired_at TIMESTAMP NULL,
+    status file_status NOT NULL DEFAULT 'pending',
+    verified_at TIMESTAMP NULL,
+    verified_by VARCHAR(36) NULL,
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(36) NOT NULL,
+    deleted_at TIMESTAMP NULL,
+
+    CONSTRAINT fk_vendor_profile_files_profile
+        FOREIGN KEY (vendor_profile_id)
+        REFERENCES vendor_profiles(id)
+        ON DELETE CASCADE
+);
+
+
+-- ================================
+-- Column comments
+-- ================================
+COMMENT ON COLUMN vendor_profile_files.file_type IS 'ktp, npwp, bank_book, nib, siup, akta, dll';
+COMMENT ON COLUMN vendor_profile_files.status IS 'pending, approved, rejected';
+
+
+-- ================================
+-- Indexes
+-- ================================
+CREATE INDEX IF NOT EXISTS idx_vendor_profile_files_vendor_profile_id
+    ON vendor_profile_files(vendor_profile_id);
+
+CREATE INDEX IF NOT EXISTS idx_vendor_profile_files_file_type
+    ON vendor_profile_files(file_type);
+
+CREATE INDEX IF NOT EXISTS idx_vendor_profile_files_status
+    ON vendor_profile_files(status);
+
+CREATE INDEX IF NOT EXISTS idx_vendor_profile_files_deleted_at
+    ON vendor_profile_files(deleted_at);
