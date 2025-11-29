@@ -7,10 +7,10 @@ import { Layout } from './components/Layout';
 import { Login, Register, ForgotPassword, ResetPassword, ChangePassword } from './pages/auth';
 import { Dashboard } from './pages/Dashboard';
 import { EventList, EventForm, EventDetail } from './pages/events';
-import { VendorList, VendorForm, VendorDetail } from './pages/vendors';
+import { VendorList, VendorForm, VendorDetail, VendorProfile } from './pages/vendors';
 import { PaymentList, PaymentDetail } from './pages/payments';
 import { EvaluationList } from './pages/evaluations';
-import { UserList, UserForm } from './pages/users';
+import { UserList, UserForm, Profile } from './pages/users';
 import { RoleList, RoleForm } from './pages/roles';
 import { MenuList, MenuForm } from './pages/menus';
 
@@ -250,6 +250,79 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <MenuForm />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Profile />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Vendor Profile Routes */}
+          <Route
+            path="/vendor/profile"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <VendorProfile />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor/profile/detail"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <VendorProfile />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor/profile/edit"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <VendorProfile />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor/profile/:id/detail"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <VendorDetail />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor/profile/new"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <VendorProfile />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor/profile/:id/edit"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <VendorProfile />
                 </Layout>
               </ProtectedRoute>
             }

@@ -442,3 +442,81 @@ func (h *HandlerEvent) GetEventResultForAdmin(ctx *gin.Context) {
 	res := response.Response(http.StatusOK, "success", logId, data)
 	ctx.JSON(http.StatusOK, res)
 }
+
+func (h *HandlerEvent) UploadEventFile(ctx *gin.Context) {
+	authData := utils.GetAuthData(ctx)
+	userId := utils.InterfaceString(authData["user_id"])
+	logId := utils.GenerateLogId(ctx)
+	logPrefix := fmt.Sprintf("[%s][EventHandler][UploadEventFile]", logId)
+
+	eventId := ctx.Param("id")
+	if eventId == "" {
+		res := response.Response(http.StatusBadRequest, messages.InvalidRequest, logId, nil)
+		res.Error = "event id is required"
+		ctx.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; FormFile ERROR: %s;", logPrefix, err.Error()))
+		res := response.Response(http.StatusBadRequest, messages.InvalidRequest, logId, nil)
+		res.Error = "file is required"
+		ctx.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	fileType := ctx.PostForm("file_type")
+	if fileType == "" {
+		fileType = "document"
+	}
+	caption := ctx.PostForm("caption")
+
+	req := dto.UploadEventFileRequest{
+		FileType: fileType,
+		Caption:  caption,
+	}
+
+	data, err := h.Service.UploadEventFile(ctx.Request.Context(), eventId, userId, file, req)
+	if err != nil {
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.UploadEventFile; ERROR: %s;", logPrefix, err))
+		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
+		res.Error = err.Error()
+		ctx.JSON(http.StatusInternalServerError, res)
+		return
+	}
+
+	res := response.Response(http.StatusOK, "file uploaded successfully", logId, data)
+	ctx.JSON(http.StatusOK, res)
+}
+
+func (h *HandlerEvent) DeleteEventFile(ctx *gin.Context) {
+	logId := utils.GenerateLogId(ctx)
+	logPrefix := fmt.Sprintf("[%s][EventHandler][DeleteEventFile]", logId)
+
+	fileId := ctx.Param("fileId")
+	if fileId == "" {
+		res := response.Response(http.StatusBadRequest, messages.InvalidRequest, logId, nil)
+		res.Error = "file id is required"
+		ctx.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	err := h.Service.DeleteEventFile(ctx.Request.Context(), fileId)
+	if err != nil {
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.DeleteEventFile; ERROR: %s;", logPrefix, err))
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			res := response.Response(http.StatusNotFound, messages.MsgNotFound, logId, nil)
+			res.Error = "file not found"
+			ctx.JSON(http.StatusNotFound, res)
+			return
+		}
+		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
+		res.Error = err.Error()
+		ctx.JSON(http.StatusInternalServerError, res)
+		return
+	}
+
+	res := response.Response(http.StatusOK, "file deleted successfully", logId, nil)
+	ctx.JSON(http.StatusOK, res)
+}

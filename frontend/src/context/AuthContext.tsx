@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { User, Menu } from '../types';
 import { authApi } from '../api/auth';
 import { menusApi } from '../api/menus';
+import { permissionsApi } from '../api/permissions';
 
 interface AuthContextType {
   user: User | null;
@@ -58,13 +59,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           localStorage.setItem('user', JSON.stringify(profileResponse.data));
 
           try {
+            // Fetch menus using the correct endpoint
             const menusResponse = await menusApi.getMyMenus();
             if (menusResponse.status && menusResponse.data) {
               setUserMenus(menusResponse.data);
               localStorage.setItem('userMenus', JSON.stringify(menusResponse.data));
             }
+
+            // Fetch permissions using the correct endpoint
+            try {
+              const permissionsResponse = await permissionsApi.getMyPermissions();
+              if (permissionsResponse.status && permissionsResponse.data) {
+                const permissionNames = permissionsResponse.data.map(p => p.name);
+                setUser(prev => prev ? { ...prev, permissions: permissionNames } : null);
+
+                // Update local storage as well to persist permissions
+                const updatedUser = { ...profileResponse.data, permissions: permissionNames };
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+              }
+            } catch (error) {
+              console.error('Failed to fetch user permissions:', error);
+            }
           } catch (error) {
-            console.error('Failed to fetch user menus:', error);
+            console.error('Failed to fetch user data:', error);
           }
 
           return { success: true, user: profileResponse.data };

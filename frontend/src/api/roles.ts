@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import { Role, Permission, ApiResponse, PaginatedResponse } from '../types';
+import { Role, ApiResponse, PaginatedResponse } from '../types';
 
 export const rolesApi = {
   getAll: async (params?: { page?: number; limit?: number; search?: string }) => {
@@ -27,20 +27,10 @@ export const rolesApi = {
     return response.data;
   },
 
-  getPermissions: async (roleId: string) => {
-    const response = await apiClient.get<ApiResponse<Permission[]>>(`/role/${roleId}/permissions`);
-    return response.data;
-  },
-
   assignPermissions: async (roleId: string, permissionIds: string[]) => {
     const response = await apiClient.post<ApiResponse>(`/role/${roleId}/permissions`, {
       permission_ids: permissionIds,
     });
-    return response.data;
-  },
-
-  getMenus: async (roleId: string) => {
-    const response = await apiClient.get<ApiResponse>(`/role/${roleId}/menus`);
     return response.data;
   },
 

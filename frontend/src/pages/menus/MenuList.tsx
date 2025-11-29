@@ -2,24 +2,33 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { menusApi } from '../../api/menus';
 import { Menu } from '../../types';
-import { Plus, Search, List, Edit, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, List } from 'lucide-react';
+import { Button, Card, Table, Badge } from '../../components/ui';
 
 export const MenuList: React.FC = () => {
   const navigate = useNavigate();
   const [menus, setMenus] = useState<Menu[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     fetchMenus();
-  }, [searchTerm]);
+  }, [currentPage, searchTerm]);
 
   const fetchMenus = async () => {
     setIsLoading(true);
     try {
-      const response = await menusApi.getAll({ limit: 1000, search: searchTerm });
+      const response = await menusApi.getAll({
+        page: currentPage,
+        limit: 10,
+        search: searchTerm,
+      });
+
       if (response.status) {
         setMenus(response.data || []);
+        setTotalPages(response.total_pages || 1);
       }
     } catch (error) {
       console.error('Failed to fetch menus:', error);
@@ -28,8 +37,10 @@ export const MenuList: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
     if (!window.confirm('Are you sure you want to delete this menu?')) return;
+
     try {
       await menusApi.delete(id);
       fetchMenus();
@@ -38,100 +49,111 @@ export const MenuList: React.FC = () => {
     }
   };
 
-  const sortedMenus = [...menus].sort((a, b) => a.order_index - b.order_index);
+  const columns = [
+    {
+      header: 'Display Name',
+      accessor: (menu: Menu) => <span className="font-medium text-secondary-900">{menu.display_name}</span>
+    },
+    {
+      header: 'Icon',
+      accessor: (menu: Menu) => <span className="font-mono text-xs text-secondary-500">{menu.icon || '-'}</span>
+    },
+    {
+      header: 'Path',
+      accessor: (menu: Menu) => <span className="font-mono text-xs text-secondary-600">{menu.path}</span>
+    },
+    {
+      header: 'Order',
+      accessor: 'order_index'
+    },
+    {
+      header: 'Status',
+      accessor: (menu: Menu) => (
+        <Badge variant={menu.is_active ? 'success' : 'secondary'}>
+          {menu.is_active ? 'Active' : 'Inactive'}
+        </Badge>
+      )
+    },
+    {
+      header: 'Actions',
+      accessor: (menu: Menu) => (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => { e.stopPropagation(); navigate(`/menus/${menu.id}/edit`); }}
+          >
+            <Edit size={16} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-danger-600 hover:text-danger-700 hover:bg-danger-50"
+            onClick={(e) => handleDelete(e, menu.id)}
+          >
+            <Trash2 size={16} />
+          </Button>
+        </div>
+      )
+    }
+  ];
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Menu Management</h1>
-          <p className="text-gray-600 mt-2">Configure system navigation menus</p>
+          <h1 className="text-2xl font-bold text-secondary-900">Menu Management</h1>
+          <p className="text-secondary-500">Manage application navigation menus</p>
         </div>
-        <button onClick={() => navigate('/menus/new')} className="btn btn-primary flex items-center space-x-2">
-          <Plus size={20} />
-          <span>Create Menu</span>
-        </button>
+        <Button
+          onClick={() => navigate('/menus/new')}
+          leftIcon={<Plus size={20} />}
+        >
+          Create Menu
+        </Button>
       </div>
 
-      <div className="card mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+      <Card className="p-4">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-400" size={20} />
           <input
             type="text"
             placeholder="Search menus..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="input pl-10"
+            className="w-full pl-10 pr-4 py-2 rounded-lg border border-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           />
         </div>
-      </div>
+      </Card>
 
-      {isLoading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-        </div>
-      ) : (
-        <div className="card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Display Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">URL</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {sortedMenus.map((menu) => (
-                  <tr key={menu.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{menu.order_index}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <List size={16} className="text-primary-500 mr-2" />
-                        <span className="text-sm font-medium text-gray-900">{menu.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{menu.display_name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{menu.url || '-'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {menu.is_active ? (
-                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700 flex items-center space-x-1 w-fit">
-                          <ToggleRight size={14} />
-                          <span>Active</span>
-                        </span>
-                      ) : (
-                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700 flex items-center space-x-1 w-fit">
-                          <ToggleLeft size={14} />
-                          <span>Inactive</span>
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => navigate(`/menus/${menu.id}/edit`)}
-                          className="text-gray-600 hover:text-gray-700"
-                          title="Edit"
-                        >
-                          <Edit size={18} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(menu.id)}
-                          className="text-red-600 hover:text-red-700"
-                          title="Delete"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      <Table
+        data={menus}
+        columns={columns}
+        keyField="id"
+        isLoading={isLoading}
+        onRowClick={(menu) => navigate(`/menus/${menu.id}/edit`)}
+        emptyMessage="No menus found."
+      />
+
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </Button>
+          <span className="flex items-center px-4 text-sm text-secondary-600">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="secondary"
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </Button>
         </div>
       )}
     </div>

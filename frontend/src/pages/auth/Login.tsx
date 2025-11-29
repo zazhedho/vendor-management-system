@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
-import { LogIn } from 'lucide-react';
+import { Mail, Lock, ArrowRight } from 'lucide-react';
+import { AuthLayout } from '../../components/AuthLayout';
+import { Button, Input, Card } from '../../components/ui';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -18,7 +20,7 @@ export const Login: React.FC = () => {
     try {
       const result = await login(email, password);
       if (result.success) {
-        toast.success('Login successful!');
+        toast.success('Welcome back!');
         navigate('/dashboard');
       } else {
         toast.error(result.error || 'Login failed');
@@ -31,69 +33,64 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-blue-100 px-4">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-full mb-4">
-            <LogIn className="text-white" size={32} />
-          </div>
-          <h2 className="text-3xl font-bold text-gray-900">Welcome Back</h2>
-          <p className="text-gray-600 mt-2">Sign in to your account</p>
-        </div>
+    <AuthLayout
+      title="Welcome Back"
+      subtitle="Sign in to access your vendor dashboard"
+    >
+      <Card className="shadow-xl border-secondary-100/50 backdrop-blur-sm bg-white/90">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <Input
+            label="Email Address"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="name@company.com"
+            required
+            leftIcon={<Mail className="w-5 h-5" />}
+          />
 
-        <div className="card">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="label">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="input"
-                placeholder="your@email.com"
-                required
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="label">Password</label>
-                <Link
-                  to="/forgot-password"
-                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                >
-                  Forgot Password?
-                </Link>
-              </div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input"
-                placeholder="Enter your password"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="btn btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">
-                Sign up
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-sm font-medium text-secondary-700">
+                Password
+              </label>
+              <Link
+                to="/forgot-password"
+                className="text-sm text-primary-600 hover:text-primary-700 font-medium transition-colors"
+              >
+                Forgot password?
               </Link>
-            </p>
+            </div>
+            <Input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              required
+              leftIcon={<Lock className="w-5 h-5" />}
+            />
           </div>
+
+          <Button
+            type="submit"
+            isLoading={isLoading}
+            className="w-full"
+            size="lg"
+            rightIcon={!isLoading && <ArrowRight className="w-4 h-4" />}
+          >
+            Sign In
+          </Button>
+        </form>
+
+        <div className="mt-6 pt-6 border-t border-secondary-100 text-center">
+          <p className="text-sm text-secondary-600">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-primary-600 hover:text-primary-700 font-semibold transition-colors">
+              Create account
+            </Link>
+          </p>
         </div>
-      </div>
-    </div>
+      </Card>
+    </AuthLayout>
   );
 };

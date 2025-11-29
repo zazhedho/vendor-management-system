@@ -24,7 +24,7 @@ func (r *repo) CreateEvent(m domainevents.Event) error {
 }
 
 func (r *repo) GetEventByID(id string) (ret domainevents.Event, err error) {
-	if err = r.DB.Where("id = ?", id).First(&ret).Error; err != nil {
+	if err = r.DB.Preload("File").Where("id = ?", id).First(&ret).Error; err != nil {
 		return domainevents.Event{}, err
 	}
 	return ret, nil

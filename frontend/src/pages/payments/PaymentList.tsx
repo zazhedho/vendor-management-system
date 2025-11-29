@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { paymentsApi } from '../../api/payments';
 import { Payment } from '../../types';
-import { Plus, Search, CreditCard, DollarSign } from 'lucide-react';
+import { Plus, Search, CreditCard, DollarSign, Eye } from 'lucide-react';
+import { Button, Card, Table, Badge } from '../../components/ui';
+import { useAuth } from '../../context/AuthContext';
 
 export const PaymentList: React.FC = () => {
+  const navigate = useNavigate();
+  const { hasRole } = useAuth();
+  const isVendor = hasRole('vendor');
   const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,18 +40,13 @@ export const PaymentList: React.FC = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'paid':
-        return 'bg-green-100 text-green-700';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-700';
-      case 'failed':
-        return 'bg-red-100 text-red-700';
-      case 'processing':
-        return 'bg-blue-100 text-blue-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
+      case 'paid': return 'success';
+      case 'pending': return 'warning';
+      case 'failed': return 'danger';
+      case 'processing': return 'info';
+      default: return 'secondary';
     }
   };
 
@@ -56,139 +57,112 @@ export const PaymentList: React.FC = () => {
     }).format(parseFloat(amount));
   };
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('id-ID', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
+  const columns = [
+    {
+      header: 'Invoice',
+      accessor: (payment: Payment) => (
+        <div className="flex items-center gap-2">
+          <CreditCard size={16} className="text-secondary-400" />
+          <span className="font-medium text-secondary-900">{payment.invoice_number}</span>
+        </div>
+      )
+    },
+    {
+      header: 'Amount',
+      accessor: (payment: Payment) => (
+        <span className="font-semibold text-secondary-900">{formatCurrency(payment.amount)}</span>
+      )
+    },
+    {
+      header: 'Status',
+      accessor: (payment: Payment) => (
+        <Badge variant={getStatusVariant(payment.status)} className="capitalize">
+          {payment.status}
+        </Badge>
+      )
+    },
+    {
+      header: 'Date',
+      accessor: (payment: Payment) => (
+        <span className="text-secondary-600 text-sm">
+          {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : '-'}
+        </span>
+      )
+    },
+    {
+      header: 'Actions',
+      accessor: (payment: Payment) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate(`/payments/${payment.id}`)}
+          leftIcon={<Eye size={16} />}
+        >
+          Details
+        </Button>
+      )
+    }
+  ];
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Payments</h1>
-          <p className="text-gray-600 mt-2">Track and manage payment transactions</p>
+          <h1 className="text-2xl font-bold text-secondary-900">Payments</h1>
+          <p className="text-secondary-500">{isVendor ? "View your payment history" : "Track and manage payment transactions"}</p>
         </div>
-        <button className="btn btn-primary flex items-center space-x-2">
-          <Plus size={20} />
-          <span>Create Payment</span>
-        </button>
+        {!isVendor && (
+          <Button
+            onClick={() => navigate('/payments/new')}
+            leftIcon={<Plus size={20} />}
+          >
+            Create Payment
+          </Button>
+        )}
       </div>
 
-      <div className="card mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+      <Card className="p-4">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-400" size={20} />
           <input
             type="text"
-            placeholder="Search payments by invoice number..."
+            placeholder="Search invoice number..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="input pl-10"
+            className="w-full pl-10 pr-4 py-2 rounded-lg border border-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           />
         </div>
-      </div>
+      </Card>
 
-      {isLoading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-        </div>
-      ) : payments.length === 0 ? (
-        <div className="card text-center py-12">
-          <CreditCard className="mx-auto text-gray-400 mb-4" size={48} />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No payments found</h3>
-          <p className="text-gray-600">Create your first payment transaction</p>
-        </div>
-      ) : (
-        <>
-          <div className="card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Invoice
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Amount
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Payment Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Created
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {payments.map((payment) => (
-                    <tr key={payment.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <DollarSign size={16} className="text-gray-400 mr-2" />
-                          <span className="text-sm font-medium text-gray-900">
-                            {payment.invoice_number}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-semibold text-gray-900">
-                          {formatCurrency(payment.amount)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(payment.status)}`}>
-                          {payment.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {formatDate(payment.payment_date)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {formatDate(payment.created_at)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <button className="text-primary-600 hover:text-primary-700 font-medium">
-                          View Details
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+      <Table
+        data={payments}
+        columns={columns}
+        keyField="id"
+        isLoading={isLoading}
+        onRowClick={(payment) => navigate(`/payments/${payment.id}`)}
+        emptyMessage={isVendor ? "No payments found for your account." : "No payments found."}
+      />
 
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center space-x-2 mt-6">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="btn btn-secondary disabled:opacity-50"
-              >
-                Previous
-              </button>
-              <span className="text-gray-600">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="btn btn-secondary disabled:opacity-50"
-              >
-                Next
-              </button>
-            </div>
-          )}
-        </>
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </Button>
+          <span className="flex items-center px-4 text-sm text-secondary-600">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="secondary"
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </Button>
+        </div>
       )}
     </div>
   );

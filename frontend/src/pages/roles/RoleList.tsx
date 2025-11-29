@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { rolesApi } from '../../api/roles';
 import { Role } from '../../types';
-import { Plus, Search, Shield, Eye, Edit, Trash2, Lock } from 'lucide-react';
+import { Plus, Search, Shield, Edit, Trash2, Lock, Eye } from 'lucide-react';
+import { Button, Card, Table, Badge } from '../../components/ui';
 
 export const RoleList: React.FC = () => {
   const navigate = useNavigate();
@@ -36,7 +37,8 @@ export const RoleList: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string, isSystem: boolean) => {
+  const handleDelete = async (e: React.MouseEvent, id: string, isSystem: boolean) => {
+    e.stopPropagation();
     if (isSystem) {
       alert('System roles cannot be deleted');
       return;
@@ -52,149 +54,119 @@ export const RoleList: React.FC = () => {
     }
   };
 
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Roles Management</h1>
-          <p className="text-gray-600 mt-2">Manage system roles and permissions</p>
+  const columns = [
+    {
+      header: 'Role Name',
+      accessor: (role: Role) => (
+        <div className="flex items-center gap-2">
+          <Shield size={16} className="text-primary-500" />
+          <span className="font-medium text-secondary-900">{role.name}</span>
         </div>
-        <button
+      )
+    },
+    {
+      header: 'Display Name',
+      accessor: 'display_name'
+    },
+    {
+      header: 'Description',
+      accessor: (role: Role) => <span className="text-secondary-500 text-sm truncate max-w-xs block">{role.description || '-'}</span>
+    },
+    {
+      header: 'Type',
+      accessor: (role: Role) => (
+        role.is_system ? (
+          <Badge variant="info" className="flex items-center gap-1 w-fit">
+            <Lock size={10} /> System
+          </Badge>
+        ) : (
+          <Badge variant="secondary">Custom</Badge>
+        )
+      )
+    },
+    {
+      header: 'Actions',
+      accessor: (role: Role) => (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => { e.stopPropagation(); navigate(`/roles/${role.id}/edit`); }}
+          >
+            <Edit size={16} />
+          </Button>
+          {!role.is_system && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-danger-600 hover:text-danger-700 hover:bg-danger-50"
+              onClick={(e) => handleDelete(e, role.id, role.is_system)}
+            >
+              <Trash2 size={16} />
+            </Button>
+          )}
+        </div>
+      )
+    }
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-secondary-900">Roles Management</h1>
+          <p className="text-secondary-500">Manage system roles and permissions</p>
+        </div>
+        <Button
           onClick={() => navigate('/roles/new')}
-          className="btn btn-primary flex items-center space-x-2"
+          leftIcon={<Plus size={20} />}
         >
-          <Plus size={20} />
-          <span>Create Role</span>
-        </button>
+          Create Role
+        </Button>
       </div>
 
-      <div className="card mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+      <Card className="p-4">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-400" size={20} />
           <input
             type="text"
             placeholder="Search roles..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="input pl-10"
+            className="w-full pl-10 pr-4 py-2 rounded-lg border border-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           />
         </div>
-      </div>
+      </Card>
 
-      {isLoading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-        </div>
-      ) : roles.length === 0 ? (
-        <div className="card text-center py-12">
-          <Shield className="mx-auto text-gray-400 mb-4" size={48} />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No roles found</h3>
-          <p className="text-gray-600 mb-4">Start by creating your first role</p>
-          <button
-            onClick={() => navigate('/roles/new')}
-            className="btn btn-primary inline-flex items-center space-x-2"
+      <Table
+        data={roles}
+        columns={columns}
+        keyField="id"
+        isLoading={isLoading}
+        onRowClick={(role) => navigate(`/roles/${role.id}/edit`)}
+        emptyMessage="No roles found."
+      />
+
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
           >
-            <Plus size={20} />
-            <span>Create Role</span>
-          </button>
+            Previous
+          </Button>
+          <span className="flex items-center px-4 text-sm text-secondary-600">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="secondary"
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </Button>
         </div>
-      ) : (
-        <>
-          <div className="card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Display Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {roles.map((role) => (
-                    <tr key={role.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <Shield size={16} className="text-primary-500 mr-2" />
-                          <span className="text-sm font-medium text-gray-900">{role.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-gray-900">{role.display_name}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm text-gray-600">{role.description || '-'}</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {role.is_system ? (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700 flex items-center space-x-1 w-fit">
-                            <Lock size={12} />
-                            <span>System</span>
-                          </span>
-                        ) : (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700">
-                            Custom
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => navigate(`/roles/${role.id}`)}
-                            className="text-primary-600 hover:text-primary-700"
-                            title="View"
-                          >
-                            <Eye size={18} />
-                          </button>
-                          <button
-                            onClick={() => navigate(`/roles/${role.id}/edit`)}
-                            className="text-gray-600 hover:text-gray-700"
-                            title="Edit"
-                          >
-                            <Edit size={18} />
-                          </button>
-                          {!role.is_system && (
-                            <button
-                              onClick={() => handleDelete(role.id, role.is_system)}
-                              className="text-red-600 hover:text-red-700"
-                              title="Delete"
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center space-x-2 mt-6">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="btn btn-secondary disabled:opacity-50"
-              >
-                Previous
-              </button>
-              <span className="text-gray-600">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="btn btn-secondary disabled:opacity-50"
-              >
-                Next
-              </button>
-            </div>
-          )}
-        </>
       )}
     </div>
   );

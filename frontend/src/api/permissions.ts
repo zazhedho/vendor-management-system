@@ -26,4 +26,9 @@ export const permissionsApi = {
     const response = await apiClient.delete<ApiResponse>(`/permission/${id}`);
     return response.data;
   },
+
+  getMyPermissions: async () => {
+    const response = await apiClient.get<ApiResponse<Permission[]>>('/permissions/me');
+    return response.data;
+  },
 };

@@ -4,7 +4,9 @@ import { usersApi } from '../../api/users';
 import { rolesApi } from '../../api/roles';
 import { useAuth } from '../../context/AuthContext';
 import { Role } from '../../types';
-import { Save, X, User } from 'lucide-react';
+import { Save, X, User as UserIcon } from 'lucide-react';
+import { Button, Input, Card, Spinner } from '../../components/ui';
+import { toast } from 'react-toastify';
 
 export const UserForm: React.FC = () => {
   const navigate = useNavigate();
@@ -23,7 +25,6 @@ export const UserForm: React.FC = () => {
   const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     fetchRoles();
@@ -47,8 +48,7 @@ export const UserForm: React.FC = () => {
         });
       }
     } catch (error) {
-      console.error('Failed to fetch user:', error);
-      setError('Failed to load user data');
+      toast.error('Failed to load user data');
     } finally {
       setIsFetching(false);
     }
@@ -65,7 +65,7 @@ export const UserForm: React.FC = () => {
         setAvailableRoles(roles);
       }
     } catch (error) {
-      console.error('Failed to fetch roles:', error);
+      console.error('Failed to fetch roles');
     }
   };
 
@@ -75,7 +75,6 @@ export const UserForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setIsLoading(true);
 
     try {
@@ -87,9 +86,10 @@ export const UserForm: React.FC = () => {
           role: formData.role,
         };
         await usersApi.update(id, updateData);
+        toast.success('User updated successfully');
       } else {
         if (!formData.password) {
-          setError('Password is required for new users');
+          toast.error('Password is required for new users');
           setIsLoading(false);
           return;
         }
@@ -100,10 +100,11 @@ export const UserForm: React.FC = () => {
           password: formData.password,
           role: formData.role,
         });
+        toast.success('User created successfully');
       }
       navigate('/users');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to save user');
+      toast.error(err.response?.data?.message || 'Failed to save user');
     } finally {
       setIsLoading(false);
     }
@@ -112,7 +113,7 @@ export const UserForm: React.FC = () => {
   if (isFetching) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <Spinner size="lg" />
       </div>
     );
   }
@@ -120,88 +121,67 @@ export const UserForm: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">
+        <h1 className="text-3xl font-bold text-secondary-900">
           {isEditMode ? 'Edit User' : 'Create New User'}
         </h1>
-        <p className="text-gray-600 mt-2">
+        <p className="text-secondary-500 mt-2">
           {isEditMode ? 'Update user information' : 'Add a new user to the system'}
         </p>
       </div>
 
-      <div className="card">
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-            {error}
-          </div>
-        )}
-
+      <Card>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="flex justify-center mb-6">
             <div className="w-20 h-20 rounded-full bg-primary-100 flex items-center justify-center">
-              <User size={40} className="text-primary-600" />
+              <UserIcon size={40} className="text-primary-600" />
             </div>
           </div>
 
-          <div>
-            <label className="label">Full Name *</label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className="input"
-              placeholder="Enter full name"
-              required
-            />
-          </div>
+          <Input
+            label="Full Name"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            placeholder="Enter full name"
+            required
+          />
+
+          <Input
+            label="Email Address"
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            placeholder="Enter email address"
+            required
+          />
+
+          <Input
+            label="Phone Number"
+            type="tel"
+            name="phone"
+            value={formData.phone}
+            onChange={handleChange}
+            placeholder="Enter phone number (optional)"
+          />
+
+          <Input
+            label={`Password ${isEditMode ? '(leave blank to keep current)' : ''}`}
+            type="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            placeholder={isEditMode ? 'Enter new password to change' : 'Enter password'}
+            required={!isEditMode}
+          />
 
           <div>
-            <label className="label">Email Address *</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className="input"
-              placeholder="Enter email address"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="label">Phone Number</label>
-            <input
-              type="tel"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              className="input"
-              placeholder="Enter phone number (optional)"
-            />
-          </div>
-
-          <div>
-            <label className="label">
-              Password {isEditMode ? '(leave blank to keep current)' : '*'}
-            </label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              className="input"
-              placeholder={isEditMode ? 'Enter new password to change' : 'Enter password'}
-              required={!isEditMode}
-            />
-          </div>
-
-          <div>
-            <label className="label">Role *</label>
+            <label className="block text-sm font-medium text-secondary-700 mb-1.5">Role</label>
             <select
               name="role"
               value={formData.role}
               onChange={handleChange}
-              className="input"
+              className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
               required
             >
               {availableRoles.map((role) => (
@@ -221,26 +201,25 @@ export const UserForm: React.FC = () => {
             </select>
           </div>
 
-          <div className="flex items-center justify-end space-x-4 pt-6 border-t">
-            <button
-              type="button"
+          <div className="flex items-center justify-end gap-4 pt-6 border-t border-secondary-100">
+            <Button
+              variant="secondary"
               onClick={() => navigate('/users')}
-              className="btn btn-secondary flex items-center space-x-2"
+              type="button"
+              leftIcon={<X size={16} />}
             >
-              <X size={20} />
-              <span>Cancel</span>
-            </button>
-            <button
+              Cancel
+            </Button>
+            <Button
               type="submit"
-              disabled={isLoading}
-              className="btn btn-primary flex items-center space-x-2 disabled:opacity-50"
+              isLoading={isLoading}
+              leftIcon={<Save size={16} />}
             >
-              <Save size={20} />
-              <span>{isLoading ? 'Saving...' : 'Save User'}</span>
-            </button>
+              {isEditMode ? 'Update User' : 'Create User'}
+            </Button>
           </div>
         </form>
-      </div>
+      </Card>
     </div>
   );
 };

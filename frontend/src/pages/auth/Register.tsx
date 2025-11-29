@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { authApi } from '../../api/auth';
-import { UserPlus } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { toast } from 'react-toastify';
+import { Mail, Lock, User, Phone, Briefcase, ArrowRight } from 'lucide-react';
+import { AuthLayout } from '../../components/AuthLayout';
+import { Button, Input, Card } from '../../components/ui';
 
 export const Register: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -10,150 +13,152 @@ export const Register: React.FC = () => {
     phone: '',
     password: '',
     confirmPassword: '',
+    role: 'vendor' // Default role
   });
-  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { register } = useAuth();
   const navigate = useNavigate();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      toast.error('Passwords do not match');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const response = await authApi.register({
+      // Assuming register function takes (name, email, password, phone, role)
+      // We need to check the AuthContext signature, but based on DTO it matches.
+      const result = await register({
         name: formData.name,
         email: formData.email,
-        phone: formData.phone,
         password: formData.password,
+        phone: formData.phone,
+        role: formData.role
       });
 
-      if (response.status) {
-        navigate('/login', { state: { message: 'Registration successful! Please login.' } });
+      if (result.success) {
+        toast.success('Registration successful! Please login.');
+        navigate('/login');
       } else {
-        setError(response.message || 'Registration failed');
+        toast.error(result.error || 'Registration failed');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Registration failed');
+      toast.error(err.response?.data?.message || err.message || 'Registration failed');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-blue-100 px-4 py-8">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-full mb-4">
-            <UserPlus className="text-white" size={32} />
+    <AuthLayout
+      title="Create Account"
+      subtitle="Join as a vendor or client to get started"
+    >
+      <Card className="shadow-xl border-secondary-100/50 backdrop-blur-sm bg-white/90">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            label="Full Name"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            placeholder="Company or Personal Name"
+            required
+            leftIcon={<User className="w-5 h-5" />}
+          />
+
+          <Input
+            label="Email Address"
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            placeholder="name@company.com"
+            required
+            leftIcon={<Mail className="w-5 h-5" />}
+          />
+
+          <Input
+            label="Phone Number"
+            type="tel"
+            name="phone"
+            value={formData.phone}
+            onChange={handleChange}
+            placeholder="+62 812 3456 7890"
+            required
+            leftIcon={<Phone className="w-5 h-5" />}
+          />
+
+          <div>
+            <label className="block text-sm font-medium text-secondary-700 mb-1.5">
+              Account Type
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-secondary-400">
+                <Briefcase className="w-5 h-5" />
+              </div>
+              <select
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-secondary-200 bg-white text-secondary-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all appearance-none"
+              >
+                <option value="vendor">Vendor</option>
+                <option value="client">Client</option>
+              </select>
+            </div>
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">Create Account</h2>
-          <p className="text-gray-600 mt-2">Sign up to get started</p>
-        </div>
 
-        <div className="card">
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="label">Full Name</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                className="input"
-                placeholder="John Doe"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="label">Email</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="input"
-                placeholder="your@email.com"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="label">Phone</label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                className="input"
-                placeholder="+62 812 3456 7890"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="label">Password</label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className="input"
-                placeholder="Enter your password"
-                required
-                minLength={6}
-              />
-            </div>
-
-            <div>
-              <label className="label">Confirm Password</label>
-              <input
-                type="password"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className="input"
-                placeholder="Confirm your password"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="btn btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Creating Account...' : 'Sign Up'}
-            </button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Already have an account?{' '}
-              <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium">
-                Sign in
-              </Link>
-            </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Password"
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="••••••••"
+              required
+              leftIcon={<Lock className="w-5 h-5" />}
+            />
+            <Input
+              label="Confirm Password"
+              type="password"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              placeholder="••••••••"
+              required
+              leftIcon={<Lock className="w-5 h-5" />}
+            />
           </div>
+
+          <Button
+            type="submit"
+            isLoading={isLoading}
+            className="w-full mt-2"
+            size="lg"
+            rightIcon={!isLoading && <ArrowRight className="w-4 h-4" />}
+          >
+            Create Account
+          </Button>
+        </form>
+
+        <div className="mt-6 pt-6 border-t border-secondary-100 text-center">
+          <p className="text-sm text-secondary-600">
+            Already have an account?{' '}
+            <Link to="/login" className="text-primary-600 hover:text-primary-700 font-semibold transition-colors">
+              Sign in
+            </Link>
+          </p>
         </div>
-      </div>
-    </div>
+      </Card>
+    </AuthLayout>
   );
 };

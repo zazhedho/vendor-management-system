@@ -8,7 +8,7 @@ export const vendorsApi = {
   },
 
   getById: async (id: string) => {
-    const response = await apiClient.get<ApiResponse<Vendor>>(`/vendor/${id}`);
+    const response = await apiClient.get<ApiResponse<Vendor>>(`/vendors/${id}`);
     return response.data;
   },
 
@@ -106,6 +106,31 @@ export const vendorsApi = {
 
   getMyVendor: async () => {
     const response = await apiClient.get<ApiResponse<Vendor>>('/vendor/me');
+    return response.data;
+  },
+
+  getMyVendorProfile: async () => {
+    const response = await apiClient.get<ApiResponse<{ vendor: Vendor; profile: VendorProfile }>>('/vendor/profile');
+    return response.data;
+  },
+
+  createOrUpdateProfile: async (data: Partial<VendorProfile>) => {
+    const response = await apiClient.post<ApiResponse<VendorProfile>>('/vendor/profile', data);
+    return response.data;
+  },
+
+  // Admin: Update vendor status
+  updateStatus: async (id: string, status: string) => {
+    const response = await apiClient.put<ApiResponse<Vendor>>(`/vendors/${id}/status`, { status });
+    return response.data;
+  },
+
+  // Admin: Update file status (approve/reject)
+  updateFileStatus: async (fileId: string, status: 'approved' | 'rejected', reason?: string) => {
+    const response = await apiClient.put<ApiResponse<VendorProfileFile>>(`/vendors/files/${fileId}/status`, { 
+      status,
+      reason 
+    });
     return response.data;
   },
 };

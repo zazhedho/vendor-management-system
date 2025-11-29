@@ -70,38 +70,47 @@ export interface VendorProfile {
   vendor_id: string;
   vendor_name: string;
   email: string;
+  telephone?: string;
+  fax?: string;
   phone?: string;
-  mobile?: string;
   address?: string;
-  province?: string;
-  city?: string;
-  district?: string;
+  district_id?: string;
+  district_name?: string;
+  city_id?: string;
+  city_name?: string;
+  province_id?: string;
+  province_name?: string;
+  postal_code?: string;
   business_field?: string;
 
   // KTP fields
   ktp_number?: string;
   ktp_name?: string;
-  ktp_file_url?: string;
 
   // NPWP fields
   npwp_number?: string;
   npwp_name?: string;
   npwp_address?: string;
-  npwp_file_url?: string;
-
-  // Bank fields
-  bank_name?: string;
-  bank_account_number?: string;
-  bank_account_name?: string;
-  bank_book_file_url?: string;
+  tax_status?: string;
 
   // NIB fields
   nib_number?: string;
-  nib_file_url?: string;
 
-  // Other documents
-  siup_file_url?: string;
-  akta_file_url?: string;
+  // Bank fields
+  bank_name?: string;
+  bank_branch?: string;
+  account_number?: string;
+  account_holder_name?: string;
+
+  // Business fields
+  transaction_type?: string;
+  purch_group?: string;
+  region_or_so?: string;
+
+  // Contact fields
+  contact_person?: string;
+  contact_email?: string;
+  contact_phone?: string;
 
   // File relationships
   files?: VendorProfileFile[];
@@ -122,6 +131,7 @@ export interface VendorProfileFile {
   file_order?: number;
   caption?: string;
   status: string; // pending, approved, rejected
+  reject_reason?: string;
   verified_at?: string;
   verified_by?: string;
   issued_at?: string;
@@ -265,6 +275,8 @@ export interface Role {
   display_name: string;
   description?: string;
   is_system: boolean;
+  permission_ids?: string[];
+  menu_ids?: string[];
   created_at: string;
   updated_at?: string;
 }
@@ -284,14 +296,24 @@ export interface Menu {
   id: string;
   name: string;
   display_name: string;
-  url?: string;
+  path?: string;
   icon?: string;
   parent_id?: string;
   order_index: number;
   is_active: boolean;
-  description?: string;
   created_at: string;
   updated_at?: string;
+}
+
+export interface MenuItem {
+  id?: string;
+  path: string | null;
+  label: string;
+  icon: string;
+  name: string;
+  parentId?: string | null;
+  orderIndex?: number;
+  children: MenuItem[];
 }
 
 export interface RolePermission {

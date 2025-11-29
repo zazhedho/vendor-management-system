@@ -275,6 +275,8 @@ func (r *Routes) EventRoutes() {
 		eventAdmin.POST("", h.CreateEvent)
 		eventAdmin.PUT("/:id", h.UpdateEvent)
 		eventAdmin.DELETE("/:id", mdw.RoleMiddleware(utils.RoleAdmin), h.DeleteEvent)
+		eventAdmin.POST("/:id/files", h.UploadEventFile)
+		eventAdmin.DELETE("/:id/files/:fileId", h.DeleteEventFile)
 		eventAdmin.GET("/:id/submissions", h.GetSubmissionsByEventID)
 		eventAdmin.PUT("/submission/:id/score", h.ScoreSubmission)
 		eventAdmin.PUT("/submission/:id/shortlist", h.ShortlistSubmission)

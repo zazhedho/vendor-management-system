@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { paymentsApi } from '../../api/payments';
 import { Payment } from '../../types';
-import { ArrowLeft, DollarSign, FileText, Calendar, Download, Upload } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { ArrowLeft, DollarSign, FileText, Calendar, Download } from 'lucide-react';
+import { Button, Card, Badge, Spinner } from '../../components/ui';
 
 export const PaymentDetail: React.FC = () => {
   const navigate = useNavigate();
@@ -12,9 +12,7 @@ export const PaymentDetail: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (id) {
-      fetchPayment(id);
-    }
+    if (id) fetchPayment(id);
   }, [id]);
 
   const fetchPayment = async (paymentId: string) => {
@@ -31,16 +29,12 @@ export const PaymentDetail: React.FC = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'paid':
-        return 'bg-green-100 text-green-700';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-700';
-      case 'failed':
-        return 'bg-red-100 text-red-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
+      case 'paid': return 'success';
+      case 'pending': return 'warning';
+      case 'failed': return 'danger';
+      default: return 'secondary';
     }
   };
 
@@ -54,130 +48,115 @@ export const PaymentDetail: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <Spinner size="lg" />
       </div>
     );
   }
 
   if (!payment) {
     return (
-      <div className="card text-center py-12">
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Payment not found</h3>
-        <button onClick={() => navigate('/payments')} className="btn btn-primary mt-4">
-          Back to Payments
-        </button>
-      </div>
+      <Card className="text-center py-12">
+        <h3 className="text-lg font-medium text-secondary-900 mb-2">Payment not found</h3>
+        <Button onClick={() => navigate('/payments')}>Back to Payments</Button>
+      </Card>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-6">
-        <button
-          onClick={() => navigate('/payments')}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
-        >
-          <ArrowLeft size={20} className="mr-2" />
-          <span>Back to Payments</span>
-        </button>
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <Button variant="ghost" onClick={() => navigate('/payments')} leftIcon={<ArrowLeft size={16} />}>
+          Back
+        </Button>
+      </div>
 
+      <Card className="bg-gradient-to-r from-secondary-900 to-secondary-800 text-white border-none">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{payment.invoice_number}</h1>
-            <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(payment.status)}`}>
+            <p className="text-secondary-300 text-sm mb-1">Invoice Number</p>
+            <h1 className="text-3xl font-bold mb-4">{payment.invoice_number}</h1>
+            <Badge variant={getStatusVariant(payment.status)} className="bg-white/20 text-white border-none backdrop-blur-sm">
               {payment.status}
-            </span>
+            </Badge>
           </div>
           <div className="text-right">
-            <p className="text-sm text-gray-600">Total Amount</p>
-            <p className="text-3xl font-bold text-gray-900">{formatCurrency(payment.amount)}</p>
+            <p className="text-secondary-300 text-sm mb-1">Total Amount</p>
+            <p className="text-3xl font-bold">{formatCurrency(payment.amount)}</p>
           </div>
         </div>
-      </div>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <div className="card">
-            <div className="flex items-center space-x-2 mb-4">
-              <FileText size={20} className="text-gray-500" />
-              <h2 className="text-xl font-semibold text-gray-900">Description</h2>
-            </div>
-            {payment.description ? (
-              <p className="text-gray-700 leading-relaxed">{payment.description}</p>
-            ) : (
-              <p className="text-gray-500 italic">No description provided</p>
-            )}
-          </div>
+          <Card>
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <FileText size={20} className="text-primary-600" />
+              Description
+            </h2>
+            <p className="text-secondary-700 leading-relaxed">
+              {payment.description || <span className="text-secondary-500 italic">No description provided</span>}
+            </p>
+          </Card>
 
           {payment.files && payment.files.length > 0 && (
-            <div className="card">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Payment Files</h2>
-              <div className="space-y-2">
+            <Card>
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <FileText size={20} className="text-primary-600" />
+                Payment Files
+              </h2>
+              <div className="space-y-3">
                 {payment.files.map((file) => (
-                  <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                    <div className="flex items-center flex-1">
-                      <FileText size={18} className="text-gray-600 mr-3" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">
-                          {file.file_type.toUpperCase()}
-                        </p>
-                        <p className="text-xs text-gray-600">{file.file_url.split('/').pop()}</p>
-                        {file.caption && (
-                          <p className="text-xs text-gray-500 mt-1">{file.caption}</p>
-                        )}
+                  <div key={file.id} className="flex items-center justify-between p-3 bg-secondary-50 border border-secondary-200 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <FileText size={20} className="text-secondary-400" />
+                      <div>
+                        <p className="text-sm font-medium text-secondary-900">{file.file_type.toUpperCase()}</p>
+                        <p className="text-xs text-secondary-500">{file.file_url.split('/').pop()}</p>
                       </div>
                     </div>
                     <a
                       href={file.file_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ml-2 p-2 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded"
+                      className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
                     >
-                      <Download size={16} />
+                      <Download size={18} />
                     </a>
                   </div>
                 ))}
               </div>
-            </div>
+            </Card>
           )}
         </div>
 
         <div className="space-y-6">
-          <div className="card">
-            <h3 className="font-semibold text-gray-900 mb-4">Payment Details</h3>
+          <Card>
+            <h3 className="font-semibold text-secondary-900 mb-4">Transaction Details</h3>
             <div className="space-y-4">
               <div>
-                <div className="flex items-center text-gray-600 mb-1">
-                  <DollarSign size={16} className="mr-2" />
-                  <span className="text-sm font-medium">Vendor ID</span>
-                </div>
-                <p className="text-sm text-gray-900 ml-6 font-mono break-all">{payment.vendor_id}</p>
+                <p className="text-xs text-secondary-500 mb-1">Vendor ID</p>
+                <p className="text-sm font-mono text-secondary-900 break-all">{payment.vendor_id}</p>
               </div>
-
-              {payment.payment_date && (
-                <div>
-                  <div className="flex items-center text-gray-600 mb-1">
-                    <Calendar size={16} className="mr-2" />
-                    <span className="text-sm font-medium">Payment Date</span>
-                  </div>
-                  <p className="text-gray-900 ml-6">
-                    {new Date(payment.payment_date).toLocaleDateString('id-ID', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </p>
+              <div className="pt-4 border-t border-secondary-100">
+                <p className="text-xs text-secondary-500 mb-1">Payment Date</p>
+                <div className="flex items-center gap-2 text-secondary-900">
+                  <Calendar size={16} className="text-secondary-400" />
+                  <span className="text-sm">
+                    {payment.payment_date
+                      ? new Date(payment.payment_date).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })
+                      : '-'
+                    }
+                  </span>
                 </div>
-              )}
-
-              <div className="pt-4 border-t">
-                <p className="text-xs text-gray-500">Created</p>
-                <p className="text-sm text-gray-900">
+              </div>
+              <div className="pt-4 border-t border-secondary-100">
+                <p className="text-xs text-secondary-500 mb-1">Created At</p>
+                <p className="text-sm text-secondary-900">
                   {new Date(payment.created_at).toLocaleString('id-ID')}
                 </p>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>

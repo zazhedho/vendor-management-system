@@ -28,7 +28,12 @@ export const menusApi = {
   },
 
   getMyMenus: async () => {
-    const response = await apiClient.get<ApiResponse<Menu[]>>('/user/menus');
+    const response = await apiClient.get<ApiResponse<Menu[]>>('/menus/me');
+    return response.data;
+  },
+
+  getActiveMenus: async () => {
+    const response = await apiClient.get<ApiResponse<Menu[]>>('/menus/active');
     return response.data;
   },
 };

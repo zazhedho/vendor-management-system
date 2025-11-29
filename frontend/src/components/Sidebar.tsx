@@ -1,0 +1,224 @@
+import React, { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import {
+    Home,
+    Calendar,
+    Users,
+    CreditCard,
+    Star,
+    ShoppingBag,
+    Shield,
+    List as ListIcon,
+    X,
+    LayoutDashboard,
+    FileText,
+    Settings,
+    ChevronDown,
+    ChevronRight,
+    Circle
+} from 'lucide-react';
+import { MenuItem } from '../types';
+
+interface SidebarProps {
+    isOpen: boolean;
+    onClose: () => void;
+    menuItems: MenuItem[];
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, menuItems }) => {
+    const location = useLocation();
+    const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
+    const [userToggledMenus, setUserToggledMenus] = useState<Record<string, boolean>>({});
+
+    // Map Bootstrap Icons (from API) to Lucide icons
+    const iconMap: Record<string, typeof Home> = {
+        // Lucide names (fallback)
+        Home,
+        Calendar,
+        Users,
+        CreditCard,
+        Star,
+        ShoppingBag,
+        Shield,
+        List: ListIcon,
+        LayoutDashboard,
+        FileText,
+        Settings,
+        Circle,
+        // Bootstrap icon mappings (bi-*)
+        'bi-speedometer2': LayoutDashboard,
+        'bi-person-circle': Users,
+        'bi-building': ShoppingBag,
+        'bi-file-earmark-text': FileText,
+        'bi-calendar-event': Calendar,
+        'bi-star': Star,
+        'bi-credit-card': CreditCard,
+        'bi-people': Users,
+        'bi-shield-lock': Shield,
+        'bi-list-ul': ListIcon,
+    };
+
+    const isMenuActive = (item: MenuItem): boolean => {
+        const currentPath = location.pathname;
+
+        // Exact match
+        if (currentPath === item.path) return true;
+
+        // Check if any child is active
+        if (item.children && item.children.length > 0) {
+            return item.children.some(child =>
+                currentPath === child.path || (child.path && currentPath.startsWith(child.path + '/'))
+            );
+        }
+
+        // For parent routes with UUID patterns
+        if (item.path) {
+            const baseRoute = item.path.split('/')[1];
+            if (baseRoute) {
+                return currentPath === `/${baseRoute}/new` ||
+                    currentPath.match(new RegExp(`^/${baseRoute}/[a-f0-9-]{36}`)) !== null;
+            }
+        }
+
+        return false;
+    };
+
+    const toggleSubmenu = (menuName: string) => {
+        setExpandedMenus(prev => ({
+            ...prev,
+            [menuName]: !prev[menuName]
+        }));
+        setUserToggledMenus(prev => ({
+            ...prev,
+            [menuName]: true
+        }));
+    };
+
+    const renderMenuItem = (item: MenuItem) => {
+        const hasChildren = item.children && item.children.length > 0;
+        const isActive = isMenuActive(item);
+        const IconComponent = iconMap[item.icon] || Home;
+
+        // Determine if menu should be expanded
+        let isExpanded = false;
+        if (hasChildren) {
+            const hasActiveChild = item.children.some(child => isMenuActive(child));
+            if (userToggledMenus[item.name]) {
+                isExpanded = expandedMenus[item.name];
+            } else {
+                isExpanded = hasActiveChild;
+            }
+        }
+
+        if (hasChildren) {
+            return (
+                <li key={item.name}>
+                    <button
+                        onClick={() => toggleSubmenu(item.name)}
+                        className={`
+                            w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200
+                            ${isActive
+                                ? 'bg-primary-600/20 text-primary-400'
+                                : 'text-secondary-400 hover:bg-secondary-800 hover:text-white'
+                            }
+                        `}
+                    >
+                        <div className="flex items-center space-x-3">
+                            <IconComponent size={20} className={isActive ? 'text-primary-400' : 'text-secondary-400'} />
+                            <span className="font-medium">{item.label}</span>
+                        </div>
+                        {isExpanded ? (
+                            <ChevronDown size={16} className="text-secondary-400" />
+                        ) : (
+                            <ChevronRight size={16} className="text-secondary-400" />
+                        )}
+                    </button>
+                    {isExpanded && (
+                        <ul className="mt-1 ml-4 space-y-1 border-l border-secondary-700 pl-4">
+                            {item.children.map(child => {
+                                const ChildIcon = iconMap[child.icon] || Circle;
+                                const childActive = isMenuActive(child);
+
+                                return (
+                                    <li key={child.path || child.name}>
+                                        <Link
+                                            to={child.path || '#'}
+                                            onClick={onClose}
+                                            className={`
+                                                flex items-center space-x-3 px-4 py-2 rounded-lg transition-all duration-200
+                                                ${childActive
+                                                    ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/20'
+                                                    : 'text-secondary-400 hover:bg-secondary-800 hover:text-white'
+                                                }
+                                            `}
+                                        >
+                                            <ChildIcon size={16} className={childActive ? 'text-white' : 'text-secondary-400'} />
+                                            <span className="font-medium text-sm">{child.label}</span>
+                                        </Link>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    )}
+                </li>
+            );
+        }
+
+        return (
+            <li key={item.path || item.name}>
+                <Link
+                    to={item.path || '#'}
+                    onClick={onClose}
+                    className={`
+                        flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200
+                        ${isActive
+                            ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/20'
+                            : 'text-secondary-400 hover:bg-secondary-800 hover:text-white'
+                        }
+                    `}
+                >
+                    <IconComponent size={20} className={isActive ? 'text-white' : 'text-secondary-400'} />
+                    <span className="font-medium">{item.label}</span>
+                </Link>
+            </li>
+        );
+    };
+
+    return (
+        <>
+            <aside
+                className={`
+                    fixed inset-y-0 left-0 z-40 w-64 bg-secondary-900 text-white transition-transform duration-300 ease-in-out
+                    ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+                    lg:translate-x-0
+                `}
+            >
+                <div className="flex items-center justify-between h-16 px-6 bg-secondary-950">
+                    <span className="text-xl font-bold tracking-tight text-white">
+                        VMS <span className="text-primary-400">Pro</span>
+                    </span>
+                    <button
+                        onClick={onClose}
+                        className="lg:hidden text-secondary-400 hover:text-white transition-colors"
+                    >
+                        <X size={24} />
+                    </button>
+                </div>
+
+                <nav className="h-[calc(100vh-4rem)] overflow-y-auto py-6 px-3">
+                    <ul className="space-y-1">
+                        {menuItems.map(item => renderMenuItem(item))}
+                    </ul>
+                </nav>
+            </aside>
+
+            {/* Overlay for mobile */}
+            {isOpen && (
+                <div
+                    className="fixed inset-0 bg-secondary-900/50 backdrop-blur-sm z-30 lg:hidden"
+                    onClick={onClose}
+                />
+            )}
+        </>
+    );
+};
