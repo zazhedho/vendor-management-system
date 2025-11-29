@@ -115,7 +115,7 @@ func (h *HandlerVendor) GetVendorDetail(ctx *gin.Context) {
 		return
 	}
 
-	vendor, err := h.Service.GetVendorProfileByVendorID(id)
+	data, err := h.Service.GetVendorDetailByVendorID(id)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetVendorDetail; ERROR: %s;", logPrefix, err))
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -131,8 +131,8 @@ func (h *HandlerVendor) GetVendorDetail(ctx *gin.Context) {
 		return
 	}
 
-	res := response.Response(http.StatusOK, "Get Vendor Detail successfully", logId, vendor)
-	logger.WriteLog(logger.LogLevelDebug, fmt.Sprintf("%s; Response: %+v;", logPrefix, utils.JsonEncode(vendor)))
+	res := response.Response(http.StatusOK, "Get Vendor Detail successfully", logId, data)
+	logger.WriteLog(logger.LogLevelDebug, fmt.Sprintf("%s; Response: %+v;", logPrefix, utils.JsonEncode(data)))
 	ctx.JSON(http.StatusOK, res)
 }
 
@@ -203,5 +203,128 @@ func (h *HandlerVendor) DeleteVendor(ctx *gin.Context) {
 
 	res := response.Response(http.StatusOK, "Vendor deleted successfully", logId, nil)
 	logger.WriteLog(logger.LogLevelDebug, fmt.Sprintf("%s; Success: Vendor deleted successfully", logPrefix))
+	ctx.JSON(http.StatusOK, res)
+}
+
+func (h *HandlerVendor) UploadVendorProfileFile(ctx *gin.Context) {
+	authData := utils.GetAuthData(ctx)
+	userId := utils.InterfaceString(authData["user_id"])
+	logId := utils.GenerateLogId(ctx)
+	logPrefix := fmt.Sprintf("[%s][VendorHandler][UploadVendorProfileFile]", logId)
+
+	profileId := ctx.Param("profileId")
+	if profileId == "" {
+		res := response.Response(http.StatusBadRequest, "Profile ID is required", logId, nil)
+		ctx.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	// Get file from multipart form
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; FormFile ERROR: %s;", logPrefix, err.Error()))
+		res := response.Response(http.StatusBadRequest, "File is required", logId, nil)
+		ctx.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	// Get file metadata from form
+	fileType := ctx.PostForm("file_type")
+	issuedAt := ctx.PostForm("issued_at")
+	expiredAt := ctx.PostForm("expired_at")
+
+	req := dto.UploadVendorProfileFileRequest{
+		FileType:  fileType,
+		IssuedAt:  issuedAt,
+		ExpiredAt: expiredAt,
+	}
+
+	// Upload file to vendor profile
+	data, err := h.Service.UploadVendorProfileFile(ctx.Request.Context(), profileId, userId, file, req)
+	if err != nil {
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.UploadVendorProfileFile; ERROR: %s;", logPrefix, err))
+		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
+		res.Error = err.Error()
+		ctx.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	res := response.Response(http.StatusOK, "File uploaded successfully", logId, data)
+	logger.WriteLog(logger.LogLevelDebug, fmt.Sprintf("%s; Response: %+v;", logPrefix, utils.JsonEncode(data)))
+	ctx.JSON(http.StatusOK, res)
+}
+
+func (h *HandlerVendor) DeleteVendorProfileFile(ctx *gin.Context) {
+	logId := utils.GenerateLogId(ctx)
+	logPrefix := fmt.Sprintf("[%s][VendorHandler][DeleteVendorProfileFile]", logId)
+
+	fileId := ctx.Param("fileId")
+	if fileId == "" {
+		res := response.Response(http.StatusBadRequest, "File ID is required", logId, nil)
+		ctx.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	if err := h.Service.DeleteVendorProfileFile(ctx.Request.Context(), fileId); err != nil {
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.DeleteVendorProfileFile; ERROR: %s;", logPrefix, err))
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			res := response.Response(http.StatusNotFound, messages.MsgNotFound, logId, nil)
+			res.Error = response.Errors{Code: http.StatusNotFound, Message: "file not found"}
+			ctx.JSON(http.StatusNotFound, res)
+			return
+		}
+
+		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
+		res.Error = err.Error()
+		ctx.JSON(http.StatusInternalServerError, res)
+		return
+	}
+
+	res := response.Response(http.StatusOK, "File deleted successfully", logId, nil)
+	logger.WriteLog(logger.LogLevelDebug, fmt.Sprintf("%s; Success: File deleted successfully", logPrefix))
+	ctx.JSON(http.StatusOK, res)
+}
+
+func (h *HandlerVendor) UpdateVendorProfileFileStatus(ctx *gin.Context) {
+	var req dto.UpdateVendorProfileFileStatusRequest
+	authData := utils.GetAuthData(ctx)
+	userId := utils.InterfaceString(authData["user_id"])
+	logId := utils.GenerateLogId(ctx)
+	logPrefix := fmt.Sprintf("[%s][VendorHandler][UpdateVendorProfileFileStatus]", logId)
+
+	fileId := ctx.Param("fileId")
+	if fileId == "" {
+		res := response.Response(http.StatusBadRequest, "File ID is required", logId, nil)
+		ctx.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	if err := ctx.BindJSON(&req); err != nil {
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; BindJSON ERROR: %s;", logPrefix, err.Error()))
+		res := response.Response(http.StatusBadRequest, messages.InvalidRequest, logId, nil)
+		res.Error = utils.ValidateError(err, reflect.TypeOf(req), "json")
+		ctx.JSON(http.StatusBadRequest, res)
+		return
+	}
+	logger.WriteLog(logger.LogLevelDebug, fmt.Sprintf("%s; Request: %+v;", logPrefix, utils.JsonEncode(req)))
+
+	data, err := h.Service.UpdateVendorProfileFileStatus(fileId, req, userId)
+	if err != nil {
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.UpdateVendorProfileFileStatus; ERROR: %s;", logPrefix, err))
+		if err.Error() == "file not found" {
+			res := response.Response(http.StatusNotFound, messages.MsgNotFound, logId, nil)
+			res.Error = response.Errors{Code: http.StatusNotFound, Message: "file not found"}
+			ctx.JSON(http.StatusNotFound, res)
+			return
+		}
+
+		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
+		res.Error = err.Error()
+		ctx.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	res := response.Response(http.StatusOK, "File status updated successfully", logId, data)
+	logger.WriteLog(logger.LogLevelDebug, fmt.Sprintf("%s; Response: %+v;", logPrefix, utils.JsonEncode(data)))
 	ctx.JSON(http.StatusOK, res)
 }

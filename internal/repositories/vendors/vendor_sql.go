@@ -101,14 +101,14 @@ func (r *repo) CreateVendorProfile(m domainvendors.VendorProfile) error {
 }
 
 func (r *repo) GetVendorProfileByID(id string) (ret domainvendors.VendorProfile, err error) {
-	if err = r.DB.Where("id = ?", id).First(&ret).Error; err != nil {
+	if err = r.DB.Preload("File").Where("id = ?", id).First(&ret).Error; err != nil {
 		return domainvendors.VendorProfile{}, err
 	}
 	return ret, nil
 }
 
 func (r *repo) GetVendorProfileByVendorID(vendorId string) (ret domainvendors.VendorProfile, err error) {
-	if err = r.DB.Where("vendor_id = ?", vendorId).First(&ret).Error; err != nil {
+	if err = r.DB.Preload("File").Where("vendor_id = ?", vendorId).First(&ret).Error; err != nil {
 		return domainvendors.VendorProfile{}, err
 	}
 	return ret, nil
@@ -132,6 +132,10 @@ func (r *repo) GetVendorProfileFileByID(id string) (ret domainvendors.VendorProf
 		return domainvendors.VendorProfileFile{}, err
 	}
 	return ret, nil
+}
+
+func (r *repo) UpdateVendorProfileFile(m domainvendors.VendorProfileFile) error {
+	return r.DB.Save(&m).Error
 }
 
 func (r *repo) DeleteVendorProfileFile(id string) error {

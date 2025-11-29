@@ -67,7 +67,7 @@ type VendorProfile struct {
 	AccountNumber     string `json:"account_number,omitempty" gorm:"column:account_number"`
 	AccountHolderName string `json:"account_holder_name,omitempty" gorm:"column:account_holder_name"`
 
-	File []VendorProfileFile `json:"files,omitempty" gorm:"foreignKey:PaymentId;constraint:OnDelete:CASCADE"`
+	File []VendorProfileFile `json:"files,omitempty" gorm:"foreignKey:VendorProfileId;constraint:OnDelete:CASCADE"`
 
 	TransactionType string `json:"transaction_type,omitempty" gorm:"column:transaction_type"`
 	PurchGroup      string `json:"purch_group,omitempty" gorm:"column:purch_group"`
@@ -99,7 +99,9 @@ type VendorProfileFile struct {
 	IssuedAt  *time.Time `json:"issued_at,omitempty" gorm:"column:issued_at"`
 	ExpiredAt *time.Time `json:"expired_at,omitempty" gorm:"column:expired_at"`
 
-	Status     string     `json:"status" gorm:"column:status"` // pending | approved | rejected
+	Status       string  `json:"status" gorm:"column:status"` // pending | approved | rejected
+	RejectReason *string `json:"reject_reason,omitempty" gorm:"column:reject_reason"`
+
 	VerifiedAt *time.Time `json:"verified_at,omitempty" gorm:"column:verified_at"`
 	VerifiedBy *string    `json:"verified_by,omitempty" gorm:"column:verified_by"`
 

@@ -1,16 +1,4 @@
 -- ================================
--- ENUM tax_status
--- ================================
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_type WHERE typname = 'tax_status'
-    ) THEN
-        CREATE TYPE tax_status AS ENUM ('PKP', 'non-PKP');
-    END IF;
-END$$;
-
--- ================================
 -- ENUM file_status
 -- ================================
 DO $$
@@ -34,18 +22,22 @@ CREATE TABLE IF NOT EXISTS vendor_profiles (
     telephone VARCHAR(50) NULL,
     fax VARCHAR(50) NULL,
     phone VARCHAR(50) NULL,
-    province VARCHAR(100) NULL,
-    city VARCHAR(100) NULL,
-    district VARCHAR(100) NULL,
+    province_id VARCHAR(20) NULL,
+    province_name VARCHAR(100) NULL,
+    city_id VARCHAR(20) NULL,
+    city_name VARCHAR(100) NULL,
+    district_id VARCHAR(20) NULL,
+    district_name VARCHAR(100) NULL,
+    postal_code VARCHAR(10) NULL,
     address TEXT NULL,
     business_field VARCHAR(255) NULL,
 
-    ktp_name VARCHAR(255) NOT NULL,
+    ktp_name VARCHAR(255) NULL,
     ktp_number VARCHAR(50) NULL,
     npwp_name VARCHAR(255) NULL,
     npwp_number VARCHAR(50) NULL,
     npwp_address TEXT NULL,
-    tax_status tax_status NULL,
+    tax_status VARCHAR(50) NULL,
 
     bank_name VARCHAR(100) NULL,
     bank_branch VARCHAR(100) NULL,
@@ -124,6 +116,7 @@ CREATE TABLE IF NOT EXISTS vendor_profile_files (
     issued_at TIMESTAMP NULL,
     expired_at TIMESTAMP NULL,
     status file_status NOT NULL DEFAULT 'pending',
+    reject_reason TEXT NULL,
     verified_at TIMESTAMP NULL,
     verified_by VARCHAR(36) NULL,
 

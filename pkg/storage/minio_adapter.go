@@ -162,17 +162,19 @@ func (m *MinIOAdapter) DownloadFile(ctx context.Context, objectName string) (io.
 
 func (m *MinIOAdapter) ensureBucket(ctx context.Context) {
 	exists, err := m.client.BucketExists(ctx, m.bucketName)
-	if err != nil || exists {
-		return
-	}
-
-	// Create bucket if it doesn't exist
-	err = m.client.MakeBucket(ctx, m.bucketName, minio.MakeBucketOptions{})
 	if err != nil {
 		return
 	}
 
-	// Set public read policy
+	// Create bucket if it doesn't exist
+	if !exists {
+		err = m.client.MakeBucket(ctx, m.bucketName, minio.MakeBucketOptions{})
+		if err != nil {
+			return
+		}
+	}
+
+	// Always set/update public read policy (even if bucket already exists)
 	policy := fmt.Sprintf(`{
 		"Version": "2012-10-17",
 		"Statement": [{

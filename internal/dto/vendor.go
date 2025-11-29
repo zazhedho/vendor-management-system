@@ -60,6 +60,11 @@ type UpdateVendorStatusRequest struct {
 	Status string `json:"status" binding:"required,oneof=pending verified rejected active suspended"`
 }
 
+type UpdateVendorProfileFileStatusRequest struct {
+	Status string `json:"status" binding:"required,oneof=pending approved rejected"`
+	Reason string `json:"reason" binding:"omitempty"`
+}
+
 type RejectVendorRequest struct {
 	Reason string `json:"reason" binding:"required,min=10"`
 }

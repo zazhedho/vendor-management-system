@@ -58,6 +58,29 @@ func (s *ServiceVendor) GetVendorProfileByVendorID(vendorId string) (domainvendo
 	return s.VendorRepo.GetVendorProfileByVendorID(vendorId)
 }
 
+func (s *ServiceVendor) GetVendorDetailByVendorID(vendorId string) (map[string]interface{}, error) {
+	vendor, err := s.VendorRepo.GetVendorByID(vendorId)
+	if err != nil {
+		return nil, err
+	}
+
+	profile, err := s.VendorRepo.GetVendorProfileByVendorID(vendorId)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	result := map[string]interface{}{
+		"vendor":  vendor,
+		"profile": nil,
+	}
+
+	if profile.Id != "" {
+		result["profile"] = profile
+	}
+
+	return result, nil
+}
+
 func (s *ServiceVendor) CreateOrUpdateVendorProfile(userId string, req dto.VendorProfileRequest) (map[string]interface{}, error) {
 	vendor, err := s.VendorRepo.GetVendorByUserID(userId)
 	if err != nil {
@@ -216,15 +239,9 @@ func (s *ServiceVendor) DeleteVendor(vendorId string) error {
 	return s.VendorRepo.DeleteVendor(vendorId)
 }
 
-func (s *ServiceVendor) UploadVendorProfileFile(ctx context.Context, vendorId string, userId string, fileHeader *multipart.FileHeader, req dto.UploadVendorProfileFileRequest) (domainvendors.VendorProfileFile, error) {
-	// Verify vendor exists
-	vendor, err := s.VendorRepo.GetVendorByID(vendorId)
-	if err != nil {
-		return domainvendors.VendorProfileFile{}, errors.New("vendor not found")
-	}
-
+func (s *ServiceVendor) UploadVendorProfileFile(ctx context.Context, profileId string, userId string, fileHeader *multipart.FileHeader, req dto.UploadVendorProfileFileRequest) (domainvendors.VendorProfileFile, error) {
 	// Verify vendor profile exists
-	profile, err := s.VendorRepo.GetVendorProfileByVendorID(vendor.Id)
+	profile, err := s.VendorRepo.GetVendorProfileByID(profileId)
 	if err != nil {
 		return domainvendors.VendorProfileFile{}, errors.New("vendor profile not found")
 	}
@@ -276,7 +293,7 @@ func (s *ServiceVendor) UploadVendorProfileFile(ctx context.Context, vendorId st
 		FileURL:         fileUrl,
 		IssuedAt:        issuedAt,
 		ExpiredAt:       expiredAt,
-		Status:          "pending",
+		Status:          utils.VendorDocPending,
 		CreatedAt:       now,
 		CreatedBy:       userId,
 	}
@@ -304,6 +321,39 @@ func (s *ServiceVendor) DeleteVendorProfileFile(ctx context.Context, fileId stri
 	}
 
 	return err
+}
+
+func (s *ServiceVendor) UpdateVendorProfileFileStatus(fileId string, req dto.UpdateVendorProfileFileStatusRequest, userId string) (domainvendors.VendorProfileFile, error) {
+	// Validate status
+	validStatuses := map[string]bool{
+		utils.VendorDocPending:  true,
+		utils.VendorDocApproved: true,
+		utils.VendorDocReject:   true,
+	}
+	if !validStatuses[req.Status] {
+		return domainvendors.VendorProfileFile{}, fmt.Errorf("invalid status: %s. Valid statuses: pending, approved, rejected", req.Status)
+	}
+
+	// Get file record
+	vendorFile, err := s.VendorRepo.GetVendorProfileFileByID(fileId)
+	if err != nil {
+		return domainvendors.VendorProfileFile{}, errors.New("file not found")
+	}
+
+	// Update status
+	now := time.Now()
+	vendorFile.Status = req.Status
+	vendorFile.VerifiedAt = &now
+	vendorFile.VerifiedBy = &userId
+	if vendorFile.Status == utils.VendorDocReject {
+		vendorFile.RejectReason = &req.Reason
+	}
+
+	if err := s.VendorRepo.UpdateVendorProfileFile(vendorFile); err != nil {
+		return domainvendors.VendorProfileFile{}, err
+	}
+
+	return vendorFile, nil
 }
 
 var _ interfacevendors.ServiceVendorInterface = (*ServiceVendor)(nil)

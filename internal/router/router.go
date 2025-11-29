@@ -237,6 +237,8 @@ func (r *Routes) VendorRoutes() {
 	{
 		vendor.GET("/profile", mdw.RoleMiddleware(utils.RoleVendor), h.GetVendorProfile)
 		vendor.POST("/profile", mdw.RoleMiddleware(utils.RoleVendor), h.CreateOrUpdateVendorProfile)
+		vendor.POST("/profile/:profileId/files", mdw.RoleMiddleware(utils.RoleVendor), h.UploadVendorProfileFile)
+		vendor.DELETE("/profile/:profileId/files/:fileId", mdw.RoleMiddleware(utils.RoleVendor), h.DeleteVendorProfileFile)
 	}
 
 	vendorAdmin := r.App.Group("/api/vendors").Use(mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin))
@@ -244,6 +246,7 @@ func (r *Routes) VendorRoutes() {
 		vendorAdmin.GET("", h.GetAllVendors)
 		vendorAdmin.GET("/:id", h.GetVendorDetail)
 		vendorAdmin.PUT("/:id/status", h.UpdateVendorStatus)
+		vendorAdmin.PUT("/files/:fileId/status", h.UpdateVendorProfileFileStatus)
 		vendorAdmin.DELETE("/:id", mdw.RoleMiddleware(utils.RoleAdmin), h.DeleteVendor)
 	}
 }
