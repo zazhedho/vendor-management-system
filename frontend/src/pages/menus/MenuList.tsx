@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { menusApi } from '../../api/menus';
 import { Menu } from '../../types';
-import { Plus, Search, Edit, Trash2, List } from 'lucide-react';
-import { Button, Card, Table, Badge, ConfirmModal } from '../../components/ui';
+import { Plus, Search, Edit, Trash2 } from 'lucide-react';
+import { Button, Card, Table, Badge, ConfirmModal, ActionMenu } from '../../components/ui';
 
 export const MenuList: React.FC = () => {
   const navigate = useNavigate();
@@ -39,11 +39,6 @@ export const MenuList: React.FC = () => {
     }
   };
 
-  const handleDeleteClick = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    setDeleteId(id);
-  };
-
   const handleDeleteConfirm = async () => {
     if (!deleteId) return;
     setIsDeleting(true);
@@ -73,7 +68,7 @@ export const MenuList: React.FC = () => {
     },
     {
       header: 'Order',
-      accessor: 'order_index'
+      accessor: (menu: Menu) => menu.order_index
     },
     {
       header: 'Status',
@@ -84,25 +79,23 @@ export const MenuList: React.FC = () => {
       )
     },
     {
-      header: 'Actions',
+      header: '',
       accessor: (menu: Menu) => (
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => { e.stopPropagation(); navigate(`/menus/${menu.id}/edit`); }}
-          >
-            <Edit size={16} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-danger-600 hover:text-danger-700 hover:bg-danger-50"
-            onClick={(e) => handleDeleteClick(e, menu.id)}
-          >
-            <Trash2 size={16} />
-          </Button>
-        </div>
+        <ActionMenu
+          items={[
+            {
+              label: 'Edit',
+              icon: <Edit size={14} />,
+              onClick: () => navigate(`/menus/${menu.id}/edit`),
+            },
+            {
+              label: 'Delete',
+              icon: <Trash2 size={14} />,
+              onClick: () => setDeleteId(menu.id),
+              variant: 'danger',
+            },
+          ]}
+        />
       )
     }
   ];

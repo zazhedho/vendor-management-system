@@ -99,7 +99,7 @@ export const MenuForm: React.FC = () => {
         setFormData({
           name: menu.name,
           display_name: menu.display_name,
-          path: menu.path,
+          path: menu.path || '',
           icon: menu.icon || '',
           order_index: menu.order_index,
           parent_id: menu.parent_id || '',

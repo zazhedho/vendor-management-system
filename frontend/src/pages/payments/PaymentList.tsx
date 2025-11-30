@@ -2,36 +2,65 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { paymentsApi } from '../../api/payments';
 import { Payment } from '../../types';
-import { Plus, Search, CreditCard, DollarSign, Eye } from 'lucide-react';
-import { Button, Card, Table, Badge } from '../../components/ui';
+import { Plus, Search, CreditCard, Eye, Edit, Trash2 } from 'lucide-react';
+import { Button, Card, Table, Badge, ConfirmModal, ActionMenu } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
+import { toast } from 'react-toastify';
 
 export const PaymentList: React.FC = () => {
   const navigate = useNavigate();
-  const { hasRole } = useAuth();
-  const isVendor = hasRole('vendor');
+  const { hasRole, hasPermission } = useAuth();
+  const isVendor = hasRole(['vendor']);
+  const canCreate = hasPermission('create_payment');
+  const canUpdate = hasPermission('update_payment');
+  const canDelete = hasPermission('delete_payment');
   const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [deletePaymentId, setDeletePaymentId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchPayments();
-  }, [currentPage, searchTerm]);
+  }, [currentPage, searchTerm, isVendor]);
+
+  const handleDelete = async () => {
+    if (!deletePaymentId) return;
+    setIsDeleting(true);
+    try {
+      await paymentsApi.delete(deletePaymentId);
+      toast.success('Payment deleted successfully');
+      fetchPayments();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || 'Failed to delete payment');
+    } finally {
+      setIsDeleting(false);
+      setDeletePaymentId(null);
+    }
+  };
 
   const fetchPayments = async () => {
     setIsLoading(true);
     try {
-      const response = await paymentsApi.getAll({
-        page: currentPage,
-        limit: 10,
-        search: searchTerm,
-      });
-
-      if (response.status) {
-        setPayments(response.data || []);
-        setTotalPages(response.total_pages || 1);
+      // Vendor uses different endpoint
+      if (isVendor) {
+        const response = await paymentsApi.getMyPayments();
+        if (response.status) {
+          setPayments(response.data || []);
+          setTotalPages(1); // No pagination for vendor endpoint
+        }
+      } else {
+        const response = await paymentsApi.getAll({
+          page: currentPage,
+          limit: 10,
+          search: searchTerm,
+        });
+        if (response.status) {
+          setPayments(response.data || []);
+          setTotalPages(response.total_pages || 1);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch payments:', error);
@@ -90,16 +119,30 @@ export const PaymentList: React.FC = () => {
       )
     },
     {
-      header: 'Actions',
+      header: '',
       accessor: (payment: Payment) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate(`/payments/${payment.id}`)}
-          leftIcon={<Eye size={16} />}
-        >
-          Details
-        </Button>
+        <ActionMenu
+          items={[
+            {
+              label: 'View',
+              icon: <Eye size={14} />,
+              onClick: () => navigate(`/payments/${payment.id}`),
+            },
+            {
+              label: 'Edit',
+              icon: <Edit size={14} />,
+              onClick: () => navigate(`/payments/${payment.id}/edit`),
+              hidden: !canUpdate,
+            },
+            {
+              label: 'Delete',
+              icon: <Trash2 size={14} />,
+              onClick: () => setDeletePaymentId(payment.id),
+              variant: 'danger',
+              hidden: !canDelete,
+            },
+          ]}
+        />
       )
     }
   ];
@@ -111,7 +154,7 @@ export const PaymentList: React.FC = () => {
           <h1 className="text-2xl font-bold text-secondary-900">Payments</h1>
           <p className="text-secondary-500">{isVendor ? "View your payment history" : "Track and manage payment transactions"}</p>
         </div>
-        {!isVendor && (
+        {canCreate && (
           <Button
             onClick={() => navigate('/payments/new')}
             leftIcon={<Plus size={20} />}
@@ -164,6 +207,17 @@ export const PaymentList: React.FC = () => {
           </Button>
         </div>
       )}
+
+      <ConfirmModal
+        show={!!deletePaymentId}
+        title="Delete Payment"
+        message="Are you sure you want to delete this payment? This action cannot be undone."
+        confirmText="Delete"
+        variant="danger"
+        isLoading={isDeleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeletePaymentId(null)}
+      />
     </div>
   );
 };

@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { eventsApi } from '../../api/events';
 import { toast } from 'react-toastify';
-import { Save, X, Upload, FileText, Trash2, Image, File, Calendar } from 'lucide-react';
+import { Save, X, Upload, FileText, Trash2, Calendar } from 'lucide-react';
 import { EventFile } from '../../types';
-import { Button, Input, Card, Spinner, ConfirmModal } from '../../components/ui';
+import { Button, Input, Card, ConfirmModal } from '../../components/ui';
 
 export const EventForm: React.FC = () => {
   const navigate = useNavigate();

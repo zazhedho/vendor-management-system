@@ -122,7 +122,6 @@ export const EvaluationDetail: React.FC = () => {
     );
   }
 
-  const isVendor = hasRole(['vendor']);
   const isClient = hasRole(['client']);
   const isAdmin = hasRole(['admin']);
 

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { evaluationsApi } from '../../api/evaluations';
 import { Evaluation } from '../../types';
 import { Star, Image as ImageIcon, Calendar, MessageSquare, Award, AlertCircle } from 'lucide-react';
-import { Button, Card, Badge } from '../../components/ui';
+import { Card, Badge } from '../../components/ui';
 import { toast } from 'react-toastify';
 
 export const VendorEvaluationList = () => {

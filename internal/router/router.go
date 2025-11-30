@@ -241,7 +241,7 @@ func (r *Routes) VendorRoutes() {
 		vendor.DELETE("/profile/:profileId/files/:fileId", mdw.RoleMiddleware(utils.RoleVendor), h.DeleteVendorProfileFile)
 	}
 
-	vendorAdmin := r.App.Group("/api/vendors").Use(mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin))
+	vendorAdmin := r.App.Group("/api/vendors").Use(mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin, utils.RoleClient))
 	{
 		vendorAdmin.GET("", h.GetAllVendors)
 		vendorAdmin.GET("/:id", h.GetVendorDetail)
@@ -309,6 +309,7 @@ func (r *Routes) PaymentRoutes() {
 
 	// Vendor can only view their payments
 	r.App.GET("/api/vendor/payments", mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleVendor), h.GetMyPayments)
+	r.App.GET("/api/vendor/payment/:id", mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleVendor), h.GetMyPaymentByID)
 
 	// Admin payment management
 	paymentAdmin := r.App.Group("/api/payment").Use(mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin))
@@ -318,6 +319,8 @@ func (r *Routes) PaymentRoutes() {
 		paymentAdmin.PUT("/:id", h.UpdatePayment)
 		paymentAdmin.PUT("/:id/status", h.UpdatePaymentStatus)
 		paymentAdmin.DELETE("/:id", h.DeletePayment)
+		paymentAdmin.POST("/:id/files", h.UploadPaymentFile)
+		paymentAdmin.DELETE("/:id/files/:file_id", h.DeletePaymentFile)
 	}
 
 	r.App.GET("/api/payments", mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin), h.GetAllPayments)

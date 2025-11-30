@@ -1,21 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { vendorsApi } from '../../api/vendors';
-import { Vendor, VendorProfile, VendorProfileFile } from '../../types';
+import { Vendor, VendorProfile } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { 
   ArrowLeft, 
   Edit, 
   ShoppingBag, 
   MapPin, 
-  Phone, 
-  Mail, 
   Building, 
   FileText,
   CheckCircle,
   XCircle,
   Clock,
-  ExternalLink
+  ExternalLink,
+  CreditCard,
+  User
 } from 'lucide-react';
 import { Button, Card, Badge, Spinner } from '../../components/ui';
 import { toast } from 'react-toastify';
@@ -40,7 +40,7 @@ export const VendorDetail: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { hasRole } = useAuth();
-  const isVendor = hasRole('vendor');
+  const isVendor = hasRole(['vendor']);
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [profile, setProfile] = useState<VendorProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -228,102 +228,199 @@ export const VendorDetail: React.FC = () => {
         <div className="lg:col-span-2 space-y-4">
           {profile ? (
             <>
-              <Card className="p-4">
-                <h2 className="text-sm font-semibold mb-3 flex items-center gap-2 text-secondary-700">
-                  <Building size={16} className="text-primary-600" />
-                  Business Information
-                </h2>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="text-xs text-secondary-500">Email</p>
-                    <p className="text-secondary-900">{profile.email || '-'}</p>
+              {/* Business Information */}
+              <Card className="overflow-hidden">
+                <div className="bg-secondary-50 px-4 py-3 border-b border-secondary-200">
+                  <h3 className="font-semibold text-secondary-900 flex items-center gap-2">
+                    <Building size={18} className="text-primary-600" />
+                    Business Information
+                  </h3>
+                </div>
+                <div className="divide-y divide-secondary-100">
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Vendor Name</span>
+                    <span className="text-secondary-900 font-medium text-sm">{profile.vendor_name || '-'}</span>
                   </div>
-                  <div>
-                    <p className="text-xs text-secondary-500">Phone</p>
-                    <p className="text-secondary-900">{profile.phone || profile.telephone || '-'}</p>
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Business Field</span>
+                    <span className="text-secondary-900 text-sm">{profile.business_field || '-'}</span>
                   </div>
-                  <div>
-                    <p className="text-xs text-secondary-500">Business Field</p>
-                    <p className="text-secondary-900">{profile.business_field || '-'}</p>
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Email</span>
+                    <span className="text-secondary-900 text-sm">{profile.email || '-'}</span>
                   </div>
-                  <div>
-                    <p className="text-xs text-secondary-500">NPWP</p>
-                    <p className="text-secondary-900 font-mono text-xs">{profile.npwp_number || '-'}</p>
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Phone</span>
+                    <span className="text-secondary-900 text-sm">{profile.phone || '-'}</span>
                   </div>
-                  <div>
-                    <p className="text-xs text-secondary-500">Tax Status</p>
-                    <p className="text-secondary-900">{profile.tax_status || '-'}</p>
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Telephone</span>
+                    <span className="text-secondary-900 text-sm">{profile.telephone || '-'}</span>
                   </div>
-                  <div>
-                    <p className="text-xs text-secondary-500">KTP Name</p>
-                    <p className="text-secondary-900">{profile.ktp_name || '-'}</p>
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Fax</span>
+                    <span className="text-secondary-900 text-sm">{profile.fax || '-'}</span>
                   </div>
                 </div>
               </Card>
 
-              {(profile.address || profile.province_name) && (
-                <Card className="p-4">
-                  <h2 className="text-sm font-semibold mb-2 flex items-center gap-2 text-secondary-700">
-                    <MapPin size={16} className="text-primary-600" />
+              {/* Location */}
+              <Card className="overflow-hidden">
+                <div className="bg-secondary-50 px-4 py-3 border-b border-secondary-200">
+                  <h3 className="font-semibold text-secondary-900 flex items-center gap-2">
+                    <MapPin size={18} className="text-primary-600" />
                     Location
-                  </h2>
-                  <p className="text-sm text-secondary-900">{profile.address || '-'}</p>
-                  <p className="text-xs text-secondary-500 mt-1">
-                    {[profile.district_name, profile.city_name, profile.province_name].filter(Boolean).join(', ')}
-                    {profile.postal_code && ` - ${profile.postal_code}`}
-                  </p>
-                </Card>
-              )}
-
-              {/* Bank & Contact - Combined */}
-              {(profile.bank_name || profile.contact_person) && (
-                <Card className="p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {profile.bank_name && (
-                      <div>
-                        <h3 className="text-xs font-semibold text-secondary-500 mb-2">Bank Information</h3>
-                        <p className="text-sm text-secondary-900">{profile.bank_name} - {profile.bank_branch || '-'}</p>
-                        <p className="text-xs text-secondary-600 font-mono">{profile.account_number || '-'}</p>
-                        <p className="text-xs text-secondary-500">{profile.account_holder_name || '-'}</p>
-                      </div>
-                    )}
-                    {profile.contact_person && (
-                      <div>
-                        <h3 className="text-xs font-semibold text-secondary-500 mb-2">Contact Person</h3>
-                        <p className="text-sm text-secondary-900">{profile.contact_person}</p>
-                        <p className="text-xs text-secondary-600">{profile.contact_email || '-'}</p>
-                        <p className="text-xs text-secondary-500">{profile.contact_phone || '-'}</p>
-                      </div>
-                    )}
+                  </h3>
+                </div>
+                <div className="divide-y divide-secondary-100">
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Address</span>
+                    <span className="text-secondary-900 text-sm">{profile.address || '-'}</span>
                   </div>
-                </Card>
-              )}
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Province</span>
+                    <span className="text-secondary-900 text-sm">{profile.province_name || '-'}</span>
+                  </div>
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">City</span>
+                    <span className="text-secondary-900 text-sm">{profile.city_name || '-'}</span>
+                  </div>
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">District</span>
+                    <span className="text-secondary-900 text-sm">{profile.district_name || '-'}</span>
+                  </div>
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Postal Code</span>
+                    <span className="text-secondary-900 text-sm">{profile.postal_code || '-'}</span>
+                  </div>
+                </div>
+              </Card>
 
-              {/* Documents - Compact */}
-              <Card className="p-4">
-                <h2 className="text-sm font-semibold mb-3 flex items-center gap-2 text-secondary-700">
-                  <FileText size={16} className="text-primary-600" />
-                  Documents
-                </h2>
+              {/* Legal Information */}
+              <Card className="overflow-hidden">
+                <div className="bg-secondary-50 px-4 py-3 border-b border-secondary-200">
+                  <h3 className="font-semibold text-secondary-900 flex items-center gap-2">
+                    <FileText size={18} className="text-primary-600" />
+                    Legal Information
+                  </h3>
+                </div>
+                <div className="divide-y divide-secondary-100">
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">KTP Number</span>
+                    <span className="text-secondary-900 font-mono text-sm">{profile.ktp_number || '-'}</span>
+                  </div>
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">KTP Name</span>
+                    <span className="text-secondary-900 text-sm">{profile.ktp_name || '-'}</span>
+                  </div>
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">NPWP Number</span>
+                    <span className="text-secondary-900 font-mono text-sm">{profile.npwp_number || '-'}</span>
+                  </div>
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">NPWP Name</span>
+                    <span className="text-secondary-900 text-sm">{profile.npwp_name || '-'}</span>
+                  </div>
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">NPWP Address</span>
+                    <span className="text-secondary-900 text-sm">{profile.npwp_address || '-'}</span>
+                  </div>
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Tax Status</span>
+                    <span className="text-secondary-900 text-sm">{profile.tax_status || '-'}</span>
+                  </div>
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">NIB Number</span>
+                    <span className="text-secondary-900 font-mono text-sm">{profile.nib_number || '-'}</span>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Bank Account */}
+              <Card className="overflow-hidden">
+                <div className="bg-secondary-50 px-4 py-3 border-b border-secondary-200">
+                  <h3 className="font-semibold text-secondary-900 flex items-center gap-2">
+                    <CreditCard size={18} className="text-primary-600" />
+                    Bank Account
+                  </h3>
+                </div>
+                <div className="divide-y divide-secondary-100">
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Bank Name</span>
+                    <span className="text-secondary-900 text-sm">{profile.bank_name || '-'}</span>
+                  </div>
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Branch</span>
+                    <span className="text-secondary-900 text-sm">{profile.bank_branch || '-'}</span>
+                  </div>
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Account Number</span>
+                    <span className="text-secondary-900 font-mono text-sm">{profile.account_number || '-'}</span>
+                  </div>
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Account Holder</span>
+                    <span className="text-secondary-900 text-sm">{profile.account_holder_name || '-'}</span>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Contact Person */}
+              <Card className="overflow-hidden">
+                <div className="bg-secondary-50 px-4 py-3 border-b border-secondary-200">
+                  <h3 className="font-semibold text-secondary-900 flex items-center gap-2">
+                    <User size={18} className="text-primary-600" />
+                    Contact Person
+                  </h3>
+                </div>
+                <div className="divide-y divide-secondary-100">
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Name</span>
+                    <span className="text-secondary-900 text-sm">{profile.contact_person || '-'}</span>
+                  </div>
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Email</span>
+                    <span className="text-secondary-900 text-sm">{profile.contact_email || '-'}</span>
+                  </div>
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Phone</span>
+                    <span className="text-secondary-900 text-sm">{profile.contact_phone || '-'}</span>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Documents */}
+              <Card className="overflow-hidden">
+                <div className="bg-secondary-50 px-4 py-3 border-b border-secondary-200">
+                  <h3 className="font-semibold text-secondary-900 flex items-center gap-2">
+                    <FileText size={18} className="text-primary-600" />
+                    Documents
+                  </h3>
+                </div>
                 {profile.files && profile.files.length > 0 ? (
-                  <div className="space-y-2">
+                  <div className="divide-y divide-secondary-100">
                     {profile.files.map((file) => (
-                      <div key={file.id} className="flex items-center justify-between py-2 px-3 border border-secondary-100 rounded-lg hover:bg-secondary-50">
-                        <div className="flex items-center gap-2">
+                      <div key={file.id} className="flex items-center justify-between py-2.5 px-4 hover:bg-secondary-50">
+                        <div className="flex items-center gap-3">
                           {getFileStatusIcon(file.status)}
-                          <span className="text-sm font-medium text-secondary-900">{formatFileType(file.file_type)}</span>
+                          <div>
+                            <span className="text-sm font-medium text-secondary-900">{formatFileType(file.file_type)}</span>
+                            <span className={`ml-2 text-xs capitalize ${
+                              file.status === 'rejected' ? 'text-danger-600' : 
+                              file.status === 'approved' ? 'text-success-600' : 'text-warning-600'
+                            }`}>({file.status})</span>
+                          </div>
                         </div>
                         <div className="flex items-center gap-1">
                           <a href={file.file_url} target="_blank" rel="noreferrer" className="p-1.5 text-secondary-400 hover:text-primary-600 rounded">
-                            <ExternalLink size={14} />
+                            <ExternalLink size={16} />
                           </a>
                           {file.status === 'pending' && (
                             <>
                               <button onClick={() => handleApproveFile(file.id)} disabled={updatingFileId === file.id} className="p-1.5 text-success-500 hover:bg-success-50 rounded">
-                                <CheckCircle size={14} />
+                                <CheckCircle size={16} />
                               </button>
                               <button onClick={() => setShowRejectModal(file.id)} disabled={updatingFileId === file.id} className="p-1.5 text-danger-500 hover:bg-danger-50 rounded">
-                                <XCircle size={14} />
+                                <XCircle size={16} />
                               </button>
                             </>
                           )}
@@ -332,7 +429,7 @@ export const VendorDetail: React.FC = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-secondary-500 text-center py-3 text-sm">No documents</p>
+                  <p className="text-secondary-500 text-center py-4 text-sm">No documents uploaded yet</p>
                 )}
               </Card>
             </>

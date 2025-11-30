@@ -68,4 +68,9 @@ export const paymentsApi = {
     const response = await apiClient.get<ApiResponse<Payment[]>>('/vendor/payments');
     return response.data;
   },
+
+  getMyPaymentById: async (id: string) => {
+    const response = await apiClient.get<ApiResponse<Payment>>(`/vendor/payment/${id}`);
+    return response.data;
+  },
 };

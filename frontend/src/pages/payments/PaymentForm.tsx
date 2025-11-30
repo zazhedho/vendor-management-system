@@ -3,8 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { paymentsApi } from '../../api/payments';
 import { vendorsApi } from '../../api/vendors';
 import { toast } from 'react-toastify';
-import { Save, X, Upload, FileText, Trash2 } from 'lucide-react';
-import { Button, Input, Card, Spinner } from '../../components/ui';
+import { Save, X, Upload, FileText, Trash2, Download } from 'lucide-react';
+import { Button, Input, Card, Spinner, ConfirmModal } from '../../components/ui';
+import { PaymentFile } from '../../types';
 
 export const PaymentForm: React.FC = () => {
   const navigate = useNavigate();
@@ -21,8 +22,13 @@ export const PaymentForm: React.FC = () => {
   });
   const [vendors, setVendors] = useState<any[]>([]);
   const [files, setFiles] = useState<{ file: File; file_type: string; caption: string }[]>([]);
+  const [existingFiles, setExistingFiles] = useState<PaymentFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [deleteFileId, setDeleteFileId] = useState<string | null>(null);
+  const [isDeletingFile, setIsDeletingFile] = useState(false);
+  const [selectedFileType, setSelectedFileType] = useState('proof');
+  const [customFileType, setCustomFileType] = useState('');
 
   useEffect(() => {
     fetchVendors();
@@ -59,10 +65,27 @@ export const PaymentForm: React.FC = () => {
           payment_date: payment.payment_date ? payment.payment_date.split('T')[0] : '',
           description: payment.description || '',
         });
+        setExistingFiles(payment.files || []);
       }
     } catch (error) {
       console.error('Failed to fetch payment:', error);
       toast.error('Failed to load payment data');
+    }
+  };
+
+  const handleDeleteExistingFile = async () => {
+    if (!deleteFileId || !id) return;
+    setIsDeletingFile(true);
+    try {
+      await paymentsApi.deleteFile(id, deleteFileId);
+      toast.success('File deleted successfully');
+      setExistingFiles(existingFiles.filter(f => f.id !== deleteFileId));
+    } catch (error: any) {
+      console.error('Failed to delete file:', error);
+      toast.error(error?.response?.data?.error || 'Failed to delete file');
+    } finally {
+      setIsDeletingFile(false);
+      setDeleteFileId(null);
     }
   };
 
@@ -71,7 +94,7 @@ export const PaymentForm: React.FC = () => {
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleFileAdd = (e: React.ChangeEvent<HTMLInputElement>, fileType: string) => {
+  const handleFileAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
 
@@ -94,8 +117,18 @@ export const PaymentForm: React.FC = () => {
         return;
       }
 
+      // Determine file type
+      const fileType = selectedFileType === 'other' 
+        ? (customFileType.trim() || 'other')
+        : selectedFileType;
+
       setFiles([...files, { file, file_type: fileType, caption: '' }]);
       e.target.value = '';
+      
+      // Reset custom type after adding
+      if (selectedFileType === 'other') {
+        setCustomFileType('');
+      }
     }
   };
 
@@ -287,70 +320,132 @@ export const PaymentForm: React.FC = () => {
               />
             </div>
 
-            {/* File Upload Section */}
-            {!isEditMode && (
+            {/* Existing Files (Edit Mode) */}
+            {isEditMode && existingFiles.length > 0 && (
               <div className="border-t pt-6">
                 <label className="block text-sm font-medium text-secondary-700 mb-3 flex items-center gap-2">
                   <FileText size={16} />
-                  Attach Documents
+                  Existing Documents ({existingFiles.length})
                 </label>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-                  {['proof', 'invoice', 'receipt'].map((fileType) => (
-                    <label
-                      key={fileType}
-                      className="cursor-pointer flex items-center justify-center gap-2 px-4 py-3 bg-secondary-100 hover:bg-secondary-200 rounded-lg transition-colors border-2 border-dashed border-secondary-300"
-                    >
-                      <Upload size={16} />
-                      <span className="capitalize">{fileType}</span>
-                      <input
-                        type="file"
-                        accept=".pdf,.doc,.docx,image/*"
-                        onChange={(e) => handleFileAdd(e, fileType)}
-                        className="hidden"
-                      />
-                    </label>
+                <div className="space-y-3">
+                  {existingFiles.map((file) => (
+                    <div key={file.id} className="flex items-center justify-between p-3 bg-secondary-50 border border-secondary-200 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <FileText size={20} className="text-secondary-400" />
+                        <div>
+                          <p className="text-sm font-medium text-secondary-900 uppercase">{file.file_type}</p>
+                          <p className="text-xs text-secondary-500">{file.caption || 'No caption'}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={file.file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                        >
+                          <Download size={16} />
+                        </a>
+                        <Button
+                          type="button"
+                          variant="danger"
+                          size="sm"
+                          onClick={() => setDeleteFileId(file.id)}
+                          leftIcon={<Trash2 size={14} />}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
                   ))}
                 </div>
-                <p className="text-xs text-secondary-500">Max 5MB per file. Accepted: PDF, DOC, DOCX, Images</p>
-
-                {files.length > 0 && (
-                  <div className="mt-4 space-y-3">
-                    {files.map((fileData, index) => (
-                      <Card key={index} className="p-4">
-                        <div className="flex items-center gap-4">
-                          <FileText size={24} className="text-secondary-400" />
-                          <div className="flex-1 space-y-2">
-                            <p className="text-sm font-medium text-secondary-900">
-                              {fileData.file.name}
-                            </p>
-                            <p className="text-xs text-secondary-500">
-                              Type: {fileData.file_type} • Size: {(fileData.file.size / 1024).toFixed(2)} KB
-                            </p>
-                            <Input
-                              type="text"
-                              value={fileData.caption}
-                              onChange={(e) => handleCaptionChange(index, e.target.value)}
-                              placeholder="Add caption (optional)"
-                              className="text-sm"
-                            />
-                          </div>
-                          <Button
-                            type="button"
-                            variant="danger"
-                            size="sm"
-                            onClick={() => handleRemoveFile(index)}
-                            leftIcon={<Trash2 size={14} />}
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                )}
               </div>
             )}
+
+            {/* File Upload Section */}
+            <div className="border-t pt-6">
+              <label className="block text-sm font-medium text-secondary-700 mb-3 flex items-center gap-2">
+                <FileText size={16} />
+                {isEditMode ? 'Add More Documents' : 'Attach Documents'}
+              </label>
+
+              <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                {/* File Type Dropdown */}
+                <div className="flex-1">
+                  <select
+                    value={selectedFileType}
+                    onChange={(e) => setSelectedFileType(e.target.value)}
+                    className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  >
+                    <option value="proof">Proof</option>
+                    <option value="invoice">Invoice</option>
+                    <option value="receipt">Receipt</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                {/* Custom Type Input (shown when "other" is selected) */}
+                {selectedFileType === 'other' && (
+                  <div className="flex-1">
+                    <Input
+                      type="text"
+                      value={customFileType}
+                      onChange={(e) => setCustomFileType(e.target.value)}
+                      placeholder="Enter custom type..."
+                    />
+                  </div>
+                )}
+
+                {/* Upload Button */}
+                <label className="cursor-pointer inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors">
+                  <Upload size={16} />
+                  Select File
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,image/*"
+                    onChange={handleFileAdd}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-secondary-500">Max 5MB per file. Accepted: PDF, DOC, DOCX, Images</p>
+
+              {files.length > 0 && (
+                <div className="mt-4 space-y-3">
+                  {files.map((fileData, index) => (
+                    <Card key={index} className="p-4">
+                      <div className="flex items-center gap-4">
+                        <FileText size={24} className="text-secondary-400" />
+                        <div className="flex-1 space-y-2">
+                          <p className="text-sm font-medium text-secondary-900">
+                            {fileData.file.name}
+                          </p>
+                          <p className="text-xs text-secondary-500">
+                            Type: {fileData.file_type} • Size: {(fileData.file.size / 1024).toFixed(2)} KB
+                          </p>
+                          <Input
+                            type="text"
+                            value={fileData.caption}
+                            onChange={(e) => handleCaptionChange(index, e.target.value)}
+                            placeholder="Add caption (optional)"
+                            className="text-sm"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="danger"
+                          size="sm"
+                          onClick={() => handleRemoveFile(index)}
+                          leftIcon={<Trash2 size={14} />}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Form Actions */}
@@ -375,6 +470,17 @@ export const PaymentForm: React.FC = () => {
           </div>
         </Card>
       </form>
+
+      <ConfirmModal
+        show={!!deleteFileId}
+        title="Delete File"
+        message="Are you sure you want to delete this file? This action cannot be undone."
+        confirmText="Delete"
+        variant="danger"
+        isLoading={isDeletingFile}
+        onConfirm={handleDeleteExistingFile}
+        onCancel={() => setDeleteFileId(null)}
+      />
     </div>
   );
 };

@@ -56,9 +56,9 @@ export const Dashboard: React.FC = () => {
         paymentsApi.getAll({ limit: 100 })
       ]);
 
-      const totalEvents = eventsRes.data?.pagination?.total || eventsRes.data?.length || 0;
-      const totalVendors = vendorsRes.data?.pagination?.total || vendorsRes.data?.length || 0;
-      const allPayments = paymentsRes.data?.data || paymentsRes.data || [];
+      const totalEvents = eventsRes.total_data || eventsRes.data?.length || 0;
+      const totalVendors = vendorsRes.total_data || vendorsRes.data?.length || 0;
+      const allPayments = paymentsRes.data || [];
       const pendingPayments = Array.isArray(allPayments)
         ? allPayments.filter((p: any) => p.status === 'pending').length
         : 0;
@@ -70,7 +70,7 @@ export const Dashboard: React.FC = () => {
         pendingPayments,
       });
 
-      const events = eventsRes.data?.data || eventsRes.data || [];
+      const events = eventsRes.data || [];
       setRecentEvents(Array.isArray(events) ? events.slice(0, 5) : []);
 
       const activities = Array.isArray(events) ? events.slice(0, 4).map((event: any, index: number) => ({
@@ -87,7 +87,7 @@ export const Dashboard: React.FC = () => {
   const fetchClientData = async () => {
     try {
       const eventsRes = await eventsApi.getAll({ limit: 5 });
-      const events = eventsRes.data?.data || eventsRes.data || [];
+      const events = eventsRes.data || [];
 
       setStats({
         totalEvents: Array.isArray(events) ? events.length : 0,
@@ -112,12 +112,12 @@ export const Dashboard: React.FC = () => {
       const [submissionsRes, paymentsRes, eventsRes] = await Promise.all([
         eventsApi.getMySubmissions().catch(() => ({ data: [] })),
         paymentsApi.getMyPayments().catch(() => ({ data: [] })),
-        eventsApi.getAll({ limit: 5 }).catch(() => ({ data: [] }))
+        eventsApi.getAll({ limit: 5 }).catch(() => ({ data: [] } as any))
       ]);
 
       const submissions = submissionsRes.data || [];
       const payments = paymentsRes.data || [];
-      const events = eventsRes.data?.data || eventsRes.data || [];
+      const events = eventsRes.data || [];
 
       const wonSubmissions = Array.isArray(submissions)
         ? submissions.filter((s: any) => s.status === 'won' || s.is_winner).length

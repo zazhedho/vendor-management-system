@@ -5,7 +5,7 @@ import { permissionsApi } from '../../api/permissions';
 import { menusApi } from '../../api/menus';
 import { Permission, Menu } from '../../types';
 import { Save, X, Shield, List, Lock } from 'lucide-react';
-import { Button, Input, Card, Spinner } from '../../components/ui';
+import { Button, Input, Card } from '../../components/ui';
 import { toast } from 'react-toastify';
 
 export const RoleForm: React.FC = () => {

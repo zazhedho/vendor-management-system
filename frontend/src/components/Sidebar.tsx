@@ -15,7 +15,6 @@ import {
     Settings,
     ChevronDown,
     ChevronRight,
-    ChevronLeft,
     Circle,
     PanelLeftClose,
     PanelLeft
@@ -227,18 +226,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, menuItems, is
                 `}
             >
                 {/* Header */}
-                <div className={`flex items-center justify-between bg-secondary-950 ${isCollapsed ? 'px-2 py-4' : 'px-4 py-5'}`}>
-                    {isCollapsed ? (
-                        <div className="flex flex-col items-center flex-1">
-                            <img src="/logo-vms.png" alt="VMS Logo" className="w-10 h-10" />
-                        </div>
-                    ) : (
-                        <div className="flex flex-col items-center flex-1">
-                            <img src="/logo-vms.png" alt="VMS Logo" className="w-16 h-16 mb-3" />
-                            <div className="text-center">
-                                <p className="text-lg font-bold tracking-wide text-white">Vendor</p>
-                                <p className="text-sm font-medium tracking-wide text-secondary-400">Management System</p>
-                            </div>
+                <div className={`flex items-center bg-secondary-950 ${isCollapsed ? 'justify-center p-2' : 'px-4 py-4 gap-3'}`}>
+                    <img 
+                        src="/logo-vms.png" 
+                        alt="VMS Logo" 
+                        className={isCollapsed ? 'h-10 w-auto' : 'h-14 w-auto'} 
+                    />
+                    {!isCollapsed && (
+                        <div className="flex flex-col">
+                            <span className="text-white font-bold text-xl leading-tight">Vendor</span>
+                            <span className="text-secondary-400 text-sm leading-tight">Management System</span>
                         </div>
                     )}
                     <button

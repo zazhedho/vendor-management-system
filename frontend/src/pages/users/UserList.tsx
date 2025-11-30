@@ -4,8 +4,7 @@ import { usersApi } from '../../api/users';
 import { useAuth } from '../../context/AuthContext';
 import { User } from '../../types';
 import { Plus, Search, Edit, Trash2, Shield } from 'lucide-react';
-import { Button, Card, Table, Badge, ConfirmModal } from '../../components/ui';
-import { toast } from 'react-toastify';
+import { Button, Card, Table, Badge, ConfirmModal, ActionMenu } from '../../components/ui';
 
 export const UserList: React.FC = () => {
   const navigate = useNavigate();
@@ -47,15 +46,6 @@ export const UserList: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleDeleteClick = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    if (id === currentUser?.id) {
-      toast.error('You cannot delete your own account');
-      return;
-    }
-    setDeleteId(id);
   };
 
   const handleDeleteConfirm = async () => {
@@ -117,27 +107,24 @@ export const UserList: React.FC = () => {
       accessor: (user: User) => new Date(user.created_at).toLocaleDateString()
     },
     {
-      header: 'Actions',
+      header: '',
       accessor: (user: User) => (
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => { e.stopPropagation(); navigate(`/users/${user.id}/edit`); }}
-          >
-            <Edit size={16} />
-          </Button>
-          {user.id !== currentUser?.id && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-danger-600 hover:text-danger-700 hover:bg-danger-50"
-              onClick={(e) => handleDeleteClick(e, user.id)}
-            >
-              <Trash2 size={16} />
-            </Button>
-          )}
-        </div>
+        <ActionMenu
+          items={[
+            {
+              label: 'Edit',
+              icon: <Edit size={14} />,
+              onClick: () => navigate(`/users/${user.id}/edit`),
+            },
+            {
+              label: 'Delete',
+              icon: <Trash2 size={14} />,
+              onClick: () => setDeleteId(user.id),
+              variant: 'danger',
+              hidden: user.id === currentUser?.id,
+            },
+          ]}
+        />
       )
     }
   ];

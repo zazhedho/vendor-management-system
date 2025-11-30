@@ -2,28 +2,55 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { paymentsApi } from '../../api/payments';
 import { Payment } from '../../types';
-import { ArrowLeft, DollarSign, FileText, Calendar, Download } from 'lucide-react';
-import { Button, Card, Badge, Spinner } from '../../components/ui';
+import { ArrowLeft, FileText, Calendar, Download, Edit, Trash2 } from 'lucide-react';
+import { Button, Card, Badge, Spinner, ConfirmModal } from '../../components/ui';
+import { useAuth } from '../../context/AuthContext';
+import { toast } from 'react-toastify';
 
 export const PaymentDetail: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const { hasPermission, hasRole } = useAuth();
+  const isVendor = hasRole(['vendor']);
+  const canUpdate = hasPermission('update_payment');
+  const canDelete = hasPermission('delete_payment');
   const [payment, setPayment] = useState<Payment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (id) fetchPayment(id);
   }, [id]);
 
+  const handleDelete = async () => {
+    if (!id) return;
+    setIsDeleting(true);
+    try {
+      await paymentsApi.delete(id);
+      toast.success('Payment deleted successfully');
+      navigate('/payments');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || 'Failed to delete payment');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+    }
+  };
+
   const fetchPayment = async (paymentId: string) => {
     setIsLoading(true);
     try {
-      const response = await paymentsApi.getById(paymentId);
+      // Vendor uses different endpoint
+      const response = isVendor 
+        ? await paymentsApi.getMyPaymentById(paymentId)
+        : await paymentsApi.getById(paymentId);
       if (response.status && response.data) {
         setPayment(response.data);
       }
     } catch (error) {
       console.error('Failed to fetch payment:', error);
+      toast.error('Failed to load payment details');
     } finally {
       setIsLoading(false);
     }
@@ -68,6 +95,28 @@ export const PaymentDetail: React.FC = () => {
         <Button variant="ghost" onClick={() => navigate('/payments')} leftIcon={<ArrowLeft size={16} />}>
           Back
         </Button>
+        {(canUpdate || canDelete) && (
+          <div className="flex gap-2">
+            {canUpdate && (
+              <Button
+                variant="secondary"
+                onClick={() => navigate(`/payments/${id}/edit`)}
+                leftIcon={<Edit size={16} />}
+              >
+                Edit
+              </Button>
+            )}
+            {canDelete && (
+              <Button
+                variant="danger"
+                onClick={() => setShowDeleteModal(true)}
+                leftIcon={<Trash2 size={16} />}
+              >
+                Delete
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       <Card className="bg-gradient-to-r from-secondary-900 to-secondary-800 text-white border-none">
@@ -134,8 +183,14 @@ export const PaymentDetail: React.FC = () => {
             <h3 className="font-semibold text-secondary-900 mb-4">Transaction Details</h3>
             <div className="space-y-4">
               <div>
+                <p className="text-xs text-secondary-500 mb-1">Vendor Name</p>
+                <p className="text-sm font-medium text-secondary-900">
+                  {payment.vendor?.profile?.vendor_name || '-'}
+                </p>
+              </div>
+              <div className="pt-4 border-t border-secondary-100">
                 <p className="text-xs text-secondary-500 mb-1">Vendor ID</p>
-                <p className="text-sm font-mono text-secondary-900 break-all">{payment.vendor_id}</p>
+                <p className="text-xs font-mono text-secondary-600 break-all">{payment.vendor_id}</p>
               </div>
               <div className="pt-4 border-t border-secondary-100">
                 <p className="text-xs text-secondary-500 mb-1">Payment Date</p>
@@ -159,6 +214,17 @@ export const PaymentDetail: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      <ConfirmModal
+        show={showDeleteModal}
+        title="Delete Payment"
+        message="Are you sure you want to delete this payment? This action cannot be undone."
+        confirmText="Delete"
+        variant="danger"
+        isLoading={isDeleting}
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteModal(false)}
+      />
     </div>
   );
 };

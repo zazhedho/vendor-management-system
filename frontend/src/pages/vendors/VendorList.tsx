@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { vendorsApi } from '../../api/vendors';
 import { Vendor } from '../../types';
 import { Plus, Search, Eye, Edit, Trash2 } from 'lucide-react';
-import { Button, Input, Card, Table, Badge, ConfirmModal } from '../../components/ui';
+import { Button, Card, Table, Badge, ConfirmModal, ActionMenu } from '../../components/ui';
 
 export const VendorList: React.FC = () => {
   const navigate = useNavigate();
@@ -39,11 +39,6 @@ export const VendorList: React.FC = () => {
     }
   };
 
-  const handleDeleteClick = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    setDeleteId(id);
-  };
-
   const handleDeleteConfirm = async () => {
     if (!deleteId) return;
     setIsDeleting(true);
@@ -75,7 +70,7 @@ export const VendorList: React.FC = () => {
     },
     {
       header: 'Type',
-      accessor: 'vendor_type'
+      accessor: (vendor: Vendor) => vendor.vendor_type
     },
     {
       header: 'Status',
@@ -90,25 +85,28 @@ export const VendorList: React.FC = () => {
       accessor: (vendor: Vendor) => new Date(vendor.created_at).toLocaleDateString()
     },
     {
-      header: 'Actions',
+      header: '',
       accessor: (vendor: Vendor) => (
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => { e.stopPropagation(); navigate(`/vendors/${vendor.id}/edit`); }}
-          >
-            <Edit size={16} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-danger-600 hover:text-danger-700 hover:bg-danger-50"
-            onClick={(e) => handleDeleteClick(e, vendor.id)}
-          >
-            <Trash2 size={16} />
-          </Button>
-        </div>
+        <ActionMenu
+          items={[
+            {
+              label: 'View',
+              icon: <Eye size={14} />,
+              onClick: () => navigate(`/vendors/${vendor.id}`),
+            },
+            {
+              label: 'Edit',
+              icon: <Edit size={14} />,
+              onClick: () => navigate(`/vendors/${vendor.id}/edit`),
+            },
+            {
+              label: 'Delete',
+              icon: <Trash2 size={14} />,
+              onClick: () => setDeleteId(vendor.id),
+              variant: 'danger',
+            },
+          ]}
+        />
       )
     }
   ];

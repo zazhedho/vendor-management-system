@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { rolesApi } from '../../api/roles';
 import { Role } from '../../types';
-import { Plus, Search, Shield, Edit, Trash2, Lock, Eye } from 'lucide-react';
-import { Button, Card, Table, Badge, ConfirmModal } from '../../components/ui';
-import { toast } from 'react-toastify';
+import { Plus, Search, Shield, Edit, Trash2, Lock } from 'lucide-react';
+import { Button, Card, Table, Badge, ConfirmModal, ActionMenu } from '../../components/ui';
 
 export const RoleList: React.FC = () => {
   const navigate = useNavigate();
@@ -40,15 +39,6 @@ export const RoleList: React.FC = () => {
     }
   };
 
-  const handleDeleteClick = (e: React.MouseEvent, id: string, isSystem: boolean) => {
-    e.stopPropagation();
-    if (isSystem) {
-      toast.error('System roles cannot be deleted');
-      return;
-    }
-    setDeleteId(id);
-  };
-
   const handleDeleteConfirm = async () => {
     if (!deleteId) return;
     setIsDeleting(true);
@@ -75,7 +65,7 @@ export const RoleList: React.FC = () => {
     },
     {
       header: 'Display Name',
-      accessor: 'display_name'
+      accessor: (role: Role) => role.display_name
     },
     {
       header: 'Description',
@@ -94,27 +84,24 @@ export const RoleList: React.FC = () => {
       )
     },
     {
-      header: 'Actions',
+      header: '',
       accessor: (role: Role) => (
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => { e.stopPropagation(); navigate(`/roles/${role.id}/edit`); }}
-          >
-            <Edit size={16} />
-          </Button>
-          {!role.is_system && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-danger-600 hover:text-danger-700 hover:bg-danger-50"
-              onClick={(e) => handleDeleteClick(e, role.id, role.is_system)}
-            >
-              <Trash2 size={16} />
-            </Button>
-          )}
-        </div>
+        <ActionMenu
+          items={[
+            {
+              label: 'Edit',
+              icon: <Edit size={14} />,
+              onClick: () => navigate(`/roles/${role.id}/edit`),
+            },
+            {
+              label: 'Delete',
+              icon: <Trash2 size={14} />,
+              onClick: () => setDeleteId(role.id),
+              variant: 'danger',
+              hidden: role.is_system,
+            },
+          ]}
+        />
       )
     }
   ];

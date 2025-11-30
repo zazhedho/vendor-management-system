@@ -245,15 +245,9 @@ export const VendorEvaluationDetail = () => {
               <p className="text-sm text-secondary-600 mt-1">Upload photos with captions to showcase your work</p>
             </div>
             {canUploadMore && (
-              <label className="cursor-pointer">
-                <Button
-                  variant="primary"
-                  size="sm"
-                  leftIcon={<Upload className="w-4 h-4" />}
-                  as="span"
-                >
-                  Add Photos
-                </Button>
+              <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors">
+                <Upload className="w-4 h-4" />
+                Add Photos
                 <input
                   type="file"
                   accept="image/*"
@@ -389,10 +383,9 @@ export const VendorEvaluationDetail = () => {
             </div>
             <h4 className="text-sm font-semibold text-secondary-900 mb-1">No Photos Yet</h4>
             <p className="text-sm text-secondary-600 mb-4">Upload photos to showcase your event work</p>
-            <label className="cursor-pointer">
-              <Button variant="primary" size="sm" leftIcon={<Upload className="w-4 h-4" />} as="span">
-                Upload Photos
-              </Button>
+            <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors">
+              <Upload className="w-4 h-4" />
+              Upload Photos
               <input
                 type="file"
                 accept="image/*"

@@ -6,3 +6,4 @@ export * from './Spinner';
 export * from './Stepper';
 export * from './Table';
 export * from './ConfirmModal';
+export * from './ActionMenu';

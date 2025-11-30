@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { evaluationsApi } from '../../api/evaluations';
 import { Evaluation, EvaluationPhoto } from '../../types';
 import { ArrowLeft, Star, Send, CheckCircle, XCircle, Calendar, MessageSquare } from 'lucide-react';
-import { Button, Card, Input } from '../../components/ui';
+import { Button, Card } from '../../components/ui';
 import { toast } from 'react-toastify';
 
 export const ClientEvaluationReview = () => {

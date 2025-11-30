@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { evaluationsApi } from '../../api/evaluations';
 import { Evaluation } from '../../types';
-import { Plus, Search, Star, Image, Upload, Award } from 'lucide-react';
-import { Button, Card, Table, Badge } from '../../components/ui';
+import { Plus, Search, Star, Image, Upload, Award, Eye } from 'lucide-react';
+import { Button, Card, Table, Badge, ActionMenu } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 
@@ -27,17 +27,19 @@ export const EvaluationList: React.FC = () => {
     setIsLoading(true);
     try {
       // Vendor uses different API endpoint
-      const response = isVendor
-        ? await evaluationsApi.getMyEvaluations()
-        : await evaluationsApi.getAll({
-            page: currentPage,
-            limit: 10,
-            search: searchTerm,
-          });
-
-      if (response.status) {
-        setEvaluations(response.data || []);
-        if (!isVendor) {
+      if (isVendor) {
+        const response = await evaluationsApi.getMyEvaluations();
+        if (response.status) {
+          setEvaluations(response.data || []);
+        }
+      } else {
+        const response = await evaluationsApi.getAll({
+          page: currentPage,
+          limit: 10,
+          search: searchTerm,
+        });
+        if (response.status) {
+          setEvaluations(response.data || []);
           setTotalPages(response.total_pages || 1);
         }
       }
@@ -100,23 +102,23 @@ export const EvaluationList: React.FC = () => {
       )
     },
     {
-      header: 'Actions',
+      header: '',
       accessor: (evaluation: Evaluation) => (
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={() => navigate(`/evaluations/${evaluation.id}`)}>
-            View
-          </Button>
-          {isVendor && (evaluation.photos?.length || 0) < 5 && (
-            <Button 
-              variant="primary" 
-              size="sm" 
-              onClick={() => navigate(`/evaluations/${evaluation.id}/upload`)}
-              leftIcon={<Upload size={14} />}
-            >
-              Upload
-            </Button>
-          )}
-        </div>
+        <ActionMenu
+          items={[
+            {
+              label: 'View',
+              icon: <Eye size={14} />,
+              onClick: () => navigate(`/evaluations/${evaluation.id}`),
+            },
+            {
+              label: 'Upload Photos',
+              icon: <Upload size={14} />,
+              onClick: () => navigate(`/evaluations/${evaluation.id}/upload`),
+              hidden: !isVendor || (evaluation.photos?.length || 0) >= 5,
+            },
+          ]}
+        />
       )
     }
   ].filter(col => !col.hidden);

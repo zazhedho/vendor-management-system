@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { vendorsApi } from '../../api/vendors';
 import { toast } from 'react-toastify';
-import { Save, X, Upload, FileText, Trash2, CheckCircle, XCircle, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Save, X, Upload, FileText, Trash2, ArrowRight, ArrowLeft } from 'lucide-react';
 import { VendorProfile, VendorProfileFile } from '../../types';
 import { Button, Input, Card, Stepper, Spinner, ConfirmModal } from '../../components/ui';
 
@@ -41,11 +41,11 @@ export const VendorForm: React.FC = () => {
     vendor_name: '',
     email: '',
     phone: '',
-    mobile: '',
+    telephone: '',
     address: '',
-    province: '',
-    city: '',
-    district: '',
+    province_id: '',
+    city_id: '',
+    district_id: '',
     business_field: '',
     ktp_number: '',
     ktp_name: '',
@@ -53,8 +53,8 @@ export const VendorForm: React.FC = () => {
     npwp_name: '',
     npwp_address: '',
     bank_name: '',
-    bank_account_number: '',
-    bank_account_name: '',
+    account_number: '',
+    account_holder_name: '',
     nib_number: '',
   });
 
@@ -287,9 +287,9 @@ export const VendorForm: React.FC = () => {
                 onChange={handleProfileChange}
               />
               <Input
-                label="Mobile"
-                name="mobile"
-                value={profileData.mobile}
+                label="Telephone"
+                name="telephone"
+                value={profileData.telephone}
                 onChange={handleProfileChange}
               />
               <Input
@@ -310,20 +310,20 @@ export const VendorForm: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input
                 label="Province"
-                name="province"
-                value={profileData.province}
+                name="province_id"
+                value={profileData.province_id}
                 onChange={handleProfileChange}
               />
               <Input
                 label="City"
-                name="city"
-                value={profileData.city}
+                name="city_id"
+                value={profileData.city_id}
                 onChange={handleProfileChange}
               />
               <Input
                 label="District"
-                name="district"
-                value={profileData.district}
+                name="district_id"
+                value={profileData.district_id}
                 onChange={handleProfileChange}
               />
               <div className="md:col-span-2">
@@ -391,14 +391,14 @@ export const VendorForm: React.FC = () => {
                   />
                   <Input
                     label="Account Number"
-                    name="bank_account_number"
-                    value={profileData.bank_account_number}
+                    name="account_number"
+                    value={profileData.account_number}
                     onChange={handleProfileChange}
                   />
                   <Input
                     label="Account Holder"
-                    name="bank_account_name"
-                    value={profileData.bank_account_name}
+                    name="account_holder_name"
+                    value={profileData.account_holder_name}
                     onChange={handleProfileChange}
                   />
                 </div>

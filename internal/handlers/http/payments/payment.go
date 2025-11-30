@@ -135,6 +135,55 @@ func (h *HandlerPayment) GetMyPayments(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, res)
 }
 
+func (h *HandlerPayment) GetMyPaymentByID(ctx *gin.Context) {
+	authData := utils.GetAuthData(ctx)
+	userId := utils.InterfaceString(authData["user_id"])
+	logId := utils.GenerateLogId(ctx)
+	logPrefix := fmt.Sprintf("[%s][PaymentHandler][GetMyPaymentByID]", logId)
+
+	id, err := utils.ValidateUUID(ctx, logId)
+	if err != nil {
+		return
+	}
+
+	// Get vendor by user ID
+	vendor, err := h.VendorRepo.GetVendorByUserID(userId)
+	if err != nil {
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; GetVendorByUserID; ERROR: %s;", logPrefix, err))
+		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
+		res.Error = "vendor profile not found"
+		ctx.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	// Get payment
+	data, err := h.Service.GetPaymentByID(id)
+	if err != nil {
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetPaymentByID; ERROR: %s;", logPrefix, err))
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			res := response.Response(http.StatusNotFound, messages.MsgNotFound, logId, nil)
+			res.Error = response.Errors{Code: http.StatusNotFound, Message: "payment not found"}
+			ctx.JSON(http.StatusNotFound, res)
+			return
+		}
+		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
+		res.Error = err.Error()
+		ctx.JSON(http.StatusInternalServerError, res)
+		return
+	}
+
+	// Verify payment belongs to this vendor
+	if data.VendorID != vendor.Id {
+		res := response.Response(http.StatusForbidden, messages.MsgFail, logId, nil)
+		res.Error = "you don't have access to this payment"
+		ctx.JSON(http.StatusForbidden, res)
+		return
+	}
+
+	res := response.Response(http.StatusOK, "success", logId, data)
+	ctx.JSON(http.StatusOK, res)
+}
+
 func (h *HandlerPayment) UpdatePayment(ctx *gin.Context) {
 	var req dto.UpdatePaymentRequest
 	logId := utils.GenerateLogId(ctx)
@@ -233,5 +282,85 @@ func (h *HandlerPayment) DeletePayment(ctx *gin.Context) {
 	}
 
 	res := response.Response(http.StatusOK, "Payment deleted successfully", logId, nil)
+	ctx.JSON(http.StatusOK, res)
+}
+
+func (h *HandlerPayment) UploadPaymentFile(ctx *gin.Context) {
+	logId := utils.GenerateLogId(ctx)
+	logPrefix := fmt.Sprintf("[%s][PaymentHandler][UploadPaymentFile]", logId)
+
+	paymentId := ctx.Param("id")
+	if paymentId == "" {
+		res := response.Response(http.StatusBadRequest, messages.InvalidRequest, logId, nil)
+		res.Error = "payment id is required"
+		ctx.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	authData := utils.GetAuthData(ctx)
+	userId := utils.InterfaceString(authData["user_id"])
+
+	// Get file from form
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; FormFile ERROR: %s;", logPrefix, err.Error()))
+		res := response.Response(http.StatusBadRequest, messages.InvalidRequest, logId, nil)
+		res.Error = "file is required"
+		ctx.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	// Get file type and caption from form
+	fileType := ctx.PostForm("file_type")
+	if fileType == "" {
+		fileType = "proof" // default
+	}
+	caption := ctx.PostForm("caption")
+
+	req := dto.UploadPaymentFileRequest{
+		FileType: fileType,
+		Caption:  caption,
+	}
+
+	data, err := h.Service.UploadPaymentFile(ctx.Request.Context(), paymentId, userId, file, req)
+	if err != nil {
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.UploadPaymentFile; ERROR: %s;", logPrefix, err))
+		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
+		res.Error = err.Error()
+		ctx.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	res := response.Response(http.StatusCreated, "File uploaded successfully", logId, data)
+	ctx.JSON(http.StatusCreated, res)
+}
+
+func (h *HandlerPayment) DeletePaymentFile(ctx *gin.Context) {
+	logId := utils.GenerateLogId(ctx)
+	logPrefix := fmt.Sprintf("[%s][PaymentHandler][DeletePaymentFile]", logId)
+
+	fileId := ctx.Param("file_id")
+	if fileId == "" {
+		res := response.Response(http.StatusBadRequest, messages.InvalidRequest, logId, nil)
+		res.Error = "file id is required"
+		ctx.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	if err := h.Service.DeletePaymentFile(ctx.Request.Context(), fileId); err != nil {
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.DeletePaymentFile; ERROR: %s;", logPrefix, err))
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			res := response.Response(http.StatusNotFound, messages.MsgNotFound, logId, nil)
+			res.Error = response.Errors{Code: http.StatusNotFound, Message: "file not found"}
+			ctx.JSON(http.StatusNotFound, res)
+			return
+		}
+		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
+		res.Error = err.Error()
+		ctx.JSON(http.StatusInternalServerError, res)
+		return
+	}
+
+	res := response.Response(http.StatusOK, "File deleted successfully", logId, nil)
 	ctx.JSON(http.StatusOK, res)
 }

@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { eventsApi } from '../../api/events';
 import { Event } from '../../types';
-import { Plus, Search, Eye, Edit, Trash2, Calendar } from 'lucide-react';
-import { Button, Card, Table, Badge, ConfirmModal } from '../../components/ui';
+import { Plus, Search, Eye, Edit, Trash2 } from 'lucide-react';
+import { Button, Card, Table, Badge, ConfirmModal, ActionMenu } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 
 export const EventList: React.FC = () => {
   const navigate = useNavigate();
   const { hasRole } = useAuth();
-  const isVendor = hasRole('vendor');
+  const isVendor = hasRole(['vendor']);
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,11 +40,6 @@ export const EventList: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleDeleteClick = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    setDeleteId(id);
   };
 
   const handleDeleteConfirm = async () => {
@@ -101,10 +96,9 @@ export const EventList: React.FC = () => {
     {
       header: 'Period',
       accessor: (event: Event) => (
-        <div className="text-sm text-secondary-600">
-          <p>{formatDate(event.start_date)}</p>
-          <p className="text-xs text-secondary-400">to {formatDate(event.end_date)}</p>
-        </div>
+        <span className="text-sm text-secondary-600">
+          {formatDate(event.start_date)} - {formatDate(event.end_date)}
+        </span>
       )
     },
     {
@@ -115,28 +109,33 @@ export const EventList: React.FC = () => {
         </Badge>
       )
     },
-    ...(!isVendor ? [{
-      header: 'Actions',
+    {
+      header: '',
       accessor: (event: Event) => (
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e: React.MouseEvent) => { e.stopPropagation(); navigate(`/events/${event.id}/edit`); }}
-          >
-            <Edit size={16} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-danger-600 hover:text-danger-700 hover:bg-danger-50"
-            onClick={(e: React.MouseEvent) => handleDeleteClick(e, event.id)}
-          >
-            <Trash2 size={16} />
-          </Button>
-        </div>
+        <ActionMenu
+          items={[
+            {
+              label: 'View',
+              icon: <Eye size={14} />,
+              onClick: () => navigate(`/events/${event.id}`),
+            },
+            {
+              label: 'Edit',
+              icon: <Edit size={14} />,
+              onClick: () => navigate(`/events/${event.id}/edit`),
+              hidden: isVendor,
+            },
+            {
+              label: 'Delete',
+              icon: <Trash2 size={14} />,
+              onClick: () => setDeleteId(event.id),
+              variant: 'danger',
+              hidden: isVendor,
+            },
+          ]}
+        />
       )
-    }] : [])
+    }
   ];
 
   return (

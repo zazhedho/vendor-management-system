@@ -50,6 +50,7 @@ export interface Vendor {
   id: string;
   user_id: string;
   vendor_type: string;
+  vendor_name?: string;
   status: string; // pending, verified, rejected, active, suspended
   verified_at?: string;
   verified_by?: string;
@@ -227,7 +228,8 @@ export interface Payment {
   payment_date?: string;
   description?: string;
 
-  // File relationships
+  // Relationships
+  vendor?: Vendor;
   files?: PaymentFile[];
 
   created_at: string;
@@ -275,8 +277,10 @@ export interface EvaluationPhoto {
   id: string;
   evaluation_id: string;
   photo_url: string;
+  caption?: string;
   review?: string;
   rating?: number;
+  reviewed_by?: string;
   created_at: string;
   updated_at?: string;
   deleted_at?: string;
@@ -310,6 +314,7 @@ export interface Menu {
   name: string;
   display_name: string;
   path?: string;
+  url?: string;
   icon?: string;
   parent_id?: string;
   order_index: number;

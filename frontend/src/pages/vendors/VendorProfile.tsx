@@ -16,7 +16,6 @@ import {
   CreditCard,
   User,
   AlertCircle,
-  Eye,
   Search
 } from 'lucide-react';
 import { Button, Card, Badge, Spinner, Input, ConfirmModal } from '../../components/ui';
@@ -53,7 +52,7 @@ export const VendorProfile: React.FC = () => {
   const isVendorRole = useMemo(() => user?.role === 'vendor', [user?.role]);
   const isEditMode = location.pathname.endsWith('/edit');
   const isNewMode = location.pathname.endsWith('/new');
-  const isDetailMode = location.pathname.endsWith('/detail');
+
   
   // For vendor role: always show their own profile form
   // For admin role: show list on /vendor/profile, detail/edit on other routes
@@ -126,7 +125,8 @@ export const VendorProfile: React.FC = () => {
 
   // File upload states
   const [uploadingFile, setUploadingFile] = useState(false);
-  const [selectedFileType, setSelectedFileType] = useState<string>('');
+  const [selectedFileType, setSelectedFileType] = useState<string>('ktp');
+  const [customFileType, setCustomFileType] = useState('');
   
   // Delete file modal
   const [deleteFileId, setDeleteFileId] = useState<string | null>(null);
@@ -182,7 +182,7 @@ export const VendorProfile: React.FC = () => {
       });
       console.log('Vendors list response:', response);
       if (response.status) {
-        setVendorList(response.data || []);
+        setVendorList((response.data || []) as unknown as VendorWithProfile[]);
         setTotalPages(response.total_pages || 1);
       }
     } catch (error: any) {
@@ -312,7 +312,7 @@ export const VendorProfile: React.FC = () => {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fileType: string) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0] || !profile?.id) return;
 
     const file = e.target.files[0];
@@ -330,13 +330,21 @@ export const VendorProfile: React.FC = () => {
       return;
     }
 
+    // Determine file type
+    const fileType = selectedFileType === 'other' 
+      ? (customFileType.trim() || 'other')
+      : selectedFileType;
+
     setUploadingFile(true);
-    setSelectedFileType(fileType);
     try {
       const response = await vendorsApi.uploadProfileFile(profile.id, file, fileType);
       if (response.status) {
         toast.success('File uploaded successfully');
         await fetchVendorProfile();
+        // Reset custom type after successful upload
+        if (selectedFileType === 'other') {
+          setCustomFileType('');
+        }
       } else {
         toast.error('Failed to upload file');
       }
@@ -344,7 +352,6 @@ export const VendorProfile: React.FC = () => {
       toast.error(error.response?.data?.message || 'Failed to upload file');
     } finally {
       setUploadingFile(false);
-      setSelectedFileType('');
       e.target.value = '';
     }
   };
@@ -711,6 +718,7 @@ export const VendorProfile: React.FC = () => {
                         </div>
                       </div>
                       <Button
+                        type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDeleteFileClick(file.id)}
@@ -733,38 +741,64 @@ export const VendorProfile: React.FC = () => {
             </div>
           )}
 
-          {/* Upload Buttons */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {['ktp', 'npwp', 'bank_book', 'nib', 'siup', 'akta'].map((type) => (
-              <label
-                key={type}
-                className={`flex flex-col items-center justify-center h-24 border-2 border-dashed rounded-lg cursor-pointer transition-all ${
-                  uploadingFile && selectedFileType === type
-                    ? 'border-primary-500 bg-primary-50'
-                    : 'border-secondary-300 hover:border-primary-500 hover:bg-primary-50'
-                }`}
+          {/* Upload Section */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            {/* File Type Dropdown */}
+            <div className="flex-1">
+              <select
+                value={selectedFileType}
+                onChange={(e) => setSelectedFileType(e.target.value)}
+                className="w-full px-4 py-2.5 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
-                {uploadingFile && selectedFileType === type ? (
-                  <Spinner size="sm" />
-                ) : (
-                  <>
-                    <Upload className="w-5 h-5 text-secondary-400 mb-1" />
-                    <span className="text-xs font-medium text-secondary-600 text-center px-2">
-                      {formatFileType(type)}
-                    </span>
-                  </>
-                )}
-                <input
-                  type="file"
-                  className="hidden"
-                  accept=".jpg,.jpeg,.png,.pdf"
-                  onChange={(e) => handleFileUpload(e, type)}
-                  disabled={uploadingFile}
+                <option value="ktp">KTP</option>
+                <option value="npwp">NPWP</option>
+                <option value="bank_book">Bank Book</option>
+                <option value="nib">NIB</option>
+                <option value="siup">SIUP</option>
+                <option value="akta">Akta</option>
+                <option value="sppkp">SPPKP</option>
+                <option value="tdp">TDP</option>
+                <option value="skdp">SKDP</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            {/* Custom Type Input (shown when "other" is selected) */}
+            {selectedFileType === 'other' && (
+              <div className="flex-1">
+                <Input
+                  type="text"
+                  value={customFileType}
+                  onChange={(e) => setCustomFileType(e.target.value)}
+                  placeholder="Enter custom document type..."
                 />
-              </label>
-            ))}
+              </div>
+            )}
+
+            {/* Upload Button */}
+            <label className={`cursor-pointer inline-flex items-center justify-center gap-2 px-4 py-2.5 font-medium rounded-lg transition-colors ${
+              uploadingFile 
+                ? 'bg-secondary-300 text-secondary-500 cursor-not-allowed' 
+                : 'bg-primary-600 hover:bg-primary-700 text-white'
+            }`}>
+              {uploadingFile ? (
+                <Spinner size="sm" />
+              ) : (
+                <>
+                  <Upload size={16} />
+                  Select File
+                </>
+              )}
+              <input
+                type="file"
+                accept=".jpg,.jpeg,.png,.pdf"
+                onChange={handleFileUpload}
+                className="hidden"
+                disabled={uploadingFile}
+              />
+            </label>
           </div>
-          <p className="text-xs text-secondary-500 mt-2">
+          <p className="text-xs text-secondary-500">
             Accepted formats: JPG, PNG, PDF (Max 5MB per file)
           </p>
         </div>
@@ -983,195 +1017,205 @@ export const VendorProfile: React.FC = () => {
           </form>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 space-y-4">
             {profile ? (
               <>
-                <Card>
-                  <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <Building size={20} className="text-primary-600" />
-                    Business Information
-                  </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <p className="text-sm text-secondary-500 mb-1">Email Address</p>
-                      <div className="flex items-center gap-2 text-secondary-900">
-                        <Mail size={16} className="text-secondary-400" />
-                        {profile.email || '-'}
-                      </div>
+                {/* Business Information */}
+                <Card className="overflow-hidden">
+                  <div className="bg-secondary-50 px-4 py-3 border-b border-secondary-200">
+                    <h3 className="font-semibold text-secondary-900 flex items-center gap-2">
+                      <Building size={18} className="text-primary-600" />
+                      Business Information
+                    </h3>
+                  </div>
+                  <div className="divide-y divide-secondary-100">
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Vendor Name</span>
+                      <span className="text-secondary-900 font-medium text-sm">{profile.vendor_name || '-'}</span>
                     </div>
-                    <div>
-                      <p className="text-sm text-secondary-500 mb-1">Phone Number</p>
-                      <div className="flex items-center gap-2 text-secondary-900">
-                        <Phone size={16} className="text-secondary-400" />
-                        {profile.phone || profile.telephone || '-'}
-                      </div>
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Business Field</span>
+                      <span className="text-secondary-900 text-sm">{profile.business_field || '-'}</span>
                     </div>
-                    <div>
-                      <p className="text-sm text-secondary-500 mb-1">Business Field</p>
-                      <p className="text-secondary-900">{profile.business_field || '-'}</p>
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Email</span>
+                      <span className="text-secondary-900 text-sm">{profile.email || '-'}</span>
                     </div>
-                    <div>
-                      <p className="text-sm text-secondary-500 mb-1">NPWP</p>
-                      <p className="text-secondary-900 font-mono">{profile.npwp_number || '-'}</p>
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Phone</span>
+                      <span className="text-secondary-900 text-sm">{profile.phone || '-'}</span>
                     </div>
-                    <div>
-                      <p className="text-sm text-secondary-500 mb-1">NIB Number</p>
-                      <p className="text-secondary-900 font-mono">{profile.nib_number || '-'}</p>
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Telephone</span>
+                      <span className="text-secondary-900 text-sm">{profile.telephone || '-'}</span>
                     </div>
-                    <div>
-                      <p className="text-sm text-secondary-500 mb-1">Tax Status</p>
-                      <p className="text-secondary-900">{profile.tax_status || '-'}</p>
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Fax</span>
+                      <span className="text-secondary-900 text-sm">{profile.fax || '-'}</span>
                     </div>
                   </div>
                 </Card>
 
-                {(profile.address || profile.province_name) && (
-                  <Card>
-                    <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                      <MapPin size={20} className="text-primary-600" />
+                {/* Location */}
+                <Card className="overflow-hidden">
+                  <div className="bg-secondary-50 px-4 py-3 border-b border-secondary-200">
+                    <h3 className="font-semibold text-secondary-900 flex items-center gap-2">
+                      <MapPin size={18} className="text-primary-600" />
                       Location
-                    </h2>
-                    <p className="text-secondary-900">{profile.address || '-'}</p>
-                    <p className="text-secondary-500 mt-1">
-                      {[profile.district_name, profile.city_name, profile.province_name].filter(Boolean).join(', ')}
-                      {profile.postal_code && ` - ${profile.postal_code}`}
-                    </p>
-                  </Card>
-                )}
-
-                {(profile.bank_name || profile.bank_account_number) && (
-                  <Card>
-                    <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                      <CreditCard size={20} className="text-primary-600" />
-                      Bank Account
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-sm text-secondary-500 mb-1">Bank Name</p>
-                        <p className="text-secondary-900">{profile.bank_name || '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-secondary-500 mb-1">Bank Branch</p>
-                        <p className="text-secondary-900">{profile.bank_branch || '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-secondary-500 mb-1">Account Number</p>
-                        <p className="text-secondary-900 font-mono">{profile.account_number || '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-secondary-500 mb-1">Account Name</p>
-                        <p className="text-secondary-900">{profile.account_holder_name || '-'}</p>
-                      </div>
-                    </div>
-                  </Card>
-                )}
-
-                <Card>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold flex items-center gap-2">
-                      <FileText size={20} className="text-primary-600" />
-                      Documents
-                    </h2>
+                    </h3>
                   </div>
+                  <div className="divide-y divide-secondary-100">
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Address</span>
+                      <span className="text-secondary-900 text-sm">{profile.address || '-'}</span>
+                    </div>
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Province</span>
+                      <span className="text-secondary-900 text-sm">{profile.province_name || '-'}</span>
+                    </div>
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">City</span>
+                      <span className="text-secondary-900 text-sm">{profile.city_name || '-'}</span>
+                    </div>
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">District</span>
+                      <span className="text-secondary-900 text-sm">{profile.district_name || '-'}</span>
+                    </div>
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Postal Code</span>
+                      <span className="text-secondary-900 text-sm">{profile.postal_code || '-'}</span>
+                    </div>
+                  </div>
+                </Card>
 
-                  {/* Existing Files */}
+                {/* Legal Information */}
+                <Card className="overflow-hidden">
+                  <div className="bg-secondary-50 px-4 py-3 border-b border-secondary-200">
+                    <h3 className="font-semibold text-secondary-900 flex items-center gap-2">
+                      <FileText size={18} className="text-primary-600" />
+                      Legal Information
+                    </h3>
+                  </div>
+                  <div className="divide-y divide-secondary-100">
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">KTP Number</span>
+                      <span className="text-secondary-900 font-mono text-sm">{profile.ktp_number || '-'}</span>
+                    </div>
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">KTP Name</span>
+                      <span className="text-secondary-900 text-sm">{profile.ktp_name || '-'}</span>
+                    </div>
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">NPWP Number</span>
+                      <span className="text-secondary-900 font-mono text-sm">{profile.npwp_number || '-'}</span>
+                    </div>
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">NPWP Name</span>
+                      <span className="text-secondary-900 text-sm">{profile.npwp_name || '-'}</span>
+                    </div>
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">NPWP Address</span>
+                      <span className="text-secondary-900 text-sm">{profile.npwp_address || '-'}</span>
+                    </div>
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Tax Status</span>
+                      <span className="text-secondary-900 text-sm">{profile.tax_status || '-'}</span>
+                    </div>
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">NIB Number</span>
+                      <span className="text-secondary-900 font-mono text-sm">{profile.nib_number || '-'}</span>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Bank Account */}
+                <Card className="overflow-hidden">
+                  <div className="bg-secondary-50 px-4 py-3 border-b border-secondary-200">
+                    <h3 className="font-semibold text-secondary-900 flex items-center gap-2">
+                      <CreditCard size={18} className="text-primary-600" />
+                      Bank Account
+                    </h3>
+                  </div>
+                  <div className="divide-y divide-secondary-100">
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Bank Name</span>
+                      <span className="text-secondary-900 text-sm">{profile.bank_name || '-'}</span>
+                    </div>
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Branch</span>
+                      <span className="text-secondary-900 text-sm">{profile.bank_branch || '-'}</span>
+                    </div>
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Account Number</span>
+                      <span className="text-secondary-900 font-mono text-sm">{profile.account_number || '-'}</span>
+                    </div>
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Account Holder</span>
+                      <span className="text-secondary-900 text-sm">{profile.account_holder_name || '-'}</span>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Contact Person */}
+                <Card className="overflow-hidden">
+                  <div className="bg-secondary-50 px-4 py-3 border-b border-secondary-200">
+                    <h3 className="font-semibold text-secondary-900 flex items-center gap-2">
+                      <User size={18} className="text-primary-600" />
+                      Contact Person
+                    </h3>
+                  </div>
+                  <div className="divide-y divide-secondary-100">
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Name</span>
+                      <span className="text-secondary-900 text-sm">{profile.contact_person || '-'}</span>
+                    </div>
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Email</span>
+                      <span className="text-secondary-900 text-sm">{profile.contact_email || '-'}</span>
+                    </div>
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Phone</span>
+                      <span className="text-secondary-900 text-sm">{profile.contact_phone || '-'}</span>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Documents */}
+                <Card className="overflow-hidden">
+                  <div className="bg-secondary-50 px-4 py-3 border-b border-secondary-200">
+                    <h3 className="font-semibold text-secondary-900 flex items-center gap-2">
+                      <FileText size={18} className="text-primary-600" />
+                      Documents
+                    </h3>
+                  </div>
                   {profile.files && profile.files.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                    <div className="divide-y divide-secondary-100">
                       {profile.files.map((file) => (
-                        <div
+                        <a
                           key={file.id}
-                          className={`flex flex-col p-3 border rounded-lg bg-white group transition-all ${
-                            file.status === 'rejected' 
-                              ? 'border-danger-300 bg-danger-50' 
-                              : file.status === 'approved'
-                              ? 'border-success-300 bg-success-50'
-                              : 'border-secondary-200 hover:border-primary-500'
-                          }`}
+                          href={file.file_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center justify-between py-2.5 px-4 hover:bg-secondary-50"
                         >
-                          <div className="flex items-center justify-between">
-                            <a
-                              href={file.file_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="flex items-center gap-3 flex-1 min-w-0"
-                            >
-                              <FileText size={20} className={`flex-shrink-0 ${
-                                file.status === 'rejected' ? 'text-danger-500' : 
-                                file.status === 'approved' ? 'text-success-500' : 'text-secondary-400'
-                              }`} />
-                              <div className="overflow-hidden flex-1">
-                                <p className="font-medium text-secondary-900 capitalize truncate">
-                                  {formatFileType(file.file_type)}
-                                </p>
-                                <p className={`text-xs capitalize ${
-                                  file.status === 'rejected' ? 'text-danger-600' : 
-                                  file.status === 'approved' ? 'text-success-600' : 'text-warning-600'
-                                }`}>
-                                  {file.status}
-                                </p>
-                              </div>
-                            </a>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteFileClick(file.id)}
-                              className="text-danger-600 hover:bg-danger-50 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                            >
-                              <AlertCircle size={16} />
-                            </Button>
+                          <div className="flex items-center gap-3">
+                            <FileText size={18} className={`flex-shrink-0 ${
+                              file.status === 'rejected' ? 'text-danger-500' : 
+                              file.status === 'approved' ? 'text-success-500' : 'text-secondary-400'
+                            }`} />
+                            <span className="text-sm font-medium text-secondary-900">{formatFileType(file.file_type)}</span>
+                            <span className={`text-xs capitalize ${
+                              file.status === 'rejected' ? 'text-danger-600' : 
+                              file.status === 'approved' ? 'text-success-600' : 'text-warning-600'
+                            }`}>({file.status})</span>
                           </div>
-                          {file.status === 'rejected' && file.reject_reason && (
-                            <div className="mt-2 pt-2 border-t border-danger-200">
-                              <p className="text-xs text-danger-700">
-                                <span className="font-medium">Reason:</span> {file.reject_reason}
-                              </p>
-                            </div>
-                          )}
-                        </div>
+                        </a>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-secondary-500 text-sm mb-6">No documents uploaded yet</p>
+                    <p className="text-secondary-500 text-sm py-4 px-4">No documents uploaded yet</p>
                   )}
-
-                  {/* Upload Section */}
-                  <div className="border-t pt-4">
-                    <p className="text-sm font-medium text-secondary-700 mb-3">Upload New Document</p>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {['ktp', 'npwp', 'bank_book', 'nib', 'siup', 'akta'].map((type) => (
-                        <label
-                          key={type}
-                          className={`flex flex-col items-center justify-center h-20 border-2 border-dashed rounded-lg cursor-pointer transition-all ${
-                            uploadingFile && selectedFileType === type
-                              ? 'border-primary-500 bg-primary-50'
-                              : 'border-secondary-300 hover:border-primary-500 hover:bg-primary-50'
-                          }`}
-                        >
-                          {uploadingFile && selectedFileType === type ? (
-                            <Spinner size="sm" />
-                          ) : (
-                            <>
-                              <Upload className="w-4 h-4 text-secondary-400 mb-1" />
-                              <span className="text-xs font-medium text-secondary-600 text-center px-2">
-                                {formatFileType(type)}
-                              </span>
-                            </>
-                          )}
-                          <input
-                            type="file"
-                            className="hidden"
-                            accept=".jpg,.jpeg,.png,.pdf"
-                            onChange={(e) => handleFileUpload(e, type)}
-                            disabled={uploadingFile}
-                          />
-                        </label>
-                      ))}
-                    </div>
-                    <p className="text-xs text-secondary-500 mt-2">
-                      JPG, PNG, PDF (Max 5MB)
-                    </p>
-                  </div>
                 </Card>
               </>
             ) : (

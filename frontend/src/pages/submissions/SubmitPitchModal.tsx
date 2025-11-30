@@ -87,7 +87,7 @@ export const SubmitPitchModal: React.FC<SubmitPitchModalProps> = ({
       formData.append('proposal_details', proposalDetails);
 
       // Add files
-      files.forEach((fileData, index) => {
+      files.forEach((fileData) => {
         formData.append('file', fileData.file);
         formData.append('file_type', fileData.file_type);
         if (fileData.caption) {

@@ -23,14 +23,22 @@ func (r *repo) CreatePayment(m domainpayments.Payment) error {
 }
 
 func (r *repo) GetPaymentByID(id string) (ret domainpayments.Payment, err error) {
-	if err = r.DB.Where("id = ?", id).First(&ret).Error; err != nil {
+	if err = r.DB.
+		Preload("File").
+		Preload("Vendor").
+		Preload("Vendor.Profile").
+		Where("id = ?", id).First(&ret).Error; err != nil {
 		return domainpayments.Payment{}, err
 	}
 	return ret, nil
 }
 
 func (r *repo) GetPaymentsByVendorID(vendorId string) (ret []domainpayments.Payment, err error) {
-	if err = r.DB.Where("vendor_id = ?", vendorId).Order("created_at DESC").Find(&ret).Error; err != nil {
+	if err = r.DB.
+		Preload("File").
+		Preload("Vendor").
+		Preload("Vendor.Profile").
+		Where("vendor_id = ?", vendorId).Order("created_at DESC").Find(&ret).Error; err != nil {
 		return nil, err
 	}
 	return ret, nil

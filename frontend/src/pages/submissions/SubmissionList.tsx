@@ -186,7 +186,7 @@ export const SubmissionList: React.FC = () => {
               }
               return (
                 <Button
-                  variant={winnerVendorSuspended ? "warning" : "primary"}
+                  variant={winnerVendorSuspended ? "secondary" : "primary"}
                   onClick={() => {
                     if (event) {
                       setWinnerModalData({ eventId: selectedEvent, eventTitle: event.title });
