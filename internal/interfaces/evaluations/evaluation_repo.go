@@ -10,6 +10,7 @@ type RepoEvaluationInterface interface {
 	CreateEvaluation(m domainevaluations.Evaluation) error
 	GetEvaluationByID(id string) (domainevaluations.Evaluation, error)
 	GetEvaluationWithPhotos(id string) (domainevaluations.Evaluation, error)
+	GetEvaluationByEventAndVendor(eventId string, vendorId string) (domainevaluations.Evaluation, error)
 	GetEvaluationsByEventID(eventId string) ([]domainevaluations.Evaluation, error)
 	GetEvaluationsByVendorID(vendorId string) ([]domainevaluations.Evaluation, error)
 	GetAllEvaluations(params filter.BaseParams) ([]domainevaluations.Evaluation, int64, error)

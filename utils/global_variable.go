@@ -19,7 +19,9 @@ const (
 
 const (
 	EventDraft     = "draft"
+	EventOpen      = "open"
 	EventPending   = "pending"
+	EventClosed    = "closed"
 	EventCompleted = "completed"
 	EventCancelled = "cancelled"
 )

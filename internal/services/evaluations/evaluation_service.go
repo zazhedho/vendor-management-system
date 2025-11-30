@@ -38,34 +38,52 @@ func NewEvaluationService(
 	}
 }
 
-func (s *ServiceEvaluation) CreateEvaluation(evaluatorId string, req dto.CreateEvaluationRequest) (domainevaluations.Evaluation, error) {
-	_, err := s.EventRepo.GetEventByID(req.EventID)
+// CreateEvaluation - Only winner vendor can create after event is completed
+func (s *ServiceEvaluation) CreateEvaluation(vendorUserId string, req dto.CreateEvaluationRequest) (domainevaluations.Evaluation, error) {
+	// Get event
+	event, err := s.EventRepo.GetEventByID(req.EventID)
 	if err != nil {
 		return domainevaluations.Evaluation{}, errors.New("event not found")
 	}
 
-	_, err = s.VendorRepo.GetVendorByID(req.VendorID)
-	if err != nil {
-		return domainevaluations.Evaluation{}, errors.New("vendor not found")
+	// Validate event is completed
+	if event.Status != utils.EventCompleted {
+		return domainevaluations.Evaluation{}, errors.New("can only create evaluation for completed events")
 	}
 
-	var overallRating *float64
-	if req.OverallRating > 0 {
-		overallRating = &req.OverallRating
+	// Get vendor by user ID
+	vendor, err := s.VendorRepo.GetVendorByUserID(vendorUserId)
+	if err != nil {
+		return domainevaluations.Evaluation{}, errors.New("vendor profile not found")
+	}
+
+	// Check if vendor won the event
+	submission, err := s.EventRepo.GetSubmissionByEventAndVendor(req.EventID, vendor.Id)
+	if err != nil {
+		return domainevaluations.Evaluation{}, errors.New("no submission found for this event")
+	}
+
+	if !submission.IsWinner {
+		return domainevaluations.Evaluation{}, errors.New("only event winner can create evaluation")
+	}
+
+	// Check if evaluation already exists
+	existing, _ := s.EvaluationRepo.GetEvaluationByEventAndVendor(req.EventID, vendor.Id)
+	if existing.Id != "" {
+		return domainevaluations.Evaluation{}, errors.New("evaluation already exists for this event")
 	}
 
 	now := time.Now()
 	evaluation := domainevaluations.Evaluation{
 		Id:              utils.CreateUUID(),
 		EventID:         req.EventID,
-		VendorID:        req.VendorID,
-		EvaluatorUserID: evaluatorId,
-		OverallRating:   overallRating,
+		VendorID:        vendor.Id,
+		EvaluatorUserID: event.CreatedBy, // Set to event creator (client)
 		Comments:        req.Comments,
 		CreatedAt:       now,
-		CreatedBy:       evaluatorId,
+		CreatedBy:       vendorUserId,
 		UpdatedAt:       now,
-		UpdatedBy:       evaluatorId,
+		UpdatedBy:       vendorUserId,
 	}
 
 	if err := s.EvaluationRepo.CreateEvaluation(evaluation); err != nil {
@@ -87,6 +105,15 @@ func (s *ServiceEvaluation) GetEvaluationsByVendorID(vendorId string) ([]domaine
 	return s.EvaluationRepo.GetEvaluationsByVendorID(vendorId)
 }
 
+// GetMyEvaluations - For vendor to get their own evaluations
+func (s *ServiceEvaluation) GetMyEvaluations(vendorUserId string) ([]domainevaluations.Evaluation, error) {
+	vendor, err := s.VendorRepo.GetVendorByUserID(vendorUserId)
+	if err != nil {
+		return nil, errors.New("vendor profile not found")
+	}
+	return s.EvaluationRepo.GetEvaluationsByVendorID(vendor.Id)
+}
+
 func (s *ServiceEvaluation) GetAllEvaluations(params filter.BaseParams) ([]domainevaluations.Evaluation, int64, error) {
 	return s.EvaluationRepo.GetAllEvaluations(params)
 }
@@ -97,9 +124,6 @@ func (s *ServiceEvaluation) UpdateEvaluation(id string, req dto.UpdateEvaluation
 		return domainevaluations.Evaluation{}, err
 	}
 
-	if req.OverallRating > 0 {
-		evaluation.OverallRating = &req.OverallRating
-	}
 	if req.Comments != "" {
 		evaluation.Comments = req.Comments
 	}
@@ -122,20 +146,32 @@ func (s *ServiceEvaluation) DeleteEvaluation(id string) error {
 	return s.EvaluationRepo.DeleteEvaluation(id)
 }
 
-func (s *ServiceEvaluation) UploadPhoto(ctx context.Context, evaluationId string, fileHeader *multipart.FileHeader, req dto.UploadEvaluationPhotoRequest) (domainevaluations.EvaluationPhoto, error) {
-	// Verify evaluation exists
-	_, err := s.EvaluationRepo.GetEvaluationByID(evaluationId)
+// UploadPhoto - Vendor uploads photo with caption (NO review/rating)
+func (s *ServiceEvaluation) UploadPhoto(ctx context.Context, vendorUserId string, evaluationId string, fileHeader *multipart.FileHeader, caption string) (domainevaluations.EvaluationPhoto, error) {
+	// Verify evaluation exists and belongs to vendor
+	evaluation, err := s.EvaluationRepo.GetEvaluationByID(evaluationId)
 	if err != nil {
 		return domainevaluations.EvaluationPhoto{}, errors.New("evaluation not found")
 	}
 
-	// Check photo limit
+	// Get vendor
+	vendor, err := s.VendorRepo.GetVendorByUserID(vendorUserId)
+	if err != nil {
+		return domainevaluations.EvaluationPhoto{}, errors.New("vendor profile not found")
+	}
+
+	// Verify evaluation belongs to this vendor
+	if evaluation.VendorID != vendor.Id {
+		return domainevaluations.EvaluationPhoto{}, errors.New("evaluation does not belong to this vendor")
+	}
+
+	// Check photo limit (max 5)
 	count, err := s.EvaluationRepo.CountPhotosByEvaluationID(evaluationId)
 	if err != nil {
 		return domainevaluations.EvaluationPhoto{}, err
 	}
 
-	if count >= int64(utils.MaxPhotoLimit) {
+	if count >= 5 {
 		return domainevaluations.EvaluationPhoto{}, errors.New("maximum 5 photos allowed per evaluation")
 	}
 
@@ -158,18 +194,14 @@ func (s *ServiceEvaluation) UploadPhoto(ctx context.Context, evaluationId string
 		return domainevaluations.EvaluationPhoto{}, fmt.Errorf("failed to upload file %s to storage: %w", fileHeader.Filename, err)
 	}
 
-	var rating *float64
-	if req.Rating > 0 {
-		rating = &req.Rating
-	}
-
+	// Create photo WITHOUT review/rating (vendor uploads, client reviews later)
 	photo := domainevaluations.EvaluationPhoto{
 		Id:           utils.CreateUUID(),
 		EvaluationID: evaluationId,
 		PhotoUrl:     photoUrl,
-		Review:       req.Review,
-		Rating:       rating,
-		CreatedAt:    time.Now(),
+		Caption:      caption,
+		// Review, Rating, ReviewedBy, ReviewedAt are NULL - will be set by client
+		CreatedAt: time.Now(),
 	}
 
 	if err := s.EvaluationRepo.CreatePhoto(photo); err != nil {
@@ -181,43 +213,75 @@ func (s *ServiceEvaluation) UploadPhoto(ctx context.Context, evaluationId string
 	return photo, nil
 }
 
-func (s *ServiceEvaluation) UpdatePhoto(photoId string, req dto.UpdateEvaluationPhotoRequest) (domainevaluations.EvaluationPhoto, error) {
+// ReviewPhoto - Client reviews and rates a photo (CLIENT ONLY)
+func (s *ServiceEvaluation) ReviewPhoto(clientUserId string, photoId string, req dto.ReviewEvaluationPhotoRequest) (domainevaluations.EvaluationPhoto, error) {
+	// Get photo
 	photo, err := s.EvaluationRepo.GetPhotoByID(photoId)
 	if err != nil {
-		return domainevaluations.EvaluationPhoto{}, err
+		return domainevaluations.EvaluationPhoto{}, errors.New("photo not found")
 	}
 
-	if req.Review != "" {
-		photo.Review = req.Review
-	}
-	if req.Rating > 0 {
-		photo.Rating = &req.Rating
+	// Get evaluation
+	evaluation, err := s.EvaluationRepo.GetEvaluationByID(photo.EvaluationID)
+	if err != nil {
+		return domainevaluations.EvaluationPhoto{}, errors.New("evaluation not found")
 	}
 
+	// Verify client is the evaluator (event creator)
+	if evaluation.EvaluatorUserID != clientUserId {
+		return domainevaluations.EvaluationPhoto{}, errors.New("only the event creator can review this evaluation")
+	}
+
+	// Validate rating (1-5 stars)
+	if req.Rating < 1 || req.Rating > 5 {
+		return domainevaluations.EvaluationPhoto{}, errors.New("rating must be between 1 and 5")
+	}
+
+	// Update photo with review and rating
+	photo.Review = req.Review
+	rating := float64(req.Rating)
+	photo.Rating = &rating
+	photo.ReviewedBy = clientUserId
 	now := time.Now()
+	photo.ReviewedAt = &now
 	photo.UpdatedAt = &now
 
 	if err := s.EvaluationRepo.UpdatePhoto(photo); err != nil {
 		return domainevaluations.EvaluationPhoto{}, err
 	}
 
+	// Calculate overall rating from all photos
+	photos, err := s.EvaluationRepo.GetPhotosByEvaluationID(evaluation.Id)
+	if err == nil {
+		totalRating := 0.0
+		ratedCount := 0
+		for _, p := range photos {
+			if p.Rating != nil {
+				totalRating += *p.Rating
+				ratedCount++
+			}
+		}
+		if ratedCount > 0 {
+			overallRating := totalRating / float64(ratedCount)
+			evaluation.OverallRating = &overallRating
+			evaluation.UpdatedAt = time.Now()
+			_ = s.EvaluationRepo.UpdateEvaluation(evaluation)
+		}
+	}
+
 	return photo, nil
 }
 
 func (s *ServiceEvaluation) DeletePhoto(ctx context.Context, photoId string) error {
-	// Get photo record to get the URL for storage deletion
 	photo, err := s.EvaluationRepo.GetPhotoByID(photoId)
 	if err != nil {
 		return err
 	}
 
-	// Delete from database first
-	if err = s.EvaluationRepo.DeletePhoto(photoId); err == nil {
-		// Delete from storage if database deletion succeeds
-		_ = s.StorageProvider.DeleteFile(ctx, photo.PhotoUrl)
+	// Delete from storage
+	if err := s.StorageProvider.DeleteFile(ctx, photo.PhotoUrl); err != nil {
+		return err
 	}
 
-	return err
+	return s.EvaluationRepo.DeletePhoto(photoId)
 }
-
-var _ interfaceevaluations.ServiceEvaluationInterface = (*ServiceEvaluation)(nil)

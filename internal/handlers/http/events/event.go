@@ -174,7 +174,6 @@ func (h *HandlerEvent) DeleteEvent(ctx *gin.Context) {
 }
 
 func (h *HandlerEvent) SubmitPitch(ctx *gin.Context) {
-	var req dto.SubmitPitchRequest
 	authData := utils.GetAuthData(ctx)
 	userId := utils.InterfaceString(authData["user_id"])
 	logId := utils.GenerateLogId(ctx)
@@ -185,13 +184,28 @@ func (h *HandlerEvent) SubmitPitch(ctx *gin.Context) {
 		return
 	}
 
-	if err := ctx.BindJSON(&req); err != nil {
-		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; BindJSON ERROR: %s;", logPrefix, err.Error()))
+	// Get proposal details from form
+	proposalDetails := ctx.PostForm("proposal_details")
+	if proposalDetails == "" {
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; proposal_details is required", logPrefix))
 		res := response.Response(http.StatusBadRequest, messages.InvalidRequest, logId, nil)
-		res.Error = utils.ValidateError(err, reflect.TypeOf(req), "json")
+		res.Error = "proposal_details is required"
 		ctx.JSON(http.StatusBadRequest, res)
 		return
 	}
+
+	// Get file from multipart form
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; FormFile ERROR: %s;", logPrefix, err.Error()))
+		res := response.Response(http.StatusBadRequest, "File is required", logId, nil)
+		ctx.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	// Get file metadata from form
+	fileType := ctx.PostForm("file_type")
+	caption := ctx.PostForm("caption")
 
 	vendor, err := h.VendorRepo.GetVendorByUserID(userId)
 	if err != nil {
@@ -202,9 +216,24 @@ func (h *HandlerEvent) SubmitPitch(ctx *gin.Context) {
 		return
 	}
 
-	data, err := h.Service.SubmitPitch(eventId, vendor.Id, req)
+	// Validate vendor status is active
+	if vendor.Status != utils.VendorActive {
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Vendor status is not active: %s;", logPrefix, vendor.Status))
+		res := response.Response(http.StatusForbidden, messages.MsgFail, logId, nil)
+		res.Error = "only vendors with active status can submit pitches"
+		ctx.JSON(http.StatusForbidden, res)
+		return
+	}
+
+	// Create DTO request
+	req := dto.SubmitPitchRequest{
+		ProposalDetails: proposalDetails,
+	}
+
+	// Submit pitch with file
+	data, err := h.Service.SubmitPitchWithFile(ctx.Request.Context(), eventId, vendor.Id, req, file, fileType, caption)
 	if err != nil {
-		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.SubmitPitch; ERROR: %s;", logPrefix, err))
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.SubmitPitchWithFile; ERROR: %s;", logPrefix, err))
 		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
 		res.Error = err.Error()
 		ctx.JSON(http.StatusBadRequest, res)
@@ -212,6 +241,7 @@ func (h *HandlerEvent) SubmitPitch(ctx *gin.Context) {
 	}
 
 	res := response.Response(http.StatusOK, "Pitch submitted successfully", logId, data)
+	logger.WriteLog(logger.LogLevelDebug, fmt.Sprintf("%s; Response: %+v;", logPrefix, utils.JsonEncode(data)))
 	ctx.JSON(http.StatusOK, res)
 }
 

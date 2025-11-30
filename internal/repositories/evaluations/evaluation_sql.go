@@ -37,6 +37,13 @@ func (r *repo) GetEvaluationWithPhotos(id string) (ret domainevaluations.Evaluat
 	return ret, nil
 }
 
+func (r *repo) GetEvaluationByEventAndVendor(eventId string, vendorId string) (ret domainevaluations.Evaluation, err error) {
+	if err = r.DB.Where("event_id = ? AND vendor_id = ?", eventId, vendorId).First(&ret).Error; err != nil {
+		return domainevaluations.Evaluation{}, err
+	}
+	return ret, nil
+}
+
 func (r *repo) GetEvaluationsByEventID(eventId string) (ret []domainevaluations.Evaluation, err error) {
 	if err = r.DB.Preload("Photos").Where("event_id = ?", eventId).Find(&ret).Error; err != nil {
 		return nil, err

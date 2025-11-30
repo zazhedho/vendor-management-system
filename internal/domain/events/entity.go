@@ -3,6 +3,8 @@ package domainevents
 import (
 	"time"
 
+	domainvendors "vendor-management-system/internal/domain/vendors"
+
 	"gorm.io/gorm"
 )
 
@@ -55,7 +57,9 @@ type EventSubmission struct {
 	EventID  string `json:"event_id" gorm:"column:event_id"`
 	VendorID string `json:"vendor_id" gorm:"column:vendor_id"`
 
-	File []EventSubmissionFile `json:"files,omitempty" gorm:"foreignKey:EventSubmissionId;constraint:OnDelete:CASCADE"`
+	Event  Event                 `json:"event,omitempty" gorm:"foreignKey:EventID;references:Id"`
+	Vendor domainvendors.Vendor  `json:"vendor,omitempty" gorm:"foreignKey:VendorID;references:Id"`
+	File   []EventSubmissionFile `json:"files,omitempty" gorm:"foreignKey:EventSubmissionId;constraint:OnDelete:CASCADE"`
 
 	ProposalDetails     string   `json:"proposal_details,omitempty" gorm:"column:proposal_details"`
 	AdditionalMaterials string   `json:"additional_materials,omitempty" gorm:"column:additional_materials"`

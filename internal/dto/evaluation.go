@@ -1,24 +1,22 @@
 package dto
 
+// CreateEvaluationRequest - Vendor creates evaluation after winning and completing event
 type CreateEvaluationRequest struct {
-	EventID       string  `json:"event_id" binding:"required,uuid"`
-	VendorID      string  `json:"vendor_id" binding:"required,uuid"`
-	OverallRating float64 `json:"overall_rating" binding:"omitempty,min=0,max=5"`
-	Comments      string  `json:"comments" binding:"omitempty"`
+	EventID  string `json:"event_id" binding:"required,uuid"`
+	Comments string `json:"comments" binding:"omitempty"`
 }
 
 type UpdateEvaluationRequest struct {
-	OverallRating float64 `json:"overall_rating" binding:"omitempty,min=0,max=5"`
-	Comments      string  `json:"comments" binding:"omitempty"`
+	Comments string `json:"comments" binding:"omitempty"`
 }
 
-// For photo uploads - separate from evaluation creation
+// UploadEvaluationPhotoRequest - Vendor uploads photo with caption only
 type UploadEvaluationPhotoRequest struct {
-	Review string  `json:"review" binding:"omitempty"`
-	Rating float64 `json:"rating" binding:"omitempty,min=0,max=5"`
+	Caption string `json:"caption" binding:"omitempty,max=500"`
 }
 
-type UpdateEvaluationPhotoRequest struct {
-	Review string  `json:"review" binding:"omitempty"`
-	Rating float64 `json:"rating" binding:"omitempty,min=0,max=5"`
+// ReviewEvaluationPhotoRequest - Client reviews and rates a photo (1-5 stars)
+type ReviewEvaluationPhotoRequest struct {
+	Review string `json:"review" binding:"omitempty,max=1000"`
+	Rating int    `json:"rating" binding:"required,min=1,max=5"`
 }

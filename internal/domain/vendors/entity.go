@@ -16,6 +16,8 @@ type Vendor struct {
 	VendorType string `json:"vendor_type" gorm:"column:vendor_type;default:perusahaan"`
 	Status     string `json:"status" gorm:"column:status"` // pending, verified, rejected, active, suspended
 
+	Profile *VendorProfile `json:"profile,omitempty" gorm:"foreignKey:VendorId;references:Id"`
+
 	VerifiedAt   *time.Time `json:"verified_at" gorm:"column:verified_at"`
 	VerifiedBy   *string    `json:"verified_by" gorm:"column:verified_by"`
 	DeactivateAt *time.Time `json:"deactivate_at" gorm:"column:deactivate_at"`

@@ -6,7 +6,7 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_type WHERE typname = 'event_status'
     ) THEN
-        CREATE TYPE event_status AS ENUM ('draft', 'open', 'closed', 'completed', 'cancelled');
+        CREATE TYPE event_status AS ENUM ('draft', 'open', 'pending', 'closed', 'completed', 'cancelled');
     END IF;
 END$$;
 

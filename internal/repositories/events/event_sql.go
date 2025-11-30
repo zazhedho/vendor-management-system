@@ -128,14 +128,14 @@ func (r *repo) GetSubmissionByEventAndVendor(eventId, vendorId string) (ret doma
 }
 
 func (r *repo) GetSubmissionsByEventID(eventId string) (ret []domainevents.EventSubmission, err error) {
-	if err = r.DB.Where("event_id = ?", eventId).Find(&ret).Error; err != nil {
+	if err = r.DB.Preload("Event").Preload("Vendor").Preload("Vendor.Profile").Preload("File").Where("event_id = ?", eventId).Find(&ret).Error; err != nil {
 		return nil, err
 	}
 	return ret, nil
 }
 
 func (r *repo) GetSubmissionsByVendorID(vendorId string) (ret []domainevents.EventSubmission, err error) {
-	if err = r.DB.Where("vendor_id = ?", vendorId).Find(&ret).Error; err != nil {
+	if err = r.DB.Preload("Event").Preload("File").Where("vendor_id = ?", vendorId).Find(&ret).Error; err != nil {
 		return nil, err
 	}
 	return ret, nil

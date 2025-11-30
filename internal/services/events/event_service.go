@@ -138,19 +138,13 @@ func (s *ServiceEvent) SubmitPitch(eventId, vendorId string, req dto.SubmitPitch
 		return domainevents.EventSubmission{}, err
 	}
 
-	if event.Status != "open" {
+	if event.Status != utils.EventOpen {
 		return domainevents.EventSubmission{}, errors.New("event is not open for submissions")
 	}
 
 	existing, err := s.EventRepo.GetSubmissionByEventAndVendor(eventId, vendorId)
 	if err == nil && existing.Id != "" {
-		existing.ProposalDetails = req.ProposalDetails
-		existing.UpdatedAt = time.Now()
-
-		if err := s.EventRepo.UpdateSubmission(existing); err != nil {
-			return domainevents.EventSubmission{}, err
-		}
-		return existing, nil
+		return domainevents.EventSubmission{}, errors.New("you have already submitted a pitch for this event")
 	}
 
 	now := time.Now()
@@ -168,6 +162,53 @@ func (s *ServiceEvent) SubmitPitch(eventId, vendorId string, req dto.SubmitPitch
 	}
 
 	if err := s.EventRepo.CreateSubmission(submission); err != nil {
+		return domainevents.EventSubmission{}, err
+	}
+
+	return submission, nil
+}
+
+func (s *ServiceEvent) SubmitPitchWithFile(ctx context.Context, eventId, vendorId string, req dto.SubmitPitchRequest, fileHeader *multipart.FileHeader, fileType, caption string) (domainevents.EventSubmission, error) {
+	// First, create or update the submission
+	submission, err := s.SubmitPitch(eventId, vendorId, req)
+	if err != nil {
+		return domainevents.EventSubmission{}, err
+	}
+
+	// Validate file size
+	maxFileSize := utils.GetEnv("MAX_FILE_SIZE", 20).(int)
+	if err := utils.ValidateFileSize(fileHeader, maxFileSize); err != nil {
+		return domainevents.EventSubmission{}, err
+	}
+
+	// Open file
+	file, err := fileHeader.Open()
+	if err != nil {
+		return domainevents.EventSubmission{}, fmt.Errorf("failed to open file %s: %w", fileHeader.Filename, err)
+	}
+	defer file.Close()
+
+	// Upload to storage provider (MinIO or R2)
+	fileUrl, err := s.StorageProvider.UploadFile(ctx, file, fileHeader, "event-submission-files")
+	if err != nil {
+		return domainevents.EventSubmission{}, fmt.Errorf("failed to upload file %s to storage: %w", fileHeader.Filename, err)
+	}
+
+	// Create submission file record
+	now := time.Now()
+	submissionFile := domainevents.EventSubmissionFile{
+		ID:                utils.CreateUUID(),
+		EventSubmissionId: submission.Id,
+		FileType:          fileType,
+		FileUrl:           fileUrl,
+		Caption:           caption,
+		CreatedAt:         now,
+		CreatedBy:         vendorId,
+	}
+
+	if err := s.EventRepo.CreateSubmissionFile(submissionFile); err != nil {
+		// Cleanup uploaded file if database save fails
+		_ = s.StorageProvider.DeleteFile(ctx, fileUrl)
 		return domainevents.EventSubmission{}, err
 	}
 

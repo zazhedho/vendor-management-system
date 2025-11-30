@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"strconv"
 
 	"vendor-management-system/internal/dto"
 	interfaceevaluations "vendor-management-system/internal/interfaces/evaluations"
@@ -139,21 +138,12 @@ func (h *HandlerEvaluation) GetMyEvaluations(ctx *gin.Context) {
 	logId := utils.GenerateLogId(ctx)
 	logPrefix := fmt.Sprintf("[%s][EvaluationHandler][GetMyEvaluations]", logId)
 
-	vendor, err := h.VendorRepo.GetVendorByUserID(userId)
+	data, err := h.Service.GetMyEvaluations(userId)
 	if err != nil {
-		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; GetVendorByUserID; ERROR: %s;", logPrefix, err))
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetMyEvaluations; ERROR: %s;", logPrefix, err))
 		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = "vendor profile not found"
-		ctx.JSON(http.StatusBadRequest, res)
-		return
-	}
-
-	data, err := h.Service.GetEvaluationsByVendorID(vendor.Id)
-	if err != nil {
-		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetEvaluationsByVendorID; ERROR: %s;", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
 		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		ctx.JSON(http.StatusBadRequest, res)
 		return
 	}
 
@@ -226,6 +216,8 @@ func (h *HandlerEvaluation) DeleteEvaluation(ctx *gin.Context) {
 }
 
 func (h *HandlerEvaluation) UploadPhoto(ctx *gin.Context) {
+	authData := utils.GetAuthData(ctx)
+	userId := utils.InterfaceString(authData["user_id"])
 	logId := utils.GenerateLogId(ctx)
 	logPrefix := fmt.Sprintf("[%s][EvaluationHandler][UploadPhoto]", logId)
 
@@ -243,23 +235,10 @@ func (h *HandlerEvaluation) UploadPhoto(ctx *gin.Context) {
 		return
 	}
 
-	// Get optional fields from form
-	review := ctx.PostForm("review")
-	ratingStr := ctx.PostForm("rating")
+	// Get caption from form (vendor uploads photo with caption only)
+	caption := ctx.PostForm("caption")
 
-	var rating float64
-	if ratingStr != "" {
-		if r, err := strconv.ParseFloat(ratingStr, 64); err == nil {
-			rating = r
-		}
-	}
-
-	req := dto.UploadEvaluationPhotoRequest{
-		Review: review,
-		Rating: rating,
-	}
-
-	data, err := h.Service.UploadPhoto(ctx.Request.Context(), evaluationId, file, req)
+	data, err := h.Service.UploadPhoto(ctx.Request.Context(), userId, evaluationId, file, caption)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.UploadPhoto; ERROR: %s;", logPrefix, err))
 		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
@@ -274,9 +253,11 @@ func (h *HandlerEvaluation) UploadPhoto(ctx *gin.Context) {
 }
 
 func (h *HandlerEvaluation) ReviewPhoto(ctx *gin.Context) {
-	var req dto.UpdateEvaluationPhotoRequest
+	var req dto.ReviewEvaluationPhotoRequest
+	authData := utils.GetAuthData(ctx)
+	userId := utils.InterfaceString(authData["user_id"])
 	logId := utils.GenerateLogId(ctx)
-	logPrefix := fmt.Sprintf("[%s][EvaluationHandler][UpdatePhoto]", logId)
+	logPrefix := fmt.Sprintf("[%s][EvaluationHandler][ReviewPhoto]", logId)
 
 	photoId, err := utils.ValidateUUID(ctx, logId)
 	if err != nil {
@@ -291,7 +272,7 @@ func (h *HandlerEvaluation) ReviewPhoto(ctx *gin.Context) {
 		return
 	}
 
-	data, err := h.Service.UpdatePhoto(photoId, req)
+	data, err := h.Service.ReviewPhoto(userId, photoId, req)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.ReviewPhoto; ERROR: %s;", logPrefix, err))
 		if errors.Is(err, gorm.ErrRecordNotFound) {

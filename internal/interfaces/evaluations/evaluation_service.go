@@ -10,17 +10,18 @@ import (
 )
 
 type ServiceEvaluationInterface interface {
-	// Evaluation operations
-	CreateEvaluation(evaluatorId string, req dto.CreateEvaluationRequest) (domainevaluations.Evaluation, error)
+	// Evaluation operations - Vendor creates after winning completed event
+	CreateEvaluation(vendorUserId string, req dto.CreateEvaluationRequest) (domainevaluations.Evaluation, error)
 	GetEvaluationByID(id string) (domainevaluations.Evaluation, error)
 	GetEvaluationsByEventID(eventId string) ([]domainevaluations.Evaluation, error)
 	GetEvaluationsByVendorID(vendorId string) ([]domainevaluations.Evaluation, error)
+	GetMyEvaluations(vendorUserId string) ([]domainevaluations.Evaluation, error)
 	GetAllEvaluations(params filter.BaseParams) ([]domainevaluations.Evaluation, int64, error)
 	UpdateEvaluation(id string, req dto.UpdateEvaluationRequest) (domainevaluations.Evaluation, error)
 	DeleteEvaluation(id string) error
 
-	// Photo operations
-	UploadPhoto(ctx context.Context, evaluationId string, file *multipart.FileHeader, req dto.UploadEvaluationPhotoRequest) (domainevaluations.EvaluationPhoto, error)
-	UpdatePhoto(photoId string, req dto.UpdateEvaluationPhotoRequest) (domainevaluations.EvaluationPhoto, error)
+	// Photo operations - Vendor uploads, Client reviews
+	UploadPhoto(ctx context.Context, vendorUserId string, evaluationId string, file *multipart.FileHeader, caption string) (domainevaluations.EvaluationPhoto, error)
+	ReviewPhoto(clientUserId string, photoId string, req dto.ReviewEvaluationPhotoRequest) (domainevaluations.EvaluationPhoto, error)
 	DeletePhoto(ctx context.Context, photoId string) error
 }
