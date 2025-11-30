@@ -248,6 +248,7 @@ export const EvaluationList: React.FC = () => {
         columns={columns}
         keyField="id"
         isLoading={isLoading}
+        onRowClick={(evaluation) => navigate(`/evaluations/${evaluation.id}`)}
         emptyMessage="No evaluations found."
       />
 
