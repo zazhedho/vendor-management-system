@@ -2,14 +2,23 @@ import React from 'react';
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
     noPadding?: boolean;
+    variant?: 'default' | 'bordered' | 'glass' | 'elevated';
 }
 
 export const Card = React.forwardRef<HTMLDivElement, CardProps>(
-    ({ className = '', noPadding = false, children, ...props }, ref) => {
+    ({ className = '', noPadding = false, variant = 'default', children, ...props }, ref) => {
+
+        const variants = {
+            default: 'bg-white border border-secondary-200 shadow-soft hover:shadow-soft-lg',
+            bordered: 'bg-white border-2 border-secondary-300 shadow-sm',
+            glass: 'bg-white/80 backdrop-blur-md border border-white/20 shadow-glass',
+            elevated: 'bg-white border border-secondary-100 shadow-lg hover:shadow-xl',
+        };
+
         return (
             <div
                 ref={ref}
-                className={`bg-white rounded-xl border border-secondary-200 shadow-sm ${!noPadding ? 'p-6' : ''} ${className}`}
+                className={`rounded-xl transition-all duration-300 ${variants[variant]} ${!noPadding ? 'p-6' : ''} ${className}`}
                 {...props}
             >
                 {children}

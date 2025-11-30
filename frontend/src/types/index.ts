@@ -57,6 +57,7 @@ export interface Vendor {
   reject_reason?: string;
   reverify_at?: string;
   expired_at?: string;
+  profile?: VendorProfile;
   created_at: string;
   created_by: string;
   updated_at?: string;
@@ -152,6 +153,8 @@ export interface Event {
   terms_file_path?: string;
   created_by_user_id: string;
   winner_vendor_id?: string;
+  winner_vendor?: Vendor;
+  winner_submission?: EventSubmission;
 
   // File relationships
   files?: EventFile[];
@@ -185,7 +188,14 @@ export interface EventSubmission {
   is_shortlisted: boolean;
   is_winner: boolean;
 
-  // File relationships
+  // Relationships
+  event?: Event;
+  vendor?: {
+    id: string;
+    vendor_type: string;
+    status: string;
+    profile?: VendorProfile;
+  };
   files?: EventSubmissionFile[];
 
   created_at: string;

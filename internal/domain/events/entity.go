@@ -20,9 +20,10 @@ type Event struct {
 	StartDate   *time.Time `json:"start_date,omitempty" gorm:"column:start_date"`
 	EndDate     *time.Time `json:"end_date,omitempty" gorm:"column:end_date"`
 
-	File           []EventFile `json:"files,omitempty" gorm:"foreignKey:EventId;constraint:OnDelete:CASCADE"`
-	Status         string      `json:"status" gorm:"column:status"`
-	WinnerVendorID *string     `json:"winner_vendor_id,omitempty" gorm:"column:winner_vendor_id"`
+	File           []EventFile           `json:"files,omitempty" gorm:"foreignKey:EventId;constraint:OnDelete:CASCADE"`
+	Status         string                `json:"status" gorm:"column:status"`
+	WinnerVendorID *string               `json:"winner_vendor_id,omitempty" gorm:"column:winner_vendor_id"`
+	WinnerVendor   *domainvendors.Vendor `json:"winner_vendor,omitempty" gorm:"foreignKey:WinnerVendorID;references:Id"`
 
 	CreatedAt time.Time      `json:"created_at" gorm:"column:created_at"`
 	CreatedBy string         `json:"created_by" gorm:"column:created_by"`

@@ -19,7 +19,7 @@ import {
   Eye,
   Search
 } from 'lucide-react';
-import { Button, Card, Badge, Spinner, Input } from '../../components/ui';
+import { Button, Card, Badge, Spinner, Input, ConfirmModal } from '../../components/ui';
 import { toast } from 'react-toastify';
 
 // Helper to format file type with proper capitalization
@@ -127,6 +127,10 @@ export const VendorProfile: React.FC = () => {
   // File upload states
   const [uploadingFile, setUploadingFile] = useState(false);
   const [selectedFileType, setSelectedFileType] = useState<string>('');
+  
+  // Delete file modal
+  const [deleteFileId, setDeleteFileId] = useState<string | null>(null);
+  const [isDeletingFile, setIsDeletingFile] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -345,11 +349,16 @@ export const VendorProfile: React.FC = () => {
     }
   };
 
-  const handleDeleteFile = async (fileId: string) => {
-    if (!profile?.id || !window.confirm('Are you sure you want to delete this file?')) return;
+  const handleDeleteFileClick = (fileId: string) => {
+    if (!profile?.id) return;
+    setDeleteFileId(fileId);
+  };
 
+  const handleDeleteFileConfirm = async () => {
+    if (!profile?.id || !deleteFileId) return;
+    setIsDeletingFile(true);
     try {
-      const response = await vendorsApi.deleteProfileFile(profile.id, fileId);
+      const response = await vendorsApi.deleteProfileFile(profile.id, deleteFileId);
       if (response.status) {
         toast.success('File deleted successfully');
         await fetchVendorProfile();
@@ -358,6 +367,9 @@ export const VendorProfile: React.FC = () => {
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to delete file');
+    } finally {
+      setIsDeletingFile(false);
+      setDeleteFileId(null);
     }
   };
 
@@ -701,7 +713,7 @@ export const VendorProfile: React.FC = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDeleteFile(file.id)}
+                        onClick={() => handleDeleteFileClick(file.id)}
                         className="text-danger-600 hover:bg-danger-50 flex-shrink-0"
                         leftIcon={<AlertCircle size={14} />}
                       >
@@ -1103,7 +1115,7 @@ export const VendorProfile: React.FC = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleDeleteFile(file.id)}
+                              onClick={() => handleDeleteFileClick(file.id)}
                               className="text-danger-600 hover:bg-danger-50 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                             >
                               <AlertCircle size={16} />
@@ -1207,6 +1219,17 @@ export const VendorProfile: React.FC = () => {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        show={!!deleteFileId}
+        title="Delete File"
+        message="Are you sure you want to delete this file?"
+        confirmText="Delete"
+        variant="danger"
+        isLoading={isDeletingFile}
+        onConfirm={handleDeleteFileConfirm}
+        onCancel={() => setDeleteFileId(null)}
+      />
     </div>
   );
 };

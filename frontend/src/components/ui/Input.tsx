@@ -13,47 +13,54 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         return (
             <div className="w-full">
                 {label && (
-                    <label className="block text-sm font-medium text-secondary-700 mb-1.5">
+                    <label className="block text-sm font-semibold text-secondary-800 mb-2">
                         {label}
+                        {props.required && <span className="text-danger-500 ml-1">*</span>}
                     </label>
                 )}
-                <div className="relative">
+                <div className="relative group">
                     {leftIcon && (
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-secondary-400">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-secondary-400 group-focus-within:text-primary-600 transition-colors">
                             {leftIcon}
                         </div>
                     )}
                     <input
                         ref={ref}
                         className={`
-              w-full rounded-lg border bg-white text-secondary-900 placeholder:text-secondary-400
-              focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500
+              w-full rounded-xl border bg-white text-secondary-900 placeholder:text-secondary-400
+              focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500
               disabled:bg-secondary-50 disabled:text-secondary-500 disabled:cursor-not-allowed
-              transition-all duration-200
-              ${leftIcon ? 'pl-10' : 'px-4'}
-              ${rightIcon ? 'pr-10' : 'px-4'}
+              transition-all duration-200 shadow-sm hover:shadow
+              ${leftIcon ? 'pl-10 pr-4' : 'px-4'}
+              ${rightIcon ? 'pr-10' : ''}
               ${error
-                                ? 'border-danger-500 focus:border-danger-500 focus:ring-danger-500/20'
-                                : 'border-secondary-200'
+                                ? 'border-danger-400 focus:border-danger-500 focus:ring-danger-500/30 bg-danger-50/30'
+                                : 'border-secondary-200 hover:border-secondary-300'
                             }
-              py-2.5
+              py-3
               ${className}
             `}
                         {...props}
                     />
                     {rightIcon && (
-                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-secondary-400">
+                        <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-secondary-400">
                             {rightIcon}
                         </div>
                     )}
                 </div>
                 {error && (
-                    <p className="mt-1.5 text-sm text-danger-600 animate-slide-up">
+                    <p className="mt-2 text-sm text-danger-600 flex items-center gap-1.5 animate-slide-up">
+                        <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
                         {error}
                     </p>
                 )}
                 {helperText && !error && (
-                    <p className="mt-1.5 text-sm text-secondary-500">
+                    <p className="mt-2 text-sm text-secondary-500 flex items-center gap-1.5">
+                        <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
                         {helperText}
                     </p>
                 )}

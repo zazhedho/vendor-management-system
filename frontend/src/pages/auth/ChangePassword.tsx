@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
-import { Key } from 'lucide-react';
+import { Key, Lock, ArrowRight, ArrowLeft, Shield } from 'lucide-react';
+import { AuthLayout } from '../../components/AuthLayout';
+import { Button, Input, Card } from '../../components/ui';
 
 const ChangePassword = () => {
   const [formData, setFormData] = useState({
@@ -34,7 +36,7 @@ const ChangePassword = () => {
     });
 
     if (result.success) {
-      toast.success('Password changed successfully! Please login with your new password.');
+      toast.success('Password changed successfully! 🎉');
       navigate('/login');
     } else {
       toast.error(result.error || 'Failed to change password');
@@ -44,76 +46,84 @@ const ChangePassword = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-blue-100 px-4">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-full mb-4">
-            <Key className="text-white" size={32} />
-          </div>
-          <h2 className="text-3xl font-bold text-gray-900">Change Password</h2>
-          <p className="text-gray-600 mt-2">Update your password to keep your account safe</p>
-        </div>
-
-        <div className="card">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="label">Current Password</label>
-              <input
-                type="password"
-                name="currentPassword"
-                value={formData.currentPassword}
-                onChange={handleChange}
-                className="input"
-                placeholder="Enter current password"
-                required
-              />
+    <AuthLayout
+      title="Change Password"
+      subtitle="Update your password to keep your account secure"
+    >
+      <Card variant="glass" className="shadow-2xl border border-white/50 backdrop-blur-xl bg-white/95">
+        <div className="mb-6 p-4 bg-gradient-to-r from-warning-50 to-orange-50 rounded-xl border border-warning-100/50">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm">
+              <Shield className="w-5 h-5 text-warning-600" />
             </div>
-
-            <div>
-              <label className="label">New Password</label>
-              <input
-                type="password"
-                name="newPassword"
-                value={formData.newPassword}
-                onChange={handleChange}
-                className="input"
-                placeholder="Enter new password"
-                required
-                minLength={8}
-              />
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-secondary-900 mb-1">Security Update</h3>
+              <p className="text-xs text-secondary-600">
+                Choose a strong password with at least 8 characters
+              </p>
             </div>
-
-            <div>
-              <label className="label">Confirm New Password</label>
-              <input
-                type="password"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className="input"
-                placeholder="Confirm new password"
-                required
-                minLength={8}
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Updating...' : 'Update Password'}
-            </button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <Link to="/login" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
-              ← Back to Login
-            </Link>
           </div>
         </div>
-      </div>
-    </div>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <Input
+            label="Current Password"
+            type="password"
+            name="currentPassword"
+            value={formData.currentPassword}
+            onChange={handleChange}
+            placeholder="Enter current password"
+            required
+            leftIcon={<Key className="w-5 h-5" />}
+          />
+
+          <Input
+            label="New Password"
+            type="password"
+            name="newPassword"
+            value={formData.newPassword}
+            onChange={handleChange}
+            placeholder="Enter new password"
+            required
+            minLength={8}
+            leftIcon={<Lock className="w-5 h-5" />}
+            helperText="Minimum 8 characters"
+          />
+
+          <Input
+            label="Confirm New Password"
+            type="password"
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            placeholder="Confirm new password"
+            required
+            minLength={8}
+            leftIcon={<Lock className="w-5 h-5" />}
+          />
+
+          <Button
+            type="submit"
+            isLoading={loading}
+            className="w-full"
+            size="lg"
+            rightIcon={!loading && <ArrowRight className="w-5 h-5" />}
+          >
+            {loading ? 'Updating...' : 'Update Password'}
+          </Button>
+        </form>
+
+        <div className="mt-8 pt-6 border-t border-secondary-100 text-center">
+          <Link
+            to="/login"
+            className="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700 font-bold transition-colors hover:underline"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Login
+          </Link>
+        </div>
+      </Card>
+    </AuthLayout>
   );
 };
 

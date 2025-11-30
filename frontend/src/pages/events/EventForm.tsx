@@ -4,7 +4,7 @@ import { eventsApi } from '../../api/events';
 import { toast } from 'react-toastify';
 import { Save, X, Upload, FileText, Trash2, Image, File, Calendar } from 'lucide-react';
 import { EventFile } from '../../types';
-import { Button, Input, Card, Spinner } from '../../components/ui';
+import { Button, Input, Card, Spinner, ConfirmModal } from '../../components/ui';
 
 export const EventForm: React.FC = () => {
   const navigate = useNavigate();
@@ -23,6 +23,8 @@ export const EventForm: React.FC = () => {
   const [files, setFiles] = useState<EventFile[]>([]);
   const [newFiles, setNewFiles] = useState<{ file: File; type: string; caption: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [deleteFileId, setDeleteFileId] = useState<string | null>(null);
+  const [isDeletingFile, setIsDeletingFile] = useState(false);
 
   useEffect(() => {
     if (isEditMode && id) {
@@ -86,17 +88,25 @@ export const EventForm: React.FC = () => {
     setNewFiles(newFiles.filter((_, i) => i !== index));
   };
 
-  const handleDeleteExistingFile = async (fileId: string) => {
-    if (!id || !window.confirm('Delete this file?')) return;
+  const handleDeleteExistingFile = (fileId: string) => {
+    if (!id) return;
+    setDeleteFileId(fileId);
+  };
 
+  const handleDeleteFileConfirm = async () => {
+    if (!id || !deleteFileId) return;
+    setIsDeletingFile(true);
     try {
-      const response = await eventsApi.deleteFile(id, fileId);
+      const response = await eventsApi.deleteFile(id, deleteFileId);
       if (response.status) {
-        setFiles(files.filter(f => f.id !== fileId));
+        setFiles(files.filter(f => f.id !== deleteFileId));
         toast.success('File deleted');
       }
     } catch (error) {
       toast.error('Failed to delete file');
+    } finally {
+      setIsDeletingFile(false);
+      setDeleteFileId(null);
     }
   };
 
@@ -326,6 +336,17 @@ export const EventForm: React.FC = () => {
           </Button>
         </div>
       </form>
+
+      <ConfirmModal
+        show={!!deleteFileId}
+        title="Delete File"
+        message="Are you sure you want to delete this file?"
+        confirmText="Delete"
+        variant="danger"
+        isLoading={isDeletingFile}
+        onConfirm={handleDeleteFileConfirm}
+        onCancel={() => setDeleteFileId(null)}
+      />
     </div>
   );
 };

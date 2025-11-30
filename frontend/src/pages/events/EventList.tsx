@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { eventsApi } from '../../api/events';
 import { Event } from '../../types';
 import { Plus, Search, Eye, Edit, Trash2, Calendar } from 'lucide-react';
-import { Button, Card, Table, Badge } from '../../components/ui';
+import { Button, Card, Table, Badge, ConfirmModal } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 
 export const EventList: React.FC = () => {
@@ -15,6 +15,8 @@ export const EventList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchEvents();
@@ -40,15 +42,22 @@ export const EventList: React.FC = () => {
     }
   };
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
+  const handleDeleteClick = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this event?')) return;
+    setDeleteId(id);
+  };
 
+  const handleDeleteConfirm = async () => {
+    if (!deleteId) return;
+    setIsDeleting(true);
     try {
-      await eventsApi.delete(id);
+      await eventsApi.delete(deleteId);
       fetchEvents();
     } catch (error) {
       console.error('Failed to delete event:', error);
+    } finally {
+      setIsDeleting(false);
+      setDeleteId(null);
     }
   };
 
@@ -121,7 +130,7 @@ export const EventList: React.FC = () => {
             variant="ghost"
             size="sm"
             className="text-danger-600 hover:text-danger-700 hover:bg-danger-50"
-            onClick={(e: React.MouseEvent) => handleDelete(e, event.id)}
+            onClick={(e: React.MouseEvent) => handleDeleteClick(e, event.id)}
           >
             <Trash2 size={16} />
           </Button>
@@ -190,6 +199,17 @@ export const EventList: React.FC = () => {
           </Button>
         </div>
       )}
+
+      <ConfirmModal
+        show={!!deleteId}
+        title="Delete Event"
+        message="Are you sure you want to delete this event? This action cannot be undone."
+        confirmText="Delete"
+        variant="danger"
+        isLoading={isDeleting}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteId(null)}
+      />
     </div>
   );
 };

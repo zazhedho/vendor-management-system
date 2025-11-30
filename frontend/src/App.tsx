@@ -8,11 +8,13 @@ import { Login, Register, ForgotPassword, ResetPassword, ChangePassword } from '
 import { Dashboard } from './pages/Dashboard';
 import { EventList, EventForm, EventDetail } from './pages/events';
 import { VendorList, VendorForm, VendorDetail, VendorProfile } from './pages/vendors';
-import { PaymentList, PaymentDetail } from './pages/payments';
-import { EvaluationList } from './pages/evaluations';
+import { PaymentList, PaymentDetail, PaymentForm } from './pages/payments';
+import { EvaluationList, EvaluationDetail, EvaluationForm } from './pages/evaluations';
+import { SubmissionList } from './pages/submissions';
 import { UserList, UserForm, Profile } from './pages/users';
 import { RoleList, RoleForm } from './pages/roles';
 import { MenuList, MenuForm } from './pages/menus';
+import { SessionList } from './pages/sessions';
 
 function App() {
   return (
@@ -141,11 +143,31 @@ function App() {
             }
           />
           <Route
+            path="/payments/new"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <PaymentForm />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/payments/:id"
             element={
               <ProtectedRoute>
                 <Layout>
                   <PaymentDetail />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/payments/:id/edit"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <PaymentForm />
                 </Layout>
               </ProtectedRoute>
             }
@@ -157,6 +179,36 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <EvaluationList />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/evaluations/new"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <EvaluationForm />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/evaluations/:id"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <EvaluationDetail />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/evaluations/:id/edit"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <EvaluationForm />
                 </Layout>
               </ProtectedRoute>
             }
@@ -266,6 +318,17 @@ function App() {
             }
           />
 
+          <Route
+            path="/sessions"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <SessionList />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
           {/* Vendor Profile Routes */}
           <Route
             path="/vendor/profile"
@@ -323,6 +386,28 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <VendorProfile />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Submission Routes */}
+          <Route
+            path="/submissions"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <SubmissionList />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor/submissions"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <SubmissionList />
                 </Layout>
               </ProtectedRoute>
             }

@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
-import { Mail } from 'lucide-react';
+import { Mail, ArrowRight, CheckCircle, Clock, RefreshCw, ArrowLeft } from 'lucide-react';
+import { AuthLayout } from '../../components/AuthLayout';
+import { Button, Input, Card } from '../../components/ui';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -64,7 +66,7 @@ const ForgotPassword = () => {
     setLoading(true);
     const result = await forgotPassword(email);
     if (result.success) {
-      toast.success('Password reset instructions resent.');
+      toast.success('Password reset instructions resent! 📧');
       startCountdown();
     } else {
       toast.error(result.error || 'Failed to resend email');
@@ -81,7 +83,7 @@ const ForgotPassword = () => {
     if (result.success) {
       setSubmitted(true);
       startCountdown();
-      toast.success('Password reset instructions sent to your email.');
+      toast.success('Password reset instructions sent! 📧');
     } else {
       toast.error(result.error || 'Failed to send reset email');
     }
@@ -90,89 +92,126 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-blue-100 px-4">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-full mb-4">
-            <Mail className="text-white" size={32} />
-          </div>
-          <h2 className="text-3xl font-bold text-gray-900">Forgot Password?</h2>
-          <p className="text-gray-600 mt-2">
-            {!submitted
-              ? "Enter your email address and we'll send you instructions to reset your password."
-              : "Check your email for reset instructions"}
-          </p>
-        </div>
-
-        <div className="card">
-          {!submitted ? (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="label">Email</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="input"
-                  placeholder="your@email.com"
-                  required
-                />
+    <AuthLayout
+      title={!submitted ? "Forgot Password?" : "Check Your Email"}
+      subtitle={!submitted
+        ? "Enter your email and we'll send reset instructions"
+        : "We've sent password reset instructions"}
+    >
+      <Card variant="glass" className="shadow-2xl border border-white/50 backdrop-blur-xl bg-white/95">
+        {!submitted ? (
+          <>
+            {/* Info Badge */}
+            <div className="mb-6 p-4 bg-gradient-to-r from-info-50 to-primary-50 rounded-xl border border-info-100/50">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm">
+                  <Mail className="w-5 h-5 text-info-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-secondary-900 mb-1">Password Recovery</h3>
+                  <p className="text-xs text-secondary-600">
+                    We'll email you a secure link to reset your password
+                  </p>
+                </div>
               </div>
+            </div>
 
-              <button
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <Input
+                label="Email Address"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@company.com"
+                required
+                leftIcon={<Mail className="w-5 h-5" />}
+                helperText="Enter the email associated with your account"
+              />
+
+              <Button
                 type="submit"
-                disabled={loading}
-                className="btn btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                isLoading={loading}
+                className="w-full"
+                size="lg"
+                rightIcon={!loading && <ArrowRight className="w-5 h-5" />}
               >
                 {loading ? 'Sending...' : 'Send Reset Link'}
-              </button>
+              </Button>
             </form>
-          ) : (
-            <div className="space-y-4">
-              <div className="text-center">
-                <div className="mb-3 text-green-600 flex justify-center">
-                  <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
+          </>
+        ) : (
+          <div className="space-y-6">
+            {/* Success Message */}
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-success-100 to-success-50 rounded-2xl shadow-lg mb-4 relative">
+                <CheckCircle className="w-12 h-12 text-success-600" />
+                <div className="absolute -top-1 -right-1 w-6 h-6 bg-success-500 rounded-full flex items-center justify-center">
+                  <Mail className="w-3.5 h-3.5 text-white" />
                 </div>
-                <h4 className="text-xl font-semibold text-gray-900 mb-2">Check your email</h4>
-                <p className="text-gray-600 mb-4">
-                  We have sent password reset instructions to <strong>{email}</strong>.
-                </p>
-
-                {countdown > 0 && (
-                  <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm">
-                    ⏳ Please wait {formatTime(countdown)} before trying again.
-                  </div>
-                )}
               </div>
+              <h3 className="text-xl font-bold text-secondary-900 mb-2">Email Sent!</h3>
+              <p className="text-secondary-600 mb-4">
+                We've sent password reset instructions to{' '}
+                <span className="font-semibold text-primary-600">{email}</span>
+              </p>
+            </div>
 
-              <button
+            {/* Countdown Warning */}
+            {countdown > 0 && (
+              <div className="p-4 bg-gradient-to-r from-warning-50 to-orange-50 border border-warning-200 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm">
+                    <Clock className="w-5 h-5 text-warning-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-warning-900">Please wait</h4>
+                    <p className="text-xs text-warning-700">
+                      You can resend in <span className="font-mono font-bold">{formatTime(countdown)}</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="space-y-3">
+              <Button
                 onClick={handleResend}
                 disabled={countdown > 0 || loading}
-                className="btn btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full"
+                size="lg"
+                variant="primary"
+                leftIcon={<RefreshCw className="w-5 h-5" />}
               >
                 {loading ? 'Resending...' : 'Resend Email'}
-              </button>
+              </Button>
 
-              <button
+              <Button
                 onClick={() => setSubmitted(false)}
                 disabled={countdown > 0}
-                className="btn btn-secondary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full"
+                size="lg"
+                variant="secondary"
               >
-                Try another email
-              </button>
+                Try Another Email
+              </Button>
             </div>
-          )}
-
-          <div className="mt-6 text-center">
-            <Link to="/login" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
-              ← Back to Login
-            </Link>
           </div>
+        )}
+
+        {/* Back to Login */}
+        <div className="mt-8 pt-6 border-t border-secondary-100 text-center">
+          <Link
+            to="/login"
+            className="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700 font-bold transition-colors hover:underline"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Login
+          </Link>
         </div>
-      </div>
-    </div>
+      </Card>
+    </AuthLayout>
   );
 };
 

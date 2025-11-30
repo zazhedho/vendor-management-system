@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
-import { Mail, Lock, User, Phone, Briefcase, ArrowRight } from 'lucide-react';
+import { Mail, Lock, User, Phone, Briefcase, ArrowRight, UserPlus } from 'lucide-react';
 import { AuthLayout } from '../../components/AuthLayout';
 import { Button, Input, Card } from '../../components/ui';
 
@@ -34,8 +34,6 @@ export const Register: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Assuming register function takes (name, email, password, phone, role)
-      // We need to check the AuthContext signature, but based on DTO it matches.
       const result = await register({
         name: formData.name,
         email: formData.email,
@@ -45,7 +43,7 @@ export const Register: React.FC = () => {
       });
 
       if (result.success) {
-        toast.success('Registration successful! Please login.');
+        toast.success('Registration successful! 🎉 Please login.');
         navigate('/login');
       } else {
         toast.error(result.error || 'Registration failed');
@@ -62,7 +60,19 @@ export const Register: React.FC = () => {
       title="Create Account"
       subtitle="Join as a vendor or client to get started"
     >
-      <Card className="shadow-xl border-secondary-100/50 backdrop-blur-sm bg-white/90">
+      <Card variant="glass" className="shadow-2xl border border-white/50 backdrop-blur-xl bg-white/95">
+        <div className="mb-6 p-4 bg-gradient-to-r from-success-50 to-primary-50 rounded-xl border border-success-100/50">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm">
+              <UserPlus className="w-5 h-5 text-success-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-secondary-900 mb-1">Quick Registration</h3>
+              <p className="text-xs text-secondary-600">Create your account in just a few steps</p>
+            </div>
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
             label="Full Name"
@@ -97,22 +107,27 @@ export const Register: React.FC = () => {
           />
 
           <div>
-            <label className="block text-sm font-medium text-secondary-700 mb-1.5">
-              Account Type
+            <label className="block text-sm font-semibold text-secondary-800 mb-2">
+              Account Type<span className="text-danger-500 ml-1">*</span>
             </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-secondary-400">
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-secondary-400 group-focus-within:text-primary-600 transition-colors">
                 <Briefcase className="w-5 h-5" />
               </div>
               <select
                 name="role"
                 value={formData.role}
                 onChange={handleChange}
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-secondary-200 bg-white text-secondary-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all appearance-none"
+                className="w-full pl-10 pr-4 py-3 rounded-xl border border-secondary-200 bg-white text-secondary-900 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-all appearance-none shadow-sm hover:shadow cursor-pointer"
               >
                 <option value="vendor">Vendor</option>
                 <option value="client">Client</option>
               </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-secondary-400">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 20 20" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
             </div>
           </div>
 
@@ -144,16 +159,16 @@ export const Register: React.FC = () => {
             isLoading={isLoading}
             className="w-full mt-2"
             size="lg"
-            rightIcon={!isLoading && <ArrowRight className="w-4 h-4" />}
+            rightIcon={!isLoading && <ArrowRight className="w-5 h-5" />}
           >
-            Create Account
+            {isLoading ? 'Creating Account...' : 'Create Account'}
           </Button>
         </form>
 
         <div className="mt-6 pt-6 border-t border-secondary-100 text-center">
           <p className="text-sm text-secondary-600">
             Already have an account?{' '}
-            <Link to="/login" className="text-primary-600 hover:text-primary-700 font-semibold transition-colors">
+            <Link to="/login" className="text-primary-600 hover:text-primary-700 font-bold transition-colors hover:underline">
               Sign in
             </Link>
           </p>

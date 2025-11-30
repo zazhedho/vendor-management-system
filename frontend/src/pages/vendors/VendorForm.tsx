@@ -4,7 +4,7 @@ import { vendorsApi } from '../../api/vendors';
 import { toast } from 'react-toastify';
 import { Save, X, Upload, FileText, Trash2, CheckCircle, XCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import { VendorProfile, VendorProfileFile } from '../../types';
-import { Button, Input, Card, Stepper, Spinner } from '../../components/ui';
+import { Button, Input, Card, Stepper, Spinner, ConfirmModal } from '../../components/ui';
 
 // Helper to format file type with proper capitalization
 const formatFileType = (type: string): string => {
@@ -60,6 +60,8 @@ export const VendorForm: React.FC = () => {
 
   const [profileFiles, setProfileFiles] = useState<VendorProfileFile[]>([]);
   const [newFiles, setNewFiles] = useState<{ file: File; type: string }[]>([]);
+  const [deleteFileId, setDeleteFileId] = useState<string | null>(null);
+  const [isDeletingFile, setIsDeletingFile] = useState(false);
 
   const steps = [
     { title: 'General Info', description: 'Basic vendor details' },
@@ -134,17 +136,25 @@ export const VendorForm: React.FC = () => {
     setNewFiles(newFiles.filter((_, i) => i !== index));
   };
 
-  const handleDeleteExistingFile = async (fileId: string) => {
-    if (!profileData.id || !window.confirm('Delete this file?')) return;
+  const handleDeleteExistingFileClick = (fileId: string) => {
+    if (!profileData.id) return;
+    setDeleteFileId(fileId);
+  };
 
+  const handleDeleteExistingFileConfirm = async () => {
+    if (!profileData.id || !deleteFileId) return;
+    setIsDeletingFile(true);
     try {
-      const response = await vendorsApi.deleteProfileFile(profileData.id, fileId);
+      const response = await vendorsApi.deleteProfileFile(profileData.id, deleteFileId);
       if (response.status) {
-        setProfileFiles(profileFiles.filter(f => f.id !== fileId));
+        setProfileFiles(profileFiles.filter(f => f.id !== deleteFileId));
         toast.success('File deleted');
       }
     } catch (error) {
       toast.error('Failed to delete file');
+    } finally {
+      setIsDeletingFile(false);
+      setDeleteFileId(null);
     }
   };
 
@@ -421,7 +431,7 @@ export const VendorForm: React.FC = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDeleteExistingFile(file.id)}
+                        onClick={() => handleDeleteExistingFileClick(file.id)}
                         className="text-danger-600 hover:bg-danger-50 hover:text-danger-700"
                       >
                         <Trash2 size={16} />
@@ -511,6 +521,17 @@ export const VendorForm: React.FC = () => {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        show={!!deleteFileId}
+        title="Delete File"
+        message="Are you sure you want to delete this file?"
+        confirmText="Delete"
+        variant="danger"
+        isLoading={isDeletingFile}
+        onConfirm={handleDeleteExistingFileConfirm}
+        onCancel={() => setDeleteFileId(null)}
+      />
     </div>
   );
 };

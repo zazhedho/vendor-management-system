@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { evaluationsApi } from '../../api/evaluations';
 import { Evaluation } from '../../types';
 import { Plus, Search, Star } from 'lucide-react';
 import { Button, Card, Table, Badge } from '../../components/ui';
 
 export const EvaluationList: React.FC = () => {
+  const navigate = useNavigate();
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -76,7 +78,7 @@ export const EvaluationList: React.FC = () => {
     {
       header: 'Actions',
       accessor: (evaluation: Evaluation) => (
-        <Button variant="ghost" size="sm">View</Button>
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/evaluations/${evaluation.id}`)}>View</Button>
       )
     }
   ];
@@ -88,7 +90,7 @@ export const EvaluationList: React.FC = () => {
           <h1 className="text-2xl font-bold text-secondary-900">Evaluations</h1>
           <p className="text-secondary-500">Vendor performance evaluations and ratings</p>
         </div>
-        <Button leftIcon={<Plus size={20} />}>
+        <Button leftIcon={<Plus size={20} />} onClick={() => navigate('/evaluations/new')}>
           New Evaluation
         </Button>
       </div>

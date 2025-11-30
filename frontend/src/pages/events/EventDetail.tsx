@@ -1,21 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { eventsApi } from '../../api/events';
+import { vendorsApi } from '../../api/vendors';
 import { Event } from '../../types';
-import { ArrowLeft, Edit, Calendar, Tag, FileText, Users, Trophy } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, Tag, FileText, Trophy, AlertCircle } from 'lucide-react';
 import { Button, Card, Badge, Spinner } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
+import { SubmitPitchModal } from '../submissions/SubmitPitchModal';
 
 export const EventDetail: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { hasRole } = useAuth();
   const [event, setEvent] = useState<Event | null>(null);
+  const [vendorProfile, setVendorProfile] = useState<any>(null);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+
+  const isVendor = hasRole(['vendor']);
 
   useEffect(() => {
     if (id) fetchEvent(id);
-  }, [id]);
+    if (isVendor) {
+      fetchVendorProfile();
+      checkExistingSubmission();
+    }
+  }, [id, isVendor]);
+
+  const checkExistingSubmission = async () => {
+    try {
+      const response = await eventsApi.getMySubmissions();
+      if (response.status && response.data) {
+        const existingSubmission = response.data.find((s: any) => s.event_id === id);
+        setHasSubmitted(!!existingSubmission);
+      }
+    } catch (error) {
+      console.error('Failed to check submissions:', error);
+    }
+  };
 
   const fetchEvent = async (eventId: string) => {
     setIsLoading(true);
@@ -28,6 +51,17 @@ export const EventDetail: React.FC = () => {
       console.error('Failed to fetch event:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchVendorProfile = async () => {
+    try {
+      const response = await vendorsApi.getMyVendorProfile();
+      if (response.status && response.data) {
+        setVendorProfile(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch vendor profile:', error);
     }
   };
 
@@ -68,8 +102,26 @@ export const EventDetail: React.FC = () => {
     );
   }
 
-  const isVendor = hasRole(['vendor']);
   const canEdit = hasRole(['admin', 'client']);
+  const vendorStatus = vendorProfile?.vendor?.status;
+  const isVendorActive = vendorStatus === 'active';
+  const isEventOpen = event.status === 'open';
+  const canSubmit = isVendor && isEventOpen && isVendorActive && !hasSubmitted;
+  
+  // Check if current vendor is the winner
+  const currentVendorId = vendorProfile?.vendor?.id;
+  const isCurrentVendorWinner = isVendor && event.winner_vendor_id && currentVendorId === event.winner_vendor_id;
+
+  const getEventStatusMessage = (status: string) => {
+    const messages: Record<string, string> = {
+      draft: 'This event is still in draft and not yet published.',
+      pending: 'This event is pending approval and not yet open for submissions.',
+      closed: 'This event has been closed and no longer accepts submissions.',
+      completed: 'This event has been completed and submissions are closed.',
+      cancelled: 'This event has been cancelled.',
+    };
+    return messages[status] || 'This event is not open for submissions.';
+  };
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -84,13 +136,114 @@ export const EventDetail: React.FC = () => {
               Edit Event
             </Button>
           )}
-          {isVendor && event.status === 'open' && (
-            <Button variant="primary" onClick={() => navigate(`/events/${id}/submit`)}>
+          {canSubmit && (
+            <Button variant="primary" onClick={() => setShowSubmitModal(true)}>
               Submit Pitch
             </Button>
           )}
         </div>
       </div>
+
+      {/* Winner Announcement - Show at top for vendors when winner is selected */}
+      {isVendor && event.winner_vendor_id && (
+        isCurrentVendorWinner ? (
+          <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-300">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center text-green-600 shrink-0">
+                <Trophy size={28} />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-green-900 text-xl">Congratulations!</h3>
+                <p className="text-green-700 mt-1">
+                  You have been selected as the winner for this event. The client will contact you soon for further details.
+                </p>
+              </div>
+            </div>
+          </Card>
+        ) : hasSubmitted ? (
+          <Card className="bg-secondary-50 border-secondary-200">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-secondary-100 flex items-center justify-center text-secondary-500 shrink-0">
+                <Trophy size={24} />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-secondary-900">Thank You for Participating</h3>
+                <p className="text-sm text-secondary-600 mt-1">
+                  Unfortunately, you were not selected as the winner for this event. Don't give up! Keep improving and try again in future events.
+                </p>
+              </div>
+            </div>
+          </Card>
+        ) : null
+      )}
+
+      {/* Event Status Alert - Not Open (only show if no winner yet) */}
+      {isVendor && !isEventOpen && !event.winner_vendor_id && (
+        <Card className="bg-secondary-50 border-secondary-200">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="text-secondary-600 mt-0.5" size={20} />
+            <div>
+              <h4 className="font-medium text-secondary-900">Event Not Open</h4>
+              <p className="text-sm text-secondary-700 mt-1">
+                {getEventStatusMessage(event.status)}
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Vendor Status Alert - Not Active (only show if no winner yet) */}
+      {isVendor && isEventOpen && !isVendorActive && !hasSubmitted && !event.winner_vendor_id && (
+        <Card className="bg-warning-50 border-warning-200">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="text-warning-600 mt-0.5" size={20} />
+            <div>
+              <h4 className="font-medium text-warning-900">Cannot Submit Pitch</h4>
+              <p className="text-sm text-warning-700 mt-1">
+                Your vendor status is <strong>{vendorStatus || 'not active'}</strong>.
+                Only vendors with <strong>active</strong> status can submit pitches to events.
+                Please contact the administrator to activate your vendor account.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Already Submitted Alert (only show if no winner yet) */}
+      {isVendor && hasSubmitted && !event.winner_vendor_id && (
+        <Card className="bg-success-50 border-success-200">
+          <div className="flex items-start gap-3">
+            <FileText className="text-success-600 mt-0.5" size={20} />
+            <div>
+              <h4 className="font-medium text-success-900">Pitch Already Submitted</h4>
+              <p className="text-sm text-success-700 mt-1">
+                You have already submitted a pitch for this event. You can view your submission in the <strong>My Submissions</strong> page.
+              </p>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="mt-2 text-success-700 hover:text-success-900"
+                onClick={() => navigate('/submissions')}
+              >
+                View My Submissions
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Submit Pitch Modal */}
+      {showSubmitModal && event && id && (
+        <SubmitPitchModal
+          eventId={id}
+          eventTitle={event.title}
+          onClose={() => setShowSubmitModal(false)}
+          onSuccess={() => {
+            setShowSubmitModal(false);
+            fetchEvent(id);
+          }}
+        />
+      )}
 
       {/* Hero Card */}
       <Card className="bg-gradient-to-br from-primary-900 to-primary-800 text-white border-none overflow-hidden relative">
@@ -119,24 +272,30 @@ export const EventDetail: React.FC = () => {
         </div>
       </Card>
 
+      {/* Winner Card - For Admin/Client/Superadmin below title */}
+      {event.winner_vendor_id && !isVendor && (
+        <Card className="bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600 shrink-0">
+              <Trophy size={24} />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-yellow-900">Winner Selected</h3>
+              <p className="text-sm text-yellow-800">
+                <span className="font-medium">{event.winner_vendor?.profile?.vendor_name || `Vendor ID: ${event.winner_vendor_id.slice(0, 8)}...`}</span>
+                {event.winner_vendor?.profile?.email && (
+                  <span className="text-yellow-700 ml-2">({event.winner_vendor.profile.email})</span>
+                )}
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Main Content */}
         <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <FileText size={20} className="text-primary-600" />
-              Description
-            </h2>
-            {event.description ? (
-              <div className="prose prose-sm max-w-none text-secondary-700">
-                <p className="whitespace-pre-wrap leading-relaxed">{event.description}</p>
-              </div>
-            ) : (
-              <p className="text-secondary-500 italic">No description provided</p>
-            )}
-          </Card>
-
-          {/* Event Pamphlet/Images */}
+          {/* Event Pamphlet/Images - Show first */}
           {event.files && event.files.filter(f => f.file_type === 'image').length > 0 && (
             <Card>
               <h2 className="text-lg font-semibold mb-4">Event Pamphlet</h2>
@@ -156,6 +315,21 @@ export const EventDetail: React.FC = () => {
               </div>
             </Card>
           )}
+
+          {/* Description - After pamphlet */}
+          <Card>
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <FileText size={20} className="text-primary-600" />
+              Description
+            </h2>
+            {event.description ? (
+              <div className="prose prose-sm max-w-none text-secondary-700">
+                <p className="whitespace-pre-wrap leading-relaxed">{event.description}</p>
+              </div>
+            ) : (
+              <p className="text-secondary-500 italic">No description provided</p>
+            )}
+          </Card>
 
           {/* Documents Section */}
           {event.files && event.files.filter(f => f.file_type !== 'image').length > 0 && (
@@ -206,23 +380,6 @@ export const EventDetail: React.FC = () => {
               </div>
             </div>
           </Card>
-
-          {event.winner_vendor_id && (
-            <Card className="bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600">
-                  <Trophy size={20} />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-yellow-900">Winner Selected</h3>
-                  <p className="text-xs text-yellow-700">Event Completed</p>
-                </div>
-              </div>
-              <p className="text-sm text-yellow-800 bg-white/50 p-3 rounded-lg border border-yellow-100">
-                Vendor ID: <span className="font-mono font-medium">{event.winner_vendor_id.slice(0, 8)}...</span>
-              </p>
-            </Card>
-          )}
 
           <Card>
             <h3 className="font-semibold text-secondary-900 mb-4">System Info</h3>

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { menusApi } from '../../api/menus';
 import { Menu } from '../../types';
 import { Plus, Search, Edit, Trash2, List } from 'lucide-react';
-import { Button, Card, Table, Badge } from '../../components/ui';
+import { Button, Card, Table, Badge, ConfirmModal } from '../../components/ui';
 
 export const MenuList: React.FC = () => {
   const navigate = useNavigate();
@@ -12,6 +12,8 @@ export const MenuList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchMenus();
@@ -37,15 +39,22 @@ export const MenuList: React.FC = () => {
     }
   };
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
+  const handleDeleteClick = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this menu?')) return;
+    setDeleteId(id);
+  };
 
+  const handleDeleteConfirm = async () => {
+    if (!deleteId) return;
+    setIsDeleting(true);
     try {
-      await menusApi.delete(id);
+      await menusApi.delete(deleteId);
       fetchMenus();
     } catch (error) {
       console.error('Failed to delete menu:', error);
+    } finally {
+      setIsDeleting(false);
+      setDeleteId(null);
     }
   };
 
@@ -89,7 +98,7 @@ export const MenuList: React.FC = () => {
             variant="ghost"
             size="sm"
             className="text-danger-600 hover:text-danger-700 hover:bg-danger-50"
-            onClick={(e) => handleDelete(e, menu.id)}
+            onClick={(e) => handleDeleteClick(e, menu.id)}
           >
             <Trash2 size={16} />
           </Button>
@@ -156,6 +165,17 @@ export const MenuList: React.FC = () => {
           </Button>
         </div>
       )}
+
+      <ConfirmModal
+        show={!!deleteId}
+        title="Delete Menu"
+        message="Are you sure you want to delete this menu? This action cannot be undone."
+        confirmText="Delete"
+        variant="danger"
+        isLoading={isDeleting}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteId(null)}
+      />
     </div>
   );
 };

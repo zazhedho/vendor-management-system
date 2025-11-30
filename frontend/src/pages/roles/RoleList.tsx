@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { rolesApi } from '../../api/roles';
 import { Role } from '../../types';
 import { Plus, Search, Shield, Edit, Trash2, Lock, Eye } from 'lucide-react';
-import { Button, Card, Table, Badge } from '../../components/ui';
+import { Button, Card, Table, Badge, ConfirmModal } from '../../components/ui';
+import { toast } from 'react-toastify';
 
 export const RoleList: React.FC = () => {
   const navigate = useNavigate();
@@ -12,6 +13,8 @@ export const RoleList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchRoles();
@@ -37,20 +40,26 @@ export const RoleList: React.FC = () => {
     }
   };
 
-  const handleDelete = async (e: React.MouseEvent, id: string, isSystem: boolean) => {
+  const handleDeleteClick = (e: React.MouseEvent, id: string, isSystem: boolean) => {
     e.stopPropagation();
     if (isSystem) {
-      alert('System roles cannot be deleted');
+      toast.error('System roles cannot be deleted');
       return;
     }
+    setDeleteId(id);
+  };
 
-    if (!window.confirm('Are you sure you want to delete this role?')) return;
-
+  const handleDeleteConfirm = async () => {
+    if (!deleteId) return;
+    setIsDeleting(true);
     try {
-      await rolesApi.delete(id);
+      await rolesApi.delete(deleteId);
       fetchRoles();
     } catch (error) {
       console.error('Failed to delete role:', error);
+    } finally {
+      setIsDeleting(false);
+      setDeleteId(null);
     }
   };
 
@@ -100,7 +109,7 @@ export const RoleList: React.FC = () => {
               variant="ghost"
               size="sm"
               className="text-danger-600 hover:text-danger-700 hover:bg-danger-50"
-              onClick={(e) => handleDelete(e, role.id, role.is_system)}
+              onClick={(e) => handleDeleteClick(e, role.id, role.is_system)}
             >
               <Trash2 size={16} />
             </Button>
@@ -168,6 +177,17 @@ export const RoleList: React.FC = () => {
           </Button>
         </div>
       )}
+
+      <ConfirmModal
+        show={!!deleteId}
+        title="Delete Role"
+        message="Are you sure you want to delete this role? This action cannot be undone."
+        confirmText="Delete"
+        variant="danger"
+        isLoading={isDeleting}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteId(null)}
+      />
     </div>
   );
 };

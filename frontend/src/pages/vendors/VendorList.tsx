@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { vendorsApi } from '../../api/vendors';
 import { Vendor } from '../../types';
 import { Plus, Search, Eye, Edit, Trash2 } from 'lucide-react';
-import { Button, Input, Card, Table, Badge } from '../../components/ui';
+import { Button, Input, Card, Table, Badge, ConfirmModal } from '../../components/ui';
 
 export const VendorList: React.FC = () => {
   const navigate = useNavigate();
@@ -12,6 +12,8 @@ export const VendorList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchVendors();
@@ -37,15 +39,22 @@ export const VendorList: React.FC = () => {
     }
   };
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
+  const handleDeleteClick = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this vendor?')) return;
+    setDeleteId(id);
+  };
 
+  const handleDeleteConfirm = async () => {
+    if (!deleteId) return;
+    setIsDeleting(true);
     try {
-      await vendorsApi.delete(id);
+      await vendorsApi.delete(deleteId);
       fetchVendors();
     } catch (error) {
       console.error('Failed to delete vendor:', error);
+    } finally {
+      setIsDeleting(false);
+      setDeleteId(null);
     }
   };
 
@@ -95,7 +104,7 @@ export const VendorList: React.FC = () => {
             variant="ghost"
             size="sm"
             className="text-danger-600 hover:text-danger-700 hover:bg-danger-50"
-            onClick={(e) => handleDelete(e, vendor.id)}
+            onClick={(e) => handleDeleteClick(e, vendor.id)}
           >
             <Trash2 size={16} />
           </Button>
@@ -162,6 +171,17 @@ export const VendorList: React.FC = () => {
           </Button>
         </div>
       )}
+
+      <ConfirmModal
+        show={!!deleteId}
+        title="Delete Vendor"
+        message="Are you sure you want to delete this vendor? This action cannot be undone."
+        confirmText="Delete"
+        variant="danger"
+        isLoading={isDeleting}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteId(null)}
+      />
     </div>
   );
 };

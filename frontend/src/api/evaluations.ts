@@ -2,8 +2,15 @@ import { apiClient } from './client';
 import { ApiResponse, PaginatedResponse, Evaluation, EvaluationPhoto } from '../types';
 
 export const evaluationsApi = {
+  // Get all evaluations (Admin)
   getAll: async (params?: { page?: number; limit?: number; search?: string }) => {
     const response = await apiClient.get<PaginatedResponse<Evaluation>>('/evaluations', { params });
+    return response.data;
+  },
+
+  // Get my evaluations (Vendor)
+  getMyEvaluations: async () => {
+    const response = await apiClient.get<ApiResponse<Evaluation[]>>('/my-evaluations');
     return response.data;
   },
 
@@ -12,19 +19,14 @@ export const evaluationsApi = {
     return response.data;
   },
 
-  create: async (data: Partial<Evaluation> | FormData) => {
-    const config = data instanceof FormData ? {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    } : {};
-    const response = await apiClient.post<ApiResponse<Evaluation>>('/evaluation', data, config);
+  // Vendor creates evaluation for won & completed event
+  create: async (data: { event_id: string; comments?: string }) => {
+    const response = await apiClient.post<ApiResponse<Evaluation>>('/evaluation', data);
     return response.data;
   },
 
-  update: async (id: string, data: Partial<Evaluation> | FormData) => {
-    const config = data instanceof FormData ? {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    } : {};
-    const response = await apiClient.put<ApiResponse<Evaluation>>(`/evaluation/${id}`, data, config);
+  update: async (id: string, data: { comments?: string }) => {
+    const response = await apiClient.put<ApiResponse<Evaluation>>(`/evaluation/${id}`, data);
     return response.data;
   },
 
@@ -33,12 +35,11 @@ export const evaluationsApi = {
     return response.data;
   },
 
-  // Evaluation Photos Management
-  uploadPhoto: async (evaluationId: string, file: File, review?: string, rating?: number) => {
+  // Vendor uploads photo with caption only (no review/rating)
+  uploadPhoto: async (evaluationId: string, file: File, caption?: string) => {
     const formData = new FormData();
-    formData.append('photo', file);
-    if (review) formData.append('review', review);
-    if (rating) formData.append('rating', rating.toString());
+    formData.append('file', file);
+    if (caption) formData.append('caption', caption);
 
     const response = await apiClient.post<ApiResponse<EvaluationPhoto>>(
       `/evaluation/${evaluationId}/photos`,
@@ -48,16 +49,17 @@ export const evaluationsApi = {
     return response.data;
   },
 
-  updatePhoto: async (evaluationId: string, photoId: string, review?: string, rating?: number) => {
+  // Client reviews and rates a photo (1-5 stars)
+  reviewPhoto: async (photoId: string, review: string, rating: number) => {
     const response = await apiClient.put<ApiResponse<EvaluationPhoto>>(
-      `/evaluation/${evaluationId}/photos/${photoId}`,
+      `/evaluation-photo/${photoId}/review`,
       { review, rating }
     );
     return response.data;
   },
 
-  deletePhoto: async (evaluationId: string, photoId: string) => {
-    const response = await apiClient.delete<ApiResponse>(`/evaluation/${evaluationId}/photos/${photoId}`);
+  deletePhoto: async (photoId: string) => {
+    const response = await apiClient.delete<ApiResponse>(`/evaluation-photo/${photoId}`);
     return response.data;
   },
 

@@ -4,7 +4,8 @@ import { usersApi } from '../../api/users';
 import { useAuth } from '../../context/AuthContext';
 import { User } from '../../types';
 import { Plus, Search, Edit, Trash2, Shield } from 'lucide-react';
-import { Button, Card, Table, Badge } from '../../components/ui';
+import { Button, Card, Table, Badge, ConfirmModal } from '../../components/ui';
+import { toast } from 'react-toastify';
 
 export const UserList: React.FC = () => {
   const navigate = useNavigate();
@@ -15,6 +16,8 @@ export const UserList: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -46,19 +49,26 @@ export const UserList: React.FC = () => {
     }
   };
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
+  const handleDeleteClick = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     if (id === currentUser?.id) {
-      alert('You cannot delete your own account');
+      toast.error('You cannot delete your own account');
       return;
     }
-    if (!window.confirm('Are you sure you want to delete this user?')) return;
+    setDeleteId(id);
+  };
 
+  const handleDeleteConfirm = async () => {
+    if (!deleteId) return;
+    setIsDeleting(true);
     try {
-      await usersApi.delete(id);
+      await usersApi.delete(deleteId);
       fetchUsers();
     } catch (error) {
       console.error('Failed to delete user:', error);
+    } finally {
+      setIsDeleting(false);
+      setDeleteId(null);
     }
   };
 
@@ -122,7 +132,7 @@ export const UserList: React.FC = () => {
               variant="ghost"
               size="sm"
               className="text-danger-600 hover:text-danger-700 hover:bg-danger-50"
-              onClick={(e) => handleDelete(e, user.id)}
+              onClick={(e) => handleDeleteClick(e, user.id)}
             >
               <Trash2 size={16} />
             </Button>
@@ -214,6 +224,17 @@ export const UserList: React.FC = () => {
           </Button>
         </div>
       )}
+
+      <ConfirmModal
+        show={!!deleteId}
+        title="Delete User"
+        message="Are you sure you want to delete this user? This action cannot be undone."
+        confirmText="Delete"
+        variant="danger"
+        isLoading={isDeleting}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteId(null)}
+      />
     </div>
   );
 };

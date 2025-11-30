@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, Bell, Search, LogOut, User, Settings } from 'lucide-react';
+import { Menu, Bell, Search, LogOut, User, Settings, Monitor } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface TopbarProps {
@@ -53,7 +53,7 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
                             </button>
 
                             {/* Dropdown Menu */}
-                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-secondary-100 py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right">
+                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-secondary-100 py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right z-50">
                                 <div className="px-4 py-2 border-b border-secondary-50 sm:hidden">
                                     <p className="text-sm font-medium text-secondary-900">{user?.name}</p>
                                     <p className="text-xs text-secondary-500">{user?.role}</p>
@@ -71,6 +71,13 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
                                 >
                                     <Settings size={16} />
                                     Change Password
+                                </button>
+                                <button
+                                    onClick={() => navigate('/sessions')}
+                                    className="w-full text-left px-4 py-2 text-sm text-secondary-700 hover:bg-secondary-50 flex items-center gap-2"
+                                >
+                                    <Monitor size={16} />
+                                    Active Sessions
                                 </button>
                                 <div className="border-t border-secondary-100 my-1"></div>
                                 <button

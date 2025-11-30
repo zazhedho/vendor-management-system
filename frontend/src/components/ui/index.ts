@@ -5,3 +5,4 @@ export * from './Badge';
 export * from './Spinner';
 export * from './Stepper';
 export * from './Table';
+export * from './ConfirmModal';

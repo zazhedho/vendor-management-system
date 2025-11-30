@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS evaluations (
     id VARCHAR(36) PRIMARY KEY,
     event_id VARCHAR(36) NOT NULL,
     vendor_id VARCHAR(36) NOT NULL,
-    evaluator_user_id VARCHAR(36) NOT NULL,  -- Client user ID (event creator) who will review
+    evaluator_user_id UUID NOT NULL,  -- Client user ID (event creator) who will review
     overall_rating DECIMAL(3,2) NULL,  -- Auto-calculated average from photo ratings (1-5 stars)
     comments TEXT NULL,  -- Vendor's comments about the event
 
@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS evaluation_photos (
     caption VARCHAR(500) NULL,  -- Vendor's caption for the photo
     review TEXT NULL,  -- Client's review of the photo
     rating DECIMAL(3,2) NULL,  -- Client's rating (1-5 stars)
-    reviewed_by VARCHAR(36) NULL,  -- Client user ID who reviewed this photo
+    reviewed_by UUID NULL,  -- Client user ID who reviewed this photo
     reviewed_at TIMESTAMP NULL,  -- When the photo was reviewed
 
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

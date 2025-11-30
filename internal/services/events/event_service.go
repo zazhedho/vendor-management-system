@@ -262,6 +262,31 @@ func (s *ServiceEvent) SelectWinner(eventId, submissionId string) (domainevents.
 		return domainevents.Event{}, err
 	}
 
+	// Check if winner already selected
+	if event.WinnerVendorID != nil && *event.WinnerVendorID != "" {
+		// Check if current winner vendor is suspended
+		currentWinnerVendor, err := s.VendorRepo.GetVendorByID(*event.WinnerVendorID)
+		if err != nil {
+			return domainevents.Event{}, errors.New("failed to check current winner status")
+		}
+		if currentWinnerVendor.Status != utils.VendorSuspend {
+			return domainevents.Event{}, errors.New("winner has already been selected for this event")
+		}
+		// Current winner is suspended, allow changing winner
+		// Reset previous winner's IsWinner flag
+		submissions, err := s.EventRepo.GetSubmissionsByEventID(eventId)
+		if err != nil {
+			return domainevents.Event{}, err
+		}
+		for _, sub := range submissions {
+			if sub.IsWinner {
+				sub.IsWinner = false
+				sub.UpdatedAt = time.Now()
+				s.EventRepo.UpdateSubmission(sub)
+			}
+		}
+	}
+
 	submission, err := s.EventRepo.GetSubmissionByID(submissionId)
 	if err != nil {
 		return domainevents.Event{}, err
@@ -271,30 +296,16 @@ func (s *ServiceEvent) SelectWinner(eventId, submissionId string) (domainevents.
 		return domainevents.Event{}, errors.New("submission does not belong to this event")
 	}
 
-	submissions, err := s.EventRepo.GetSubmissionsByEventID(eventId)
-	if err != nil {
-		return domainevents.Event{}, err
-	}
-
-	now := time.Now()
-	for _, sub := range submissions {
-		if sub.IsWinner {
-			sub.IsWinner = false
-			sub.UpdatedAt = now
-			s.EventRepo.UpdateSubmission(sub)
-		}
-	}
-
 	submission.IsWinner = true
 	submission.IsShortlisted = true
-	submission.UpdatedAt = now
+	submission.UpdatedAt = time.Now()
 	if err := s.EventRepo.UpdateSubmission(submission); err != nil {
 		return domainevents.Event{}, err
 	}
 
 	event.WinnerVendorID = &submission.VendorID
 	event.Status = utils.EventCompleted
-	event.UpdatedAt = now
+	event.UpdatedAt = time.Now()
 	if err := s.EventRepo.UpdateEvent(event); err != nil {
 		return domainevents.Event{}, err
 	}

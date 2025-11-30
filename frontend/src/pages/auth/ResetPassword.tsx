@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
-import { Lock } from 'lucide-react';
+import { Lock, ArrowRight, ArrowLeft, Shield, CheckCircle, XCircle } from 'lucide-react';
+import { AuthLayout } from '../../components/AuthLayout';
+import { Button, Input, Card } from '../../components/ui';
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -67,7 +69,7 @@ const ResetPassword = () => {
     const result = await resetPassword(token, formData.newPassword);
 
     if (result.success) {
-      toast.success('Password reset successfully! Please login with your new password.');
+      toast.success('Password reset successfully! 🎉');
       navigate('/login');
     } else {
       toast.error(result.error || 'Failed to reset password');
@@ -77,91 +79,120 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-blue-100 px-4">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-full mb-4">
-            <Lock className="text-white" size={32} />
+    <AuthLayout
+      title="Reset Password"
+      subtitle="Create a new strong password for your account"
+    >
+      <Card variant="glass" className="shadow-2xl border border-white/50 backdrop-blur-xl bg-white/95">
+        <div className="mb-6 p-4 bg-gradient-to-r from-primary-50 to-info-50 rounded-xl border border-primary-100/50">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm">
+              <Shield className="w-5 h-5 text-primary-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-secondary-900 mb-1">Secure Password</h3>
+              <p className="text-xs text-secondary-600">
+                Create a strong password that meets all requirements
+              </p>
+            </div>
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">Reset Password</h2>
-          <p className="text-gray-600 mt-2">Create a new strong password for your account</p>
         </div>
 
-        <div className="card">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="label">New Password</label>
-              <input
-                type="password"
-                name="newPassword"
-                value={formData.newPassword}
-                onChange={handleChange}
-                className="input"
-                placeholder="Enter new password"
-                required
-                minLength={8}
-              />
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <Input
+            label="New Password"
+            type="password"
+            name="newPassword"
+            value={formData.newPassword}
+            onChange={handleChange}
+            placeholder="Enter new password"
+            required
+            minLength={8}
+            leftIcon={<Lock className="w-5 h-5" />}
+          />
 
-            {formData.newPassword && (
-              <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="text-sm font-semibold text-gray-700 mb-2">Password Requirements:</p>
-                <div className="space-y-1">
-                  <div className={`text-sm flex items-center ${passwordValidation.minLength ? 'text-green-600' : 'text-red-600'}`}>
-                    <span className="mr-2">{passwordValidation.minLength ? '✓' : '✗'}</span>
-                    Minimum 8 characters
-                  </div>
-                  <div className={`text-sm flex items-center ${passwordValidation.hasLowercase ? 'text-green-600' : 'text-red-600'}`}>
-                    <span className="mr-2">{passwordValidation.hasLowercase ? '✓' : '✗'}</span>
-                    At least 1 lowercase letter (a-z)
-                  </div>
-                  <div className={`text-sm flex items-center ${passwordValidation.hasUppercase ? 'text-green-600' : 'text-red-600'}`}>
-                    <span className="mr-2">{passwordValidation.hasUppercase ? '✓' : '✗'}</span>
-                    At least 1 uppercase letter (A-Z)
-                  </div>
-                  <div className={`text-sm flex items-center ${passwordValidation.hasNumber ? 'text-green-600' : 'text-red-600'}`}>
-                    <span className="mr-2">{passwordValidation.hasNumber ? '✓' : '✗'}</span>
-                    At least 1 number (0-9)
-                  </div>
-                  <div className={`text-sm flex items-center ${passwordValidation.hasSymbol ? 'text-green-600' : 'text-red-600'}`}>
-                    <span className="mr-2">{passwordValidation.hasSymbol ? '✓' : '✗'}</span>
-                    At least 1 symbol (!@#$%^&*...)
-                  </div>
+          {formData.newPassword && (
+            <div className="p-4 bg-secondary-50 rounded-xl border border-secondary-200">
+              <p className="text-sm font-semibold text-secondary-900 mb-3">Password Requirements:</p>
+              <div className="space-y-2">
+                <div className={`text-sm flex items-center gap-2 ${passwordValidation.minLength ? 'text-success-600' : 'text-danger-600'}`}>
+                  {passwordValidation.minLength ? (
+                    <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                  ) : (
+                    <XCircle className="w-4 h-4 flex-shrink-0" />
+                  )}
+                  <span>Minimum 8 characters</span>
+                </div>
+                <div className={`text-sm flex items-center gap-2 ${passwordValidation.hasLowercase ? 'text-success-600' : 'text-danger-600'}`}>
+                  {passwordValidation.hasLowercase ? (
+                    <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                  ) : (
+                    <XCircle className="w-4 h-4 flex-shrink-0" />
+                  )}
+                  <span>At least 1 lowercase letter (a-z)</span>
+                </div>
+                <div className={`text-sm flex items-center gap-2 ${passwordValidation.hasUppercase ? 'text-success-600' : 'text-danger-600'}`}>
+                  {passwordValidation.hasUppercase ? (
+                    <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                  ) : (
+                    <XCircle className="w-4 h-4 flex-shrink-0" />
+                  )}
+                  <span>At least 1 uppercase letter (A-Z)</span>
+                </div>
+                <div className={`text-sm flex items-center gap-2 ${passwordValidation.hasNumber ? 'text-success-600' : 'text-danger-600'}`}>
+                  {passwordValidation.hasNumber ? (
+                    <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                  ) : (
+                    <XCircle className="w-4 h-4 flex-shrink-0" />
+                  )}
+                  <span>At least 1 number (0-9)</span>
+                </div>
+                <div className={`text-sm flex items-center gap-2 ${passwordValidation.hasSymbol ? 'text-success-600' : 'text-danger-600'}`}>
+                  {passwordValidation.hasSymbol ? (
+                    <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                  ) : (
+                    <XCircle className="w-4 h-4 flex-shrink-0" />
+                  )}
+                  <span>At least 1 symbol (!@#$%^&*...)</span>
                 </div>
               </div>
-            )}
-
-            <div>
-              <label className="label">Confirm New Password</label>
-              <input
-                type="password"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className="input"
-                placeholder="Confirm new password"
-                required
-                minLength={8}
-              />
             </div>
+          )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Resetting...' : 'Reset Password'}
-            </button>
-          </form>
+          <Input
+            label="Confirm New Password"
+            type="password"
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            placeholder="Confirm new password"
+            required
+            minLength={8}
+            leftIcon={<Lock className="w-5 h-5" />}
+          />
 
-          <div className="mt-6 text-center">
-            <Link to="/login" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
-              ← Back to Login
-            </Link>
-          </div>
+          <Button
+            type="submit"
+            isLoading={loading}
+            className="w-full"
+            size="lg"
+            rightIcon={!loading && <ArrowRight className="w-5 h-5" />}
+          >
+            {loading ? 'Resetting...' : 'Reset Password'}
+          </Button>
+        </form>
+
+        <div className="mt-8 pt-6 border-t border-secondary-100 text-center">
+          <Link
+            to="/login"
+            className="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700 font-bold transition-colors hover:underline"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Login
+          </Link>
         </div>
-      </div>
-    </div>
+      </Card>
+    </AuthLayout>
   );
 };
 
