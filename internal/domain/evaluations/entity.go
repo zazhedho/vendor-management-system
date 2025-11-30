@@ -4,6 +4,7 @@ import (
 	"time"
 
 	domainevents "vendor-management-system/internal/domain/events"
+	domainuser "vendor-management-system/internal/domain/user"
 	domainvendors "vendor-management-system/internal/domain/vendors"
 
 	"gorm.io/gorm"
@@ -22,9 +23,10 @@ type Evaluation struct {
 	Comments        string   `json:"comments,omitempty" gorm:"column:comments"`
 
 	// Relationships
-	Event  domainevents.Event   `json:"event,omitempty" gorm:"foreignKey:EventID;references:Id"`
-	Vendor domainvendors.Vendor `json:"vendor,omitempty" gorm:"foreignKey:VendorID;references:Id"`
-	Photos []EvaluationPhoto    `json:"photos,omitempty" gorm:"foreignKey:EvaluationID;constraint:OnDelete:CASCADE"`
+	Event     domainevents.Event   `json:"event,omitempty" gorm:"foreignKey:EventID;references:Id"`
+	Vendor    domainvendors.Vendor `json:"vendor,omitempty" gorm:"foreignKey:VendorID;references:Id"`
+	Evaluator domainuser.Users     `json:"evaluator,omitempty" gorm:"foreignKey:EvaluatorUserID;references:Id"`
+	Photos    []EvaluationPhoto    `json:"photos,omitempty" gorm:"foreignKey:EvaluationID;constraint:OnDelete:CASCADE"`
 
 	CreatedAt time.Time      `json:"created_at" gorm:"column:created_at"`
 	CreatedBy string         `json:"created_by" gorm:"column:created_by"`
@@ -45,7 +47,7 @@ type EvaluationPhoto struct {
 	Caption      string     `json:"caption,omitempty" gorm:"column:caption"`
 	Review       string     `json:"review,omitempty" gorm:"column:review"`
 	Rating       *float64   `json:"rating,omitempty" gorm:"column:rating"`
-	ReviewedBy   string     `json:"reviewed_by,omitempty" gorm:"column:reviewed_by"` // Client user ID who reviewed this photo
+	ReviewedBy   *string    `json:"reviewed_by,omitempty" gorm:"column:reviewed_by"`
 	ReviewedAt   *time.Time `json:"reviewed_at,omitempty" gorm:"column:reviewed_at"`
 
 	CreatedAt time.Time      `json:"created_at,omitempty" gorm:"column:created_at"`

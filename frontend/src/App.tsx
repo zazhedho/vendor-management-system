@@ -9,7 +9,7 @@ import { Dashboard } from './pages/Dashboard';
 import { EventList, EventForm, EventDetail } from './pages/events';
 import { VendorList, VendorForm, VendorDetail, VendorProfile } from './pages/vendors';
 import { PaymentList, PaymentDetail, PaymentForm } from './pages/payments';
-import { EvaluationList, EvaluationDetail, EvaluationForm } from './pages/evaluations';
+import { EvaluationList, EvaluationDetail, EvaluationForm, VendorPhotoUpload } from './pages/evaluations';
 import { SubmissionList } from './pages/submissions';
 import { UserList, UserForm, Profile } from './pages/users';
 import { RoleList, RoleForm } from './pages/roles';
@@ -209,6 +209,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <EvaluationForm />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/evaluations/:id/upload"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <VendorPhotoUpload />
                 </Layout>
               </ProtectedRoute>
             }

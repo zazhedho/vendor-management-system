@@ -2,16 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { evaluationsApi } from '../../api/evaluations';
 import { Evaluation } from '../../types';
-import { Plus, Search, Star } from 'lucide-react';
+import { Plus, Search, Star, Image, Upload, Award } from 'lucide-react';
 import { Button, Card, Table, Badge } from '../../components/ui';
+import { useAuth } from '../../context/AuthContext';
+import { toast } from 'react-toastify';
 
 export const EvaluationList: React.FC = () => {
   const navigate = useNavigate();
+  const { hasRole } = useAuth();
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
+  const isVendor = hasRole(['vendor']);
+  const isClient = hasRole(['client']);
 
   useEffect(() => {
     fetchEvaluations();
@@ -20,18 +26,24 @@ export const EvaluationList: React.FC = () => {
   const fetchEvaluations = async () => {
     setIsLoading(true);
     try {
-      const response = await evaluationsApi.getAll({
-        page: currentPage,
-        limit: 10,
-        search: searchTerm,
-      });
+      // Vendor uses different API endpoint
+      const response = isVendor
+        ? await evaluationsApi.getMyEvaluations()
+        : await evaluationsApi.getAll({
+            page: currentPage,
+            limit: 10,
+            search: searchTerm,
+          });
 
       if (response.status) {
         setEvaluations(response.data || []);
-        setTotalPages(response.total_pages || 1);
+        if (!isVendor) {
+          setTotalPages(response.total_pages || 1);
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch evaluations:', error);
+      toast.error(error?.response?.data?.error || 'Failed to load evaluations');
     } finally {
       setIsLoading(false);
     }
@@ -50,22 +62,34 @@ export const EvaluationList: React.FC = () => {
 
   const columns = [
     {
-      header: 'Evaluation ID',
+      header: 'Event',
       accessor: (evaluation: Evaluation) => (
-        <span className="font-mono text-xs text-secondary-600">#{evaluation.id.slice(0, 8)}</span>
+        <span className="font-medium text-secondary-900">
+          {evaluation.event?.title || evaluation.event_id?.slice(0, 8)}
+        </span>
+      )
+    },
+    {
+      header: 'Vendor',
+      accessor: (evaluation: Evaluation) => (
+        <span className="text-sm text-secondary-600">
+          {evaluation.vendor?.profile?.vendor_name || evaluation.vendor_id?.slice(0, 8)}
+        </span>
+      ),
+      hidden: isVendor
+    },
+    {
+      header: 'Photos',
+      accessor: (evaluation: Evaluation) => (
+        <div className="flex items-center gap-1">
+          <Image size={14} className="text-secondary-400" />
+          <span className="text-sm">{evaluation.photos?.length || 0}/5</span>
+        </div>
       )
     },
     {
       header: 'Rating',
       accessor: (evaluation: Evaluation) => renderStars(evaluation.overall_rating)
-    },
-    {
-      header: 'Comments',
-      accessor: (evaluation: Evaluation) => (
-        <span className="text-sm text-secondary-600 truncate max-w-xs block">
-          {evaluation.comments || '-'}
-        </span>
-      )
     },
     {
       header: 'Date',
@@ -78,11 +102,118 @@ export const EvaluationList: React.FC = () => {
     {
       header: 'Actions',
       accessor: (evaluation: Evaluation) => (
-        <Button variant="ghost" size="sm" onClick={() => navigate(`/evaluations/${evaluation.id}`)}>View</Button>
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={() => navigate(`/evaluations/${evaluation.id}`)}>
+            View
+          </Button>
+          {isVendor && (evaluation.photos?.length || 0) < 5 && (
+            <Button 
+              variant="primary" 
+              size="sm" 
+              onClick={() => navigate(`/evaluations/${evaluation.id}/upload`)}
+              leftIcon={<Upload size={14} />}
+            >
+              Upload
+            </Button>
+          )}
+        </div>
       )
     }
-  ];
+  ].filter(col => !col.hidden);
 
+  // Vendor view
+  if (isVendor) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-secondary-900">My Evaluations</h1>
+          <p className="text-secondary-500">Upload photos for events you've completed</p>
+        </div>
+
+        {/* Info Card */}
+        <Card className="border border-info-200 bg-info-50">
+          <div className="flex items-start gap-3">
+            <Award className="w-5 h-5 text-info-600 mt-0.5" />
+            <div className="text-sm text-info-800">
+              <p className="font-medium mb-1">About Evaluations</p>
+              <p className="text-info-700">
+                After you win and complete an event, the client will create an evaluation. 
+                You can then upload up to 5 photos showcasing your work. The client will review and rate each photo.
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        {evaluations.length === 0 ? (
+          <Card className="text-center py-12">
+            <Award size={48} className="mx-auto text-secondary-400 mb-4" />
+            <h3 className="text-lg font-medium text-secondary-900 mb-2">No Evaluations Yet</h3>
+            <p className="text-secondary-600">
+              When a client creates an evaluation for an event you won, it will appear here.
+            </p>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {evaluations.map((evaluation) => (
+              <Card key={evaluation.id} className="hover:shadow-lg transition-shadow">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h3 className="font-semibold text-secondary-900">
+                      {evaluation.event?.title || 'Event'}
+                    </h3>
+                    <p className="text-xs text-secondary-500 mt-1">
+                      {new Date(evaluation.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  {evaluation.overall_rating ? (
+                    <div className="flex items-center gap-1 px-2 py-1 bg-warning-100 rounded">
+                      <Star size={14} className="text-warning-500 fill-warning-500" />
+                      <span className="text-sm font-medium text-warning-700">
+                        {evaluation.overall_rating.toFixed(1)}
+                      </span>
+                    </div>
+                  ) : (
+                    <Badge variant="secondary">Not rated</Badge>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 mb-4">
+                  <Image size={16} className="text-secondary-400" />
+                  <span className="text-sm text-secondary-600">
+                    {evaluation.photos?.length || 0} of 5 photos uploaded
+                  </span>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => navigate(`/evaluations/${evaluation.id}`)}
+                  >
+                    View Details
+                  </Button>
+                  {(evaluation.photos?.length || 0) < 5 && (
+                    <Button 
+                      variant="primary" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => navigate(`/evaluations/${evaluation.id}/upload`)}
+                      leftIcon={<Upload size={14} />}
+                    >
+                      Upload Photos
+                    </Button>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Admin/Client view
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -90,9 +221,11 @@ export const EvaluationList: React.FC = () => {
           <h1 className="text-2xl font-bold text-secondary-900">Evaluations</h1>
           <p className="text-secondary-500">Vendor performance evaluations and ratings</p>
         </div>
-        <Button leftIcon={<Plus size={20} />} onClick={() => navigate('/evaluations/new')}>
-          New Evaluation
-        </Button>
+        {isClient && (
+          <Button leftIcon={<Plus size={20} />} onClick={() => navigate('/evaluations/new')}>
+            New Evaluation
+          </Button>
+        )}
       </div>
 
       <Card className="p-4">

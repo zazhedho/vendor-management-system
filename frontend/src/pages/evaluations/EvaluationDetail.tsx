@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { evaluationsApi } from '../../api/evaluations';
-import { Evaluation } from '../../types';
-import { ArrowLeft, Edit, Star, MessageSquare, Image, Trash2 } from 'lucide-react';
+import { Evaluation, EvaluationPhoto } from '../../types';
+import { ArrowLeft, Star, MessageSquare, Image, Trash2, X, Send } from 'lucide-react';
 import { Button, Card, Spinner, ConfirmModal } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
@@ -15,6 +15,9 @@ export const EvaluationDetail: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [deletePhotoId, setDeletePhotoId] = useState<string | null>(null);
   const [isDeletingPhoto, setIsDeletingPhoto] = useState(false);
+  const [reviewingPhoto, setReviewingPhoto] = useState<EvaluationPhoto | null>(null);
+  const [reviewForm, setReviewForm] = useState({ review: '', rating: 3 });
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   useEffect(() => {
     if (id) fetchEvaluation(id);
@@ -44,7 +47,7 @@ export const EvaluationDetail: React.FC = () => {
     if (!id || !deletePhotoId) return;
     setIsDeletingPhoto(true);
     try {
-      await evaluationsApi.deletePhoto(id, deletePhotoId);
+      await evaluationsApi.deletePhoto(deletePhotoId);
       toast.success('Photo deleted successfully');
       fetchEvaluation(id);
     } catch (error) {
@@ -53,6 +56,43 @@ export const EvaluationDetail: React.FC = () => {
     } finally {
       setIsDeletingPhoto(false);
       setDeletePhotoId(null);
+    }
+  };
+
+  const handleStartReview = (photo: EvaluationPhoto) => {
+    setReviewingPhoto(photo);
+    setReviewForm({
+      review: photo.review || '',
+      rating: photo.rating || 3,
+    });
+  };
+
+  const handleSubmitReview = async () => {
+    if (!reviewingPhoto || !id) return;
+
+    if (reviewForm.rating < 1 || reviewForm.rating > 5) {
+      toast.error('Rating must be between 1 and 5');
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    try {
+      const response = await evaluationsApi.reviewPhoto(
+        reviewingPhoto.id,
+        reviewForm.review,
+        reviewForm.rating
+      );
+
+      if (response.status) {
+        toast.success('Review submitted successfully');
+        setReviewingPhoto(null);
+        fetchEvaluation(id);
+      }
+    } catch (error: any) {
+      console.error('Failed to submit review:', error);
+      toast.error(error?.response?.data?.error || 'Failed to submit review');
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -82,7 +122,9 @@ export const EvaluationDetail: React.FC = () => {
     );
   }
 
-  const canEdit = hasRole(['admin', 'client']);
+  const isVendor = hasRole(['vendor']);
+  const isClient = hasRole(['client']);
+  const isAdmin = hasRole(['admin']);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -91,11 +133,6 @@ export const EvaluationDetail: React.FC = () => {
         <Button variant="ghost" onClick={() => navigate('/evaluations')} leftIcon={<ArrowLeft size={16} />}>
           Back
         </Button>
-        {canEdit && (
-          <Button onClick={() => navigate(`/evaluations/${id}/edit`)} leftIcon={<Edit size={16} />}>
-            Edit Evaluation
-          </Button>
-        )}
       </div>
 
       {/* Main Card */}
@@ -105,22 +142,22 @@ export const EvaluationDetail: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Event ID */}
+          {/* Event */}
           <div>
-            <label className="block text-sm font-medium text-secondary-700 mb-1">Event ID</label>
-            <p className="text-secondary-900">{evaluation.event_id}</p>
+            <label className="block text-sm font-medium text-secondary-700 mb-1">Event</label>
+            <p className="text-secondary-900">{evaluation.event?.title || evaluation.event_id}</p>
           </div>
 
-          {/* Vendor ID */}
+          {/* Vendor */}
           <div>
-            <label className="block text-sm font-medium text-secondary-700 mb-1">Vendor ID</label>
-            <p className="text-secondary-900">{evaluation.vendor_id}</p>
+            <label className="block text-sm font-medium text-secondary-700 mb-1">Vendor</label>
+            <p className="text-secondary-900">{evaluation.vendor?.profile?.vendor_name || evaluation.vendor_id}</p>
           </div>
 
           {/* Evaluator */}
           <div>
             <label className="block text-sm font-medium text-secondary-700 mb-1">Evaluator</label>
-            <p className="text-secondary-900">{evaluation.evaluator_user_id}</p>
+            <p className="text-secondary-900">{evaluation.evaluator?.name || evaluation.evaluator_user_id}</p>
           </div>
 
           {/* Overall Rating */}
@@ -129,7 +166,7 @@ export const EvaluationDetail: React.FC = () => {
             <div className="flex items-center gap-2">
               <Star className="text-yellow-500" fill="currentColor" size={20} />
               <span className="text-lg font-semibold text-secondary-900">
-                {evaluation.overall_rating ? evaluation.overall_rating.toFixed(1) : 'N/A'}
+                {evaluation.overall_rating ? evaluation.overall_rating.toFixed(1) : 'Not rated yet'}
               </span>
             </div>
           </div>
@@ -167,6 +204,11 @@ export const EvaluationDetail: React.FC = () => {
               <Image size={20} />
               Evaluation Photos ({evaluation.photos.length})
             </h3>
+            {isClient && (
+              <p className="text-sm text-secondary-600 mt-1">
+                Click "Review & Rate" to rate each photo
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -177,35 +219,156 @@ export const EvaluationDetail: React.FC = () => {
                   alt="Evaluation"
                   className="w-full h-48 object-cover"
                 />
-                <div className="p-4 space-y-2">
-                  {photo.rating && (
-                    <div className="flex items-center gap-2">
-                      <Star className="text-yellow-500" fill="currentColor" size={16} />
-                      <span className="font-medium">{photo.rating.toFixed(1)}</span>
+                <div className="p-4 space-y-3">
+                  {photo.caption && (
+                    <p className="text-sm text-secondary-600 italic">"{photo.caption}"</p>
+                  )}
+                  {photo.rating ? (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Star className="text-yellow-500" fill="currentColor" size={16} />
+                        <span className="font-medium">{photo.rating.toFixed(1)}/5</span>
+                      </div>
+                      <span className="text-xs text-success-600">Reviewed</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-secondary-400">
+                      <Star size={16} />
+                      <span className="text-sm">Not rated yet</span>
                     </div>
                   )}
                   {photo.review && (
-                    <p className="text-sm text-secondary-700">{photo.review}</p>
+                    <div className="bg-secondary-50 rounded-lg p-3">
+                      <p className="text-xs text-secondary-500 mb-1">Review:</p>
+                      <p className="text-sm text-secondary-700">{photo.review}</p>
+                    </div>
                   )}
                   <div className="text-xs text-secondary-500">
-                    {formatDate(photo.created_at)}
+                    Uploaded: {formatDate(photo.created_at)}
                   </div>
-                  {canEdit && (
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      leftIcon={<Trash2 size={14} />}
-                      onClick={() => handleDeletePhotoClick(photo.id)}
-                      className="w-full"
-                    >
-                      Delete Photo
-                    </Button>
-                  )}
+                  <div className="flex gap-2">
+                    {isClient && (
+                      <Button
+                        variant={photo.rating ? 'secondary' : 'primary'}
+                        size="sm"
+                        leftIcon={<Star size={14} />}
+                        onClick={() => handleStartReview(photo)}
+                        className="flex-1"
+                      >
+                        {photo.rating ? 'Edit Review' : 'Review & Rate'}
+                      </Button>
+                    )}
+                    {isAdmin && (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        leftIcon={<Trash2 size={14} />}
+                        onClick={() => handleDeletePhotoClick(photo.id)}
+                        className={isClient ? '' : 'flex-1'}
+                      >
+                        Delete
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </Card>
             ))}
           </div>
         </Card>
+      )}
+
+      {/* Review Modal */}
+      {reviewingPhoto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <h3 className="text-lg font-semibold text-secondary-900">Review Photo</h3>
+              <button
+                onClick={() => setReviewingPhoto(null)}
+                className="text-secondary-400 hover:text-secondary-600"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Photo Preview */}
+              <img
+                src={reviewingPhoto.photo_url}
+                alt="Review"
+                className="w-full h-48 object-cover rounded-lg"
+              />
+
+              {/* Caption */}
+              {reviewingPhoto.caption && (
+                <p className="text-sm text-secondary-600 italic text-center">
+                  "{reviewingPhoto.caption}"
+                </p>
+              )}
+
+              {/* Rating */}
+              <div>
+                <label className="block text-sm font-medium text-secondary-700 mb-2">
+                  Rating
+                </label>
+                <div className="flex items-center gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+                      className="focus:outline-none"
+                    >
+                      <Star
+                        size={32}
+                        className={
+                          star <= reviewForm.rating
+                            ? 'text-yellow-500 fill-yellow-500'
+                            : 'text-secondary-300'
+                        }
+                      />
+                    </button>
+                  ))}
+                  <span className="ml-2 text-lg font-semibold text-secondary-700">
+                    {reviewForm.rating}/5
+                  </span>
+                </div>
+              </div>
+
+              {/* Review Text */}
+              <div>
+                <label className="block text-sm font-medium text-secondary-700 mb-2">
+                  Review (Optional)
+                </label>
+                <textarea
+                  value={reviewForm.review}
+                  onChange={(e) => setReviewForm({ ...reviewForm, review: e.target.value })}
+                  placeholder="Write your review here..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 px-6 py-4 border-t bg-secondary-50">
+              <Button
+                variant="secondary"
+                onClick={() => setReviewingPhoto(null)}
+                disabled={isSubmittingReview}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleSubmitReview}
+                isLoading={isSubmittingReview}
+                leftIcon={<Send size={16} />}
+              >
+                Submit Review
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       <ConfirmModal

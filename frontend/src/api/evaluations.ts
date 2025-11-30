@@ -10,7 +10,7 @@ export const evaluationsApi = {
 
   // Get my evaluations (Vendor)
   getMyEvaluations: async () => {
-    const response = await apiClient.get<ApiResponse<Evaluation[]>>('/my-evaluations');
+    const response = await apiClient.get<ApiResponse<Evaluation[]>>('/vendor/evaluations');
     return response.data;
   },
 
@@ -42,7 +42,7 @@ export const evaluationsApi = {
     if (caption) formData.append('caption', caption);
 
     const response = await apiClient.post<ApiResponse<EvaluationPhoto>>(
-      `/evaluation/${evaluationId}/photos`,
+      `/evaluation/${evaluationId}/photo`,
       formData,
       { headers: { 'Content-Type': 'multipart/form-data' } }
     );
@@ -52,14 +52,14 @@ export const evaluationsApi = {
   // Client reviews and rates a photo (1-5 stars)
   reviewPhoto: async (photoId: string, review: string, rating: number) => {
     const response = await apiClient.put<ApiResponse<EvaluationPhoto>>(
-      `/evaluation-photo/${photoId}/review`,
+      `/evaluation/photo/${photoId}/review`,
       { review, rating }
     );
     return response.data;
   },
 
   deletePhoto: async (photoId: string) => {
-    const response = await apiClient.delete<ApiResponse>(`/evaluation-photo/${photoId}`);
+    const response = await apiClient.delete<ApiResponse>(`/evaluation/photo/${photoId}`);
     return response.data;
   },
 

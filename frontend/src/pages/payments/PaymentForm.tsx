@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { paymentsApi } from '../../api/payments';
 import { vendorsApi } from '../../api/vendors';
 import { toast } from 'react-toastify';
-import { Save, X, Upload, FileText, Trash2, DollarSign } from 'lucide-react';
+import { Save, X, Upload, FileText, Trash2 } from 'lucide-react';
 import { Button, Input, Card, Spinner } from '../../components/ui';
 
 export const PaymentForm: React.FC = () => {
@@ -123,7 +123,7 @@ export const PaymentForm: React.FC = () => {
       const submitData: any = {
         invoice_number: formData.invoice_number,
         vendor_id: formData.vendor_id,
-        amount: formData.amount,
+        amount: parseFloat(formData.amount) || 0,
         status: formData.status,
         payment_date: formData.payment_date || undefined,
         description: formData.description || undefined,
@@ -226,8 +226,7 @@ export const PaymentForm: React.FC = () => {
 
             {/* Amount */}
             <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2 flex items-center gap-2">
-                <DollarSign size={16} />
+              <label className="block text-sm font-medium text-secondary-700 mb-2">
                 Amount <span className="text-danger-500">*</span>
               </label>
               <Input
@@ -235,7 +234,7 @@ export const PaymentForm: React.FC = () => {
                 name="amount"
                 value={formData.amount}
                 onChange={handleChange}
-                placeholder="0.00"
+                placeholder="0"
                 step="0.01"
                 min="0"
                 required

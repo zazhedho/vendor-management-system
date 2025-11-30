@@ -31,7 +31,13 @@ func (r *repo) GetEvaluationByID(id string) (ret domainevaluations.Evaluation, e
 }
 
 func (r *repo) GetEvaluationWithPhotos(id string) (ret domainevaluations.Evaluation, err error) {
-	if err = r.DB.Preload("Photos").Where("id = ?", id).First(&ret).Error; err != nil {
+	if err = r.DB.
+		Preload("Event").
+		Preload("Vendor").
+		Preload("Vendor.Profile").
+		Preload("Evaluator").
+		Preload("Photos").
+		Where("id = ?", id).First(&ret).Error; err != nil {
 		return domainevaluations.Evaluation{}, err
 	}
 	return ret, nil
@@ -52,7 +58,10 @@ func (r *repo) GetEvaluationsByEventID(eventId string) (ret []domainevaluations.
 }
 
 func (r *repo) GetEvaluationsByVendorID(vendorId string) (ret []domainevaluations.Evaluation, err error) {
-	if err = r.DB.Preload("Photos").Where("vendor_id = ?", vendorId).Find(&ret).Error; err != nil {
+	if err = r.DB.
+		Preload("Event").
+		Preload("Photos").
+		Where("vendor_id = ?", vendorId).Find(&ret).Error; err != nil {
 		return nil, err
 	}
 	return ret, nil
@@ -97,7 +106,12 @@ func (r *repo) GetAllEvaluations(params filter.BaseParams) (ret []domainevaluati
 		query = query.Order(fmt.Sprintf("%s %s", params.OrderBy, params.OrderDirection))
 	}
 
-	if err := query.Preload("Photos").Offset(params.Offset).Limit(params.Limit).Find(&ret).Error; err != nil {
+	if err := query.
+		Preload("Event").
+		Preload("Vendor").
+		Preload("Vendor.Profile").
+		Preload("Photos").
+		Offset(params.Offset).Limit(params.Limit).Find(&ret).Error; err != nil {
 		return nil, 0, err
 	}
 

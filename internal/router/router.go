@@ -349,13 +349,18 @@ func (r *Routes) EvaluationRoutes() {
 	// Vendor can upload photos for their evaluations
 	r.App.POST("/api/evaluation/:id/photo", mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleVendor), h.UploadPhoto)
 
-	// Client/Admin evaluation management
-	evalAdmin := r.App.Group("/api/evaluation").Use(mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin, utils.RoleClient))
+	// Client creates evaluation for winner vendor
+	evalClient := r.App.Group("/api/evaluation").Use(mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleClient))
 	{
-		evalAdmin.POST("", h.CreateEvaluation)
-		evalAdmin.PUT("/:id", h.UpdateEvaluation)
-		evalAdmin.DELETE("/:id", mdw.RoleMiddleware(utils.RoleAdmin), h.DeleteEvaluation)
-		evalAdmin.PUT("/photo/:id/review", h.ReviewPhoto)
+		evalClient.POST("", h.CreateEvaluation)
+		evalClient.PUT("/:id", h.UpdateEvaluation)
+		evalClient.PUT("/photo/:id/review", h.ReviewPhoto)
+	}
+
+	// Admin can delete evaluation and photos
+	evalAdmin := r.App.Group("/api/evaluation").Use(mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin))
+	{
+		evalAdmin.DELETE("/:id", h.DeleteEvaluation)
 		evalAdmin.DELETE("/photo/:id", h.DeletePhoto)
 	}
 }

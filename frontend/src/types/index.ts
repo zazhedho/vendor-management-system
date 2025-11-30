@@ -257,7 +257,10 @@ export interface Evaluation {
   overall_rating?: number;
   comments?: string;
 
-  // Photo relationships
+  // Relationships
+  event?: Event;
+  vendor?: Vendor;
+  evaluator?: User;
   photos?: EvaluationPhoto[];
 
   created_at: string;

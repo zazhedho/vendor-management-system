@@ -38,8 +38,8 @@ func NewEvaluationService(
 	}
 }
 
-// CreateEvaluation - Only winner vendor can create after event is completed
-func (s *ServiceEvaluation) CreateEvaluation(vendorUserId string, req dto.CreateEvaluationRequest) (domainevaluations.Evaluation, error) {
+// CreateEvaluation - Client creates evaluation for winner vendor after event is completed
+func (s *ServiceEvaluation) CreateEvaluation(clientUserId string, req dto.CreateEvaluationRequest) (domainevaluations.Evaluation, error) {
 	// Get event
 	event, err := s.EventRepo.GetEventByID(req.EventID)
 	if err != nil {
@@ -51,24 +51,13 @@ func (s *ServiceEvaluation) CreateEvaluation(vendorUserId string, req dto.Create
 		return domainevaluations.Evaluation{}, errors.New("can only create evaluation for completed events")
 	}
 
-	// Get vendor by user ID
-	vendor, err := s.VendorRepo.GetVendorByUserID(vendorUserId)
-	if err != nil {
-		return domainevaluations.Evaluation{}, errors.New("vendor profile not found")
-	}
-
-	// Check if vendor won the event
-	submission, err := s.EventRepo.GetSubmissionByEventAndVendor(req.EventID, vendor.Id)
-	if err != nil {
-		return domainevaluations.Evaluation{}, errors.New("no submission found for this event")
-	}
-
-	if !submission.IsWinner {
-		return domainevaluations.Evaluation{}, errors.New("only event winner can create evaluation")
+	// Event must have a winner
+	if event.WinnerVendorID == nil || *event.WinnerVendorID == "" {
+		return domainevaluations.Evaluation{}, errors.New("event must have a winner to create evaluation")
 	}
 
 	// Check if evaluation already exists
-	existing, _ := s.EvaluationRepo.GetEvaluationByEventAndVendor(req.EventID, vendor.Id)
+	existing, _ := s.EvaluationRepo.GetEvaluationByEventAndVendor(req.EventID, *event.WinnerVendorID)
 	if existing.Id != "" {
 		return domainevaluations.Evaluation{}, errors.New("evaluation already exists for this event")
 	}
@@ -77,13 +66,13 @@ func (s *ServiceEvaluation) CreateEvaluation(vendorUserId string, req dto.Create
 	evaluation := domainevaluations.Evaluation{
 		Id:              utils.CreateUUID(),
 		EventID:         req.EventID,
-		VendorID:        vendor.Id,
-		EvaluatorUserID: event.CreatedBy, // Set to event creator (client)
+		VendorID:        *event.WinnerVendorID,
+		EvaluatorUserID: clientUserId,
 		Comments:        req.Comments,
 		CreatedAt:       now,
-		CreatedBy:       vendorUserId,
+		CreatedBy:       clientUserId,
 		UpdatedAt:       now,
-		UpdatedBy:       vendorUserId,
+		UpdatedBy:       clientUserId,
 	}
 
 	if err := s.EvaluationRepo.CreateEvaluation(evaluation); err != nil {
@@ -241,7 +230,7 @@ func (s *ServiceEvaluation) ReviewPhoto(clientUserId string, photoId string, req
 	photo.Review = req.Review
 	rating := float64(req.Rating)
 	photo.Rating = &rating
-	photo.ReviewedBy = clientUserId
+	photo.ReviewedBy = &clientUserId
 	now := time.Now()
 	photo.ReviewedAt = &now
 	photo.UpdatedAt = &now
