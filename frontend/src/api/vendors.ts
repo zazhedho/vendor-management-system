@@ -115,7 +115,7 @@ export const vendorsApi = {
   },
 
   createOrUpdateProfile: async (data: Partial<VendorProfile>) => {
-    const response = await apiClient.post<ApiResponse<VendorProfile>>('/vendor/profile', data);
+    const response = await apiClient.post<ApiResponse<{ vendor: Vendor; profile: VendorProfile }>>('/vendor/profile', data);
     return response.data;
   },
 

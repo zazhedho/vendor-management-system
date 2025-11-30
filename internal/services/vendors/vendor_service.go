@@ -133,9 +133,18 @@ func (s *ServiceVendor) CreateOrUpdateVendorProfile(userId string, req dto.Vendo
 			NpwpNumber:        req.NpwpNumber,
 			NpwpName:          req.NpwpName,
 			NpwpAddress:       req.NpwpAddress,
+			TaxStatus:         req.TaxStatus,
+			NibNumber:         req.NibNumber,
 			BankName:          req.BankName,
-			AccountNumber:     req.BankAccountNumber,
-			AccountHolderName: req.BankAccountName,
+			BankBranch:        req.BankBranch,
+			AccountNumber:     req.AccountNumber,
+			AccountHolderName: req.AccountHolderName,
+			TransactionType:   req.TransactionType,
+			PurchGroup:        req.PurchGroup,
+			RegionOrSo:        req.RegionOrSo,
+			ContactPerson:     req.ContactPerson,
+			ContactEmail:      req.ContactEmail,
+			ContactPhone:      req.ContactPhone,
 			CreatedAt:         now,
 			CreatedBy:         userId,
 			UpdatedAt:         now,
@@ -164,9 +173,18 @@ func (s *ServiceVendor) CreateOrUpdateVendorProfile(userId string, req dto.Vendo
 		profile.NpwpNumber = req.NpwpNumber
 		profile.NpwpName = req.NpwpName
 		profile.NpwpAddress = req.NpwpAddress
+		profile.TaxStatus = req.TaxStatus
+		profile.NibNumber = req.NibNumber
 		profile.BankName = req.BankName
-		profile.AccountNumber = req.BankAccountNumber
-		profile.AccountHolderName = req.BankAccountName
+		profile.BankBranch = req.BankBranch
+		profile.AccountNumber = req.AccountNumber
+		profile.AccountHolderName = req.AccountHolderName
+		profile.TransactionType = req.TransactionType
+		profile.PurchGroup = req.PurchGroup
+		profile.RegionOrSo = req.RegionOrSo
+		profile.ContactPerson = req.ContactPerson
+		profile.ContactEmail = req.ContactEmail
+		profile.ContactPhone = req.ContactPhone
 		profile.UpdatedAt = now
 		profile.UpdatedBy = userId
 

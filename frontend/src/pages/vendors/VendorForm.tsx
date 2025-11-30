@@ -42,20 +42,39 @@ export const VendorForm: React.FC = () => {
     email: '',
     phone: '',
     telephone: '',
+    fax: '',
     address: '',
     province_id: '',
+    province_name: '',
     city_id: '',
+    city_name: '',
     district_id: '',
+    district_name: '',
+    postal_code: '',
     business_field: '',
+    // KTP
     ktp_number: '',
     ktp_name: '',
+    // NPWP
     npwp_number: '',
     npwp_name: '',
     npwp_address: '',
+    tax_status: '',
+    // NIB
+    nib_number: '',
+    // Bank
     bank_name: '',
+    bank_branch: '',
     account_number: '',
     account_holder_name: '',
-    nib_number: '',
+    // Business
+    transaction_type: '',
+    purch_group: '',
+    region_or_so: '',
+    // Contact
+    contact_person: '',
+    contact_email: '',
+    contact_phone: '',
   });
 
   const [profileFiles, setProfileFiles] = useState<VendorProfileFile[]>([]);
@@ -175,7 +194,13 @@ export const VendorForm: React.FC = () => {
 
       // 2. Create/Update Profile
       if (vendorId) {
-        const profileSubmitData = { ...profileData, vendor_id: vendorId };
+        // Map frontend fields to backend DTO fields
+        const profileSubmitData = {
+          ...profileData,
+          vendor_id: vendorId,
+          bank_account_number: profileData.account_number,
+          bank_account_name: profileData.account_holder_name,
+        };
 
         if (profileData.id) {
           const response = await vendorsApi.updateProfile(profileData.id, profileSubmitData);
@@ -293,6 +318,12 @@ export const VendorForm: React.FC = () => {
                 onChange={handleProfileChange}
               />
               <Input
+                label="Fax"
+                name="fax"
+                value={profileData.fax}
+                onChange={handleProfileChange}
+              />
+              <Input
                 label="Business Field"
                 name="business_field"
                 value={profileData.business_field}
@@ -309,21 +340,45 @@ export const VendorForm: React.FC = () => {
             <h2 className="text-xl font-semibold mb-6">Address Details</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input
-                label="Province"
+                label="Province ID"
                 name="province_id"
                 value={profileData.province_id}
                 onChange={handleProfileChange}
               />
               <Input
-                label="City"
+                label="Province Name"
+                name="province_name"
+                value={profileData.province_name}
+                onChange={handleProfileChange}
+              />
+              <Input
+                label="City ID"
                 name="city_id"
                 value={profileData.city_id}
                 onChange={handleProfileChange}
               />
               <Input
-                label="District"
+                label="City Name"
+                name="city_name"
+                value={profileData.city_name}
+                onChange={handleProfileChange}
+              />
+              <Input
+                label="District ID"
                 name="district_id"
                 value={profileData.district_id}
+                onChange={handleProfileChange}
+              />
+              <Input
+                label="District Name"
+                name="district_name"
+                value={profileData.district_name}
+                onChange={handleProfileChange}
+              />
+              <Input
+                label="Postal Code"
+                name="postal_code"
+                value={profileData.postal_code}
                 onChange={handleProfileChange}
               />
               <div className="md:col-span-2">

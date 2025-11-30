@@ -14,7 +14,6 @@ const ResetPassword = () => {
     confirmPassword: ''
   });
   const [loading, setLoading] = useState(false);
-
   const [passwordValidation, setPasswordValidation] = useState({
     minLength: false,
     hasLowercase: false,
@@ -69,7 +68,7 @@ const ResetPassword = () => {
     const result = await resetPassword(token, formData.newPassword);
 
     if (result.success) {
-      toast.success('Password reset successfully! 🎉');
+      toast.success('Password reset successfully!');
       navigate('/login');
     } else {
       toast.error(result.error || 'Failed to reset password');
@@ -107,53 +106,32 @@ const ResetPassword = () => {
             onChange={handleChange}
             placeholder="Enter new password"
             required
-            minLength={8}
             leftIcon={<Lock className="w-5 h-5" />}
           />
 
           {formData.newPassword && (
             <div className="p-4 bg-secondary-50 rounded-xl border border-secondary-200">
               <p className="text-sm font-semibold text-secondary-900 mb-3">Password Requirements:</p>
-              <div className="space-y-2">
-                <div className={`text-sm flex items-center gap-2 ${passwordValidation.minLength ? 'text-success-600' : 'text-danger-600'}`}>
-                  {passwordValidation.minLength ? (
-                    <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                  ) : (
-                    <XCircle className="w-4 h-4 flex-shrink-0" />
-                  )}
-                  <span>Minimum 8 characters</span>
+              <div className="grid grid-cols-2 gap-2">
+                <div className={`text-xs flex items-center gap-1.5 ${passwordValidation.minLength ? 'text-success-600' : 'text-secondary-500'}`}>
+                  {passwordValidation.minLength ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                  <span>Min 8 characters</span>
                 </div>
-                <div className={`text-sm flex items-center gap-2 ${passwordValidation.hasLowercase ? 'text-success-600' : 'text-danger-600'}`}>
-                  {passwordValidation.hasLowercase ? (
-                    <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                  ) : (
-                    <XCircle className="w-4 h-4 flex-shrink-0" />
-                  )}
-                  <span>At least 1 lowercase letter (a-z)</span>
+                <div className={`text-xs flex items-center gap-1.5 ${passwordValidation.hasLowercase ? 'text-success-600' : 'text-secondary-500'}`}>
+                  {passwordValidation.hasLowercase ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                  <span>Lowercase (a-z)</span>
                 </div>
-                <div className={`text-sm flex items-center gap-2 ${passwordValidation.hasUppercase ? 'text-success-600' : 'text-danger-600'}`}>
-                  {passwordValidation.hasUppercase ? (
-                    <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                  ) : (
-                    <XCircle className="w-4 h-4 flex-shrink-0" />
-                  )}
-                  <span>At least 1 uppercase letter (A-Z)</span>
+                <div className={`text-xs flex items-center gap-1.5 ${passwordValidation.hasUppercase ? 'text-success-600' : 'text-secondary-500'}`}>
+                  {passwordValidation.hasUppercase ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                  <span>Uppercase (A-Z)</span>
                 </div>
-                <div className={`text-sm flex items-center gap-2 ${passwordValidation.hasNumber ? 'text-success-600' : 'text-danger-600'}`}>
-                  {passwordValidation.hasNumber ? (
-                    <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                  ) : (
-                    <XCircle className="w-4 h-4 flex-shrink-0" />
-                  )}
-                  <span>At least 1 number (0-9)</span>
+                <div className={`text-xs flex items-center gap-1.5 ${passwordValidation.hasNumber ? 'text-success-600' : 'text-secondary-500'}`}>
+                  {passwordValidation.hasNumber ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                  <span>Number (0-9)</span>
                 </div>
-                <div className={`text-sm flex items-center gap-2 ${passwordValidation.hasSymbol ? 'text-success-600' : 'text-danger-600'}`}>
-                  {passwordValidation.hasSymbol ? (
-                    <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                  ) : (
-                    <XCircle className="w-4 h-4 flex-shrink-0" />
-                  )}
-                  <span>At least 1 symbol (!@#$%^&*...)</span>
+                <div className={`text-xs flex items-center gap-1.5 ${passwordValidation.hasSymbol ? 'text-success-600' : 'text-secondary-500'}`}>
+                  {passwordValidation.hasSymbol ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                  <span>Symbol (!@#$...)</span>
                 </div>
               </div>
             </div>
@@ -167,9 +145,24 @@ const ResetPassword = () => {
             onChange={handleChange}
             placeholder="Confirm new password"
             required
-            minLength={8}
             leftIcon={<Lock className="w-5 h-5" />}
           />
+
+          {formData.confirmPassword && (
+            <div className={`text-xs flex items-center gap-1.5 ${formData.newPassword === formData.confirmPassword ? 'text-success-600' : 'text-danger-600'}`}>
+              {formData.newPassword === formData.confirmPassword ? (
+                <>
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  <span>Passwords match</span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-3.5 h-3.5" />
+                  <span>Passwords do not match</span>
+                </>
+              )}
+            </div>
+          )}
 
           <Button
             type="submit"

@@ -299,14 +299,18 @@ export const VendorProfile: React.FC = () => {
     try {
       const response = await vendorsApi.createOrUpdateProfile(formData);
       if (response.status) {
+        // Update local state with returned data
+        if (response.data) {
+          setVendor(response.data.vendor);
+          setProfile(response.data.profile);
+        }
         toast.success('Profile saved successfully');
         navigate(getBackUrl());
-        fetchVendorProfile();
       } else {
         toast.error(response.message || 'Failed to save profile');
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to save profile');
+      toast.error(error.response?.data?.message || error.response?.data?.error || 'Failed to save profile');
     } finally {
       setIsSaving(false);
     }

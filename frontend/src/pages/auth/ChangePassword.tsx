@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
-import { Key, Lock, ArrowRight, ArrowLeft, Shield } from 'lucide-react';
+import { Key, Lock, ArrowRight, ArrowLeft, Shield, CheckCircle, XCircle } from 'lucide-react';
 import { AuthLayout } from '../../components/AuthLayout';
 import { Button, Input, Card } from '../../components/ui';
 
@@ -13,18 +13,42 @@ const ChangePassword = () => {
     confirmPassword: ''
   });
   const [loading, setLoading] = useState(false);
+  const [passwordValidation, setPasswordValidation] = useState({
+    minLength: false,
+    hasLowercase: false,
+    hasUppercase: false,
+    hasNumber: false,
+    hasSymbol: false
+  });
 
   const { updatePassword } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+
+    if (name === 'newPassword') {
+      setPasswordValidation({
+        minLength: value.length >= 8,
+        hasLowercase: /[a-z]/.test(value),
+        hasUppercase: /[A-Z]/.test(value),
+        hasNumber: /[0-9]/.test(value),
+        hasSymbol: /[^a-zA-Z0-9]/.test(value)
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.newPassword !== formData.confirmPassword) {
       toast.error('New passwords do not match');
+      return;
+    }
+
+    const allRequirementsMet = Object.values(passwordValidation).every(val => val === true);
+    if (!allRequirementsMet) {
+      toast.error('New password does not meet all requirements');
       return;
     }
 
@@ -36,7 +60,7 @@ const ChangePassword = () => {
     });
 
     if (result.success) {
-      toast.success('Password changed successfully! 🎉');
+      toast.success('Password changed successfully!');
       navigate('/login');
     } else {
       toast.error(result.error || 'Failed to change password');
@@ -59,7 +83,7 @@ const ChangePassword = () => {
             <div className="flex-1">
               <h3 className="text-sm font-semibold text-secondary-900 mb-1">Security Update</h3>
               <p className="text-xs text-secondary-600">
-                Choose a strong password with at least 8 characters
+                Create a strong password that meets all requirements
               </p>
             </div>
           </div>
@@ -85,10 +109,36 @@ const ChangePassword = () => {
             onChange={handleChange}
             placeholder="Enter new password"
             required
-            minLength={8}
             leftIcon={<Lock className="w-5 h-5" />}
-            helperText="Minimum 8 characters"
           />
+
+          {formData.newPassword && (
+            <div className="p-4 bg-secondary-50 rounded-xl border border-secondary-200">
+              <p className="text-sm font-semibold text-secondary-900 mb-3">Password Requirements:</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className={`text-xs flex items-center gap-1.5 ${passwordValidation.minLength ? 'text-success-600' : 'text-secondary-500'}`}>
+                  {passwordValidation.minLength ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                  <span>Min 8 characters</span>
+                </div>
+                <div className={`text-xs flex items-center gap-1.5 ${passwordValidation.hasLowercase ? 'text-success-600' : 'text-secondary-500'}`}>
+                  {passwordValidation.hasLowercase ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                  <span>Lowercase (a-z)</span>
+                </div>
+                <div className={`text-xs flex items-center gap-1.5 ${passwordValidation.hasUppercase ? 'text-success-600' : 'text-secondary-500'}`}>
+                  {passwordValidation.hasUppercase ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                  <span>Uppercase (A-Z)</span>
+                </div>
+                <div className={`text-xs flex items-center gap-1.5 ${passwordValidation.hasNumber ? 'text-success-600' : 'text-secondary-500'}`}>
+                  {passwordValidation.hasNumber ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                  <span>Number (0-9)</span>
+                </div>
+                <div className={`text-xs flex items-center gap-1.5 ${passwordValidation.hasSymbol ? 'text-success-600' : 'text-secondary-500'}`}>
+                  {passwordValidation.hasSymbol ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                  <span>Symbol (!@#$...)</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           <Input
             label="Confirm New Password"
@@ -98,9 +148,24 @@ const ChangePassword = () => {
             onChange={handleChange}
             placeholder="Confirm new password"
             required
-            minLength={8}
             leftIcon={<Lock className="w-5 h-5" />}
           />
+
+          {formData.confirmPassword && (
+            <div className={`text-xs flex items-center gap-1.5 ${formData.newPassword === formData.confirmPassword ? 'text-success-600' : 'text-danger-600'}`}>
+              {formData.newPassword === formData.confirmPassword ? (
+                <>
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  <span>Passwords match</span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-3.5 h-3.5" />
+                  <span>Passwords do not match</span>
+                </>
+              )}
+            </div>
+          )}
 
           <Button
             type="submit"

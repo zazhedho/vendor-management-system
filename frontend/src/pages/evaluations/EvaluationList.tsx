@@ -43,9 +43,8 @@ export const EvaluationList: React.FC = () => {
           setTotalPages(response.total_pages || 1);
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to fetch evaluations:', error);
-      toast.error(error?.response?.data?.error || 'Failed to load evaluations');
     } finally {
       setIsLoading(false);
     }

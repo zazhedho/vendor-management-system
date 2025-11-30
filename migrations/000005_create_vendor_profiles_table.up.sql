@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS vendor_profiles (
     npwp_number VARCHAR(50) NULL,
     npwp_address TEXT NULL,
     tax_status VARCHAR(50) NULL,
+    nib_number VARCHAR(50) NULL,
 
     bank_name VARCHAR(100) NULL,
     bank_branch VARCHAR(100) NULL,

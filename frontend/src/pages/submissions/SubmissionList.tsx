@@ -46,7 +46,6 @@ export const SubmissionList: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to fetch submissions:', error);
-      toast.error('Failed to load submissions');
     } finally {
       setIsLoading(false);
     }
@@ -65,7 +64,6 @@ export const SubmissionList: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to fetch events:', error);
-      toast.error('Failed to load events');
     } finally {
       setIsLoading(false);
     }
@@ -80,7 +78,6 @@ export const SubmissionList: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to fetch event submissions:', error);
-      toast.error('Failed to load submissions');
     } finally {
       setIsLoading(false);
     }

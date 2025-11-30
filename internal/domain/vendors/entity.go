@@ -63,6 +63,7 @@ type VendorProfile struct {
 	NpwpNumber  string `json:"npwp_number,omitempty" gorm:"column:npwp_number"`
 	NpwpAddress string `json:"npwp_address,omitempty" gorm:"column:npwp_address"`
 	TaxStatus   string `json:"tax_status,omitempty" gorm:"column:tax_status"` //PKP, non-PKP
+	NibNumber   string `json:"nib_number,omitempty" gorm:"column:nib_number"`
 
 	BankName          string `json:"bank_name,omitempty" gorm:"column:bank_name"`
 	BankBranch        string `json:"bank_branch,omitempty" gorm:"column:bank_branch"`

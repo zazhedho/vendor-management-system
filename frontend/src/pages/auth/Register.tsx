@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
-import { Mail, Lock, User, Phone, Briefcase, ArrowRight, UserPlus } from 'lucide-react';
+import { Mail, Lock, User, Phone, ArrowRight, UserPlus, CheckCircle, XCircle } from 'lucide-react';
 import { AuthLayout } from '../../components/AuthLayout';
 import { Button, Input, Card } from '../../components/ui';
 
@@ -12,15 +12,32 @@ export const Register: React.FC = () => {
     email: '',
     phone: '',
     password: '',
-    confirmPassword: '',
-    role: 'vendor' // Default role
+    confirmPassword: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [passwordValidation, setPasswordValidation] = useState({
+    minLength: false,
+    hasLowercase: false,
+    hasUppercase: false,
+    hasNumber: false,
+    hasSymbol: false
+  });
   const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+
+    if (name === 'password') {
+      setPasswordValidation({
+        minLength: value.length >= 8,
+        hasLowercase: /[a-z]/.test(value),
+        hasUppercase: /[A-Z]/.test(value),
+        hasNumber: /[0-9]/.test(value),
+        hasSymbol: /[^a-zA-Z0-9]/.test(value)
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,6 +48,12 @@ export const Register: React.FC = () => {
       return;
     }
 
+    const allRequirementsMet = Object.values(passwordValidation).every(val => val === true);
+    if (!allRequirementsMet) {
+      toast.error('Password does not meet all requirements');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -38,12 +61,11 @@ export const Register: React.FC = () => {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        phone: formData.phone,
-        role: formData.role
+        phone: formData.phone
       });
 
       if (result.success) {
-        toast.success('Registration successful! 🎉 Please login.');
+        toast.success('Registration successful! Please login.');
         navigate('/login');
       } else {
         toast.error(result.error || 'Registration failed');
@@ -58,7 +80,7 @@ export const Register: React.FC = () => {
   return (
     <AuthLayout
       title="Create Account"
-      subtitle="Join as a vendor or client to get started"
+      subtitle="Register as a vendor to get started"
     >
       <Card variant="glass" className="shadow-2xl border border-white/50 backdrop-blur-xl bg-white/95">
         <div className="mb-6 p-4 bg-gradient-to-r from-success-50 to-primary-50 rounded-xl border border-success-100/50">
@@ -106,53 +128,71 @@ export const Register: React.FC = () => {
             leftIcon={<Phone className="w-5 h-5" />}
           />
 
-          <div>
-            <label className="block text-sm font-semibold text-secondary-800 mb-2">
-              Account Type<span className="text-danger-500 ml-1">*</span>
-            </label>
-            <div className="relative group">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-secondary-400 group-focus-within:text-primary-600 transition-colors">
-                <Briefcase className="w-5 h-5" />
-              </div>
-              <select
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-secondary-200 bg-white text-secondary-900 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-all appearance-none shadow-sm hover:shadow cursor-pointer"
-              >
-                <option value="vendor">Vendor</option>
-                <option value="client">Client</option>
-              </select>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-secondary-400">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 20 20" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
+          <Input
+            label="Password"
+            type="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            placeholder="••••••••"
+            required
+            leftIcon={<Lock className="w-5 h-5" />}
+          />
+
+          {formData.password && (
+            <div className="p-4 bg-secondary-50 rounded-xl border border-secondary-200">
+              <p className="text-sm font-semibold text-secondary-900 mb-3">Password Requirements:</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className={`text-xs flex items-center gap-1.5 ${passwordValidation.minLength ? 'text-success-600' : 'text-secondary-500'}`}>
+                  {passwordValidation.minLength ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                  <span>Min 8 characters</span>
+                </div>
+                <div className={`text-xs flex items-center gap-1.5 ${passwordValidation.hasLowercase ? 'text-success-600' : 'text-secondary-500'}`}>
+                  {passwordValidation.hasLowercase ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                  <span>Lowercase (a-z)</span>
+                </div>
+                <div className={`text-xs flex items-center gap-1.5 ${passwordValidation.hasUppercase ? 'text-success-600' : 'text-secondary-500'}`}>
+                  {passwordValidation.hasUppercase ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                  <span>Uppercase (A-Z)</span>
+                </div>
+                <div className={`text-xs flex items-center gap-1.5 ${passwordValidation.hasNumber ? 'text-success-600' : 'text-secondary-500'}`}>
+                  {passwordValidation.hasNumber ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                  <span>Number (0-9)</span>
+                </div>
+                <div className={`text-xs flex items-center gap-1.5 ${passwordValidation.hasSymbol ? 'text-success-600' : 'text-secondary-500'}`}>
+                  {passwordValidation.hasSymbol ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                  <span>Symbol (!@#$...)</span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Password"
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="••••••••"
-              required
-              leftIcon={<Lock className="w-5 h-5" />}
-            />
-            <Input
-              label="Confirm Password"
-              type="password"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              placeholder="••••••••"
-              required
-              leftIcon={<Lock className="w-5 h-5" />}
-            />
-          </div>
+          <Input
+            label="Confirm Password"
+            type="password"
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            placeholder="••••••••"
+            required
+            leftIcon={<Lock className="w-5 h-5" />}
+          />
+
+          {formData.confirmPassword && (
+            <div className={`text-xs flex items-center gap-1.5 ${formData.password === formData.confirmPassword ? 'text-success-600' : 'text-danger-600'}`}>
+              {formData.password === formData.confirmPassword ? (
+                <>
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  <span>Passwords match</span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-3.5 h-3.5" />
+                  <span>Passwords do not match</span>
+                </>
+              )}
+            </div>
+          )}
 
           <Button
             type="submit"
