@@ -1,20 +1,65 @@
+import { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
+import { Spinner } from './components/ui';
+
+// Auth pages - not lazy loaded for faster initial load
 import { Login, Register, ForgotPassword, ResetPassword, ChangePassword } from './pages/auth';
-import { Dashboard } from './pages/Dashboard';
-import { EventList, EventForm, EventDetail } from './pages/events';
-import { VendorList, VendorForm, VendorDetail, VendorProfile } from './pages/vendors';
-import { PaymentList, PaymentDetail, PaymentForm } from './pages/payments';
-import { EvaluationList, EvaluationDetail, EvaluationForm, VendorPhotoUpload } from './pages/evaluations';
-import { SubmissionList } from './pages/submissions';
-import { UserList, UserForm, Profile } from './pages/users';
-import { RoleList, RoleForm } from './pages/roles';
-import { MenuList, MenuForm } from './pages/menus';
-import { SessionList } from './pages/sessions';
+
+// Lazy loaded pages
+const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
+
+// Events
+const EventList = lazy(() => import('./pages/events').then(m => ({ default: m.EventList })));
+const EventForm = lazy(() => import('./pages/events').then(m => ({ default: m.EventForm })));
+const EventDetail = lazy(() => import('./pages/events').then(m => ({ default: m.EventDetail })));
+
+// Vendors
+const VendorList = lazy(() => import('./pages/vendors').then(m => ({ default: m.VendorList })));
+const VendorForm = lazy(() => import('./pages/vendors').then(m => ({ default: m.VendorForm })));
+const VendorDetail = lazy(() => import('./pages/vendors').then(m => ({ default: m.VendorDetail })));
+const VendorProfile = lazy(() => import('./pages/vendors').then(m => ({ default: m.VendorProfile })));
+
+// Payments
+const PaymentList = lazy(() => import('./pages/payments').then(m => ({ default: m.PaymentList })));
+const PaymentDetail = lazy(() => import('./pages/payments').then(m => ({ default: m.PaymentDetail })));
+const PaymentForm = lazy(() => import('./pages/payments').then(m => ({ default: m.PaymentForm })));
+
+// Evaluations
+const EvaluationList = lazy(() => import('./pages/evaluations').then(m => ({ default: m.EvaluationList })));
+const EvaluationDetail = lazy(() => import('./pages/evaluations').then(m => ({ default: m.EvaluationDetail })));
+const EvaluationForm = lazy(() => import('./pages/evaluations').then(m => ({ default: m.EvaluationForm })));
+const VendorPhotoUpload = lazy(() => import('./pages/evaluations').then(m => ({ default: m.VendorPhotoUpload })));
+
+// Submissions
+const SubmissionList = lazy(() => import('./pages/submissions').then(m => ({ default: m.SubmissionList })));
+
+// Users
+const UserList = lazy(() => import('./pages/users').then(m => ({ default: m.UserList })));
+const UserForm = lazy(() => import('./pages/users').then(m => ({ default: m.UserForm })));
+const Profile = lazy(() => import('./pages/users').then(m => ({ default: m.Profile })));
+
+// Roles
+const RoleList = lazy(() => import('./pages/roles').then(m => ({ default: m.RoleList })));
+const RoleForm = lazy(() => import('./pages/roles').then(m => ({ default: m.RoleForm })));
+
+// Menus
+const MenuList = lazy(() => import('./pages/menus').then(m => ({ default: m.MenuList })));
+const MenuForm = lazy(() => import('./pages/menus').then(m => ({ default: m.MenuForm })));
+
+// Sessions
+const SessionList = lazy(() => import('./pages/sessions').then(m => ({ default: m.SessionList })));
+
+// Loading fallback component
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-[400px]">
+    <Spinner size="lg" />
+  </div>
+);
 
 function App() {
   return (
@@ -44,7 +89,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <Dashboard />
+                  <Suspense fallback={<PageLoader />}>
+                    <Dashboard />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -55,7 +102,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <EventList />
+                  <Suspense fallback={<PageLoader />}>
+                    <EventList />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -65,7 +114,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <EventForm />
+                  <Suspense fallback={<PageLoader />}>
+                    <EventForm />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -75,7 +126,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <EventDetail />
+                  <Suspense fallback={<PageLoader />}>
+                    <EventDetail />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -85,7 +138,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <EventForm />
+                  <Suspense fallback={<PageLoader />}>
+                    <EventForm />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -96,7 +151,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <VendorList />
+                  <Suspense fallback={<PageLoader />}>
+                    <VendorList />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -106,7 +163,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <VendorForm />
+                  <Suspense fallback={<PageLoader />}>
+                    <VendorForm />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -116,7 +175,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <VendorDetail />
+                  <Suspense fallback={<PageLoader />}>
+                    <VendorDetail />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -126,7 +187,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <VendorForm />
+                  <Suspense fallback={<PageLoader />}>
+                    <VendorForm />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -137,7 +200,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <PaymentList />
+                  <Suspense fallback={<PageLoader />}>
+                    <PaymentList />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -147,7 +212,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <PaymentForm />
+                  <Suspense fallback={<PageLoader />}>
+                    <PaymentForm />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -157,7 +224,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <PaymentDetail />
+                  <Suspense fallback={<PageLoader />}>
+                    <PaymentDetail />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -167,7 +236,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <PaymentForm />
+                  <Suspense fallback={<PageLoader />}>
+                    <PaymentForm />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -178,7 +249,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <EvaluationList />
+                  <Suspense fallback={<PageLoader />}>
+                    <EvaluationList />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -188,7 +261,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <EvaluationForm />
+                  <Suspense fallback={<PageLoader />}>
+                    <EvaluationForm />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -198,7 +273,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <EvaluationDetail />
+                  <Suspense fallback={<PageLoader />}>
+                    <EvaluationDetail />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -208,7 +285,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <EvaluationForm />
+                  <Suspense fallback={<PageLoader />}>
+                    <EvaluationForm />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -218,7 +297,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <VendorPhotoUpload />
+                  <Suspense fallback={<PageLoader />}>
+                    <VendorPhotoUpload />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -229,7 +310,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <UserList />
+                  <Suspense fallback={<PageLoader />}>
+                    <UserList />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -239,7 +322,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <UserForm />
+                  <Suspense fallback={<PageLoader />}>
+                    <UserForm />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -249,7 +334,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <UserForm />
+                  <Suspense fallback={<PageLoader />}>
+                    <UserForm />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -260,7 +347,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <RoleList />
+                  <Suspense fallback={<PageLoader />}>
+                    <RoleList />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -270,7 +359,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <RoleForm />
+                  <Suspense fallback={<PageLoader />}>
+                    <RoleForm />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -280,7 +371,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <RoleForm />
+                  <Suspense fallback={<PageLoader />}>
+                    <RoleForm />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -291,7 +384,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <MenuList />
+                  <Suspense fallback={<PageLoader />}>
+                    <MenuList />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -301,7 +396,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <MenuForm />
+                  <Suspense fallback={<PageLoader />}>
+                    <MenuForm />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -311,7 +408,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <MenuForm />
+                  <Suspense fallback={<PageLoader />}>
+                    <MenuForm />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -322,7 +421,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <Profile />
+                  <Suspense fallback={<PageLoader />}>
+                    <Profile />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -333,7 +434,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <SessionList />
+                  <Suspense fallback={<PageLoader />}>
+                    <SessionList />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -345,7 +448,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <VendorProfile />
+                  <Suspense fallback={<PageLoader />}>
+                    <VendorProfile />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -355,7 +460,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <VendorProfile />
+                  <Suspense fallback={<PageLoader />}>
+                    <VendorProfile />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -365,7 +472,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <VendorProfile />
+                  <Suspense fallback={<PageLoader />}>
+                    <VendorProfile />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -375,7 +484,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <VendorDetail />
+                  <Suspense fallback={<PageLoader />}>
+                    <VendorDetail />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -385,7 +496,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <VendorProfile />
+                  <Suspense fallback={<PageLoader />}>
+                    <VendorProfile />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -395,7 +508,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <VendorProfile />
+                  <Suspense fallback={<PageLoader />}>
+                    <VendorProfile />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -407,7 +522,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <SubmissionList />
+                  <Suspense fallback={<PageLoader />}>
+                    <SubmissionList />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }
@@ -417,7 +534,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <SubmissionList />
+                  <Suspense fallback={<PageLoader />}>
+                    <SubmissionList />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             }

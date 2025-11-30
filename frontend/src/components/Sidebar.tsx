@@ -197,6 +197,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, menuItems, is
                 <Link
                     to={item.path || '#'}
                     onClick={onClose}
+                    title={item.label}
                     className={`
                         flex items-center justify-center p-3 rounded-lg transition-all duration-200
                         ${isActive
@@ -207,10 +208,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, menuItems, is
                 >
                     <IconComponent size={20} />
                 </Link>
-                {/* Tooltip */}
-                <div className="absolute left-full ml-2 px-2 py-1 bg-secondary-800 text-white text-sm rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
-                    {item.label}
-                </div>
             </li>
         );
     };
@@ -219,7 +216,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, menuItems, is
         <>
             <aside
                 className={`
-                    fixed inset-y-0 left-0 z-40 bg-secondary-900 text-white transition-all duration-300 ease-in-out
+                    fixed inset-y-0 left-0 z-40 bg-secondary-900 text-white transition-all duration-300 ease-in-out overflow-x-hidden
                     ${isCollapsed ? 'w-16' : 'w-64'}
                     ${isOpen ? 'translate-x-0' : '-translate-x-full'}
                     lg:translate-x-0
@@ -247,7 +244,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, menuItems, is
                 </div>
 
                 {/* Navigation */}
-                <nav className={`h-[calc(100vh-6rem)] overflow-y-auto py-4 ${isCollapsed ? 'px-2' : 'px-3'}`}>
+                <nav className={`h-[calc(100vh-6rem)] overflow-y-auto overflow-x-hidden py-4 ${isCollapsed ? 'px-2' : 'px-3'}`}>
                     <ul className="space-y-1">
                         {isCollapsed 
                             ? menuItems.map(item => renderCollapsedMenuItem(item))

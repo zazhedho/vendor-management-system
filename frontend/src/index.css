@@ -5,6 +5,10 @@
 @tailwind utilities;
 
 @layer base {
+  html, body {
+    @apply overflow-x-hidden;
+  }
+  
   body {
     @apply bg-secondary-50 text-secondary-900 font-sans antialiased;
   }
