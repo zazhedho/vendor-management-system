@@ -1,7 +1,7 @@
 package dto
 
 type RoleCreate struct {
-	Name        string `json:"name" binding:"required,min=3,max=50"`
+	Name        string `json:"name" binding:"required,min=3,max=50,lowercase_nospace"`
 	DisplayName string `json:"display_name" binding:"required,min=3,max=100"`
 	Description string `json:"description" binding:"omitempty,max=500"`
 }

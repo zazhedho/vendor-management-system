@@ -47,13 +47,13 @@ export const VendorProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const { user } = useAuth();
-  
+
   // Determine view mode based on role and URL
   const isVendorRole = useMemo(() => user?.role === 'vendor', [user?.role]);
   const isEditMode = location.pathname.endsWith('/edit');
   const isNewMode = location.pathname.endsWith('/new');
 
-  
+
   // For vendor role: always show their own profile form
   // For admin role: show list on /vendor/profile, detail/edit on other routes
   const showListView = useMemo(() => {
@@ -61,15 +61,15 @@ export const VendorProfile: React.FC = () => {
     // Admin sees list only on exact /vendor/profile path
     return location.pathname === '/vendor/profile';
   }, [isVendorRole, location.pathname]);
-  
+
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [profile, setProfile] = useState<VendorProfileType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   // isEditing based on URL for proper routing
   const isEditing = isEditMode || isNewMode;
-  
+
   // For admin list view
   const [vendorList, setVendorList] = useState<VendorWithProfile[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -127,14 +127,14 @@ export const VendorProfile: React.FC = () => {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [selectedFileType, setSelectedFileType] = useState<string>('ktp');
   const [customFileType, setCustomFileType] = useState('');
-  
+
   // Delete file modal
   const [deleteFileId, setDeleteFileId] = useState<string | null>(null);
   const [isDeletingFile, setIsDeletingFile] = useState(false);
 
   useEffect(() => {
     if (!user) return;
-    
+
     const loadData = async () => {
       if (showListView) {
         // Admin viewing list
@@ -147,7 +147,7 @@ export const VendorProfile: React.FC = () => {
     };
     loadData();
   }, [user, showListView, id]);
-  
+
   useEffect(() => {
     if (!user || !showListView) return;
     if (currentPage > 1 || searchTerm) {
@@ -175,10 +175,10 @@ export const VendorProfile: React.FC = () => {
   const fetchVendorsList = async () => {
     setIsLoading(true);
     try {
-      const response = await vendorsApi.getAll({ 
-        page: currentPage, 
+      const response = await vendorsApi.getAll({
+        page: currentPage,
         limit: 10,
-        search: searchTerm 
+        search: searchTerm
       });
       console.log('Vendors list response:', response);
       if (response.status) {
@@ -236,7 +236,7 @@ export const VendorProfile: React.FC = () => {
         // Handle both direct response and nested data structure
         const vendorData = (data as any).vendor || data;
         const profileData = (data as any).profile || null;
-        
+
         setVendor(vendorData?.id ? vendorData : null);
         setProfile(profileData);
 
@@ -298,18 +298,38 @@ export const VendorProfile: React.FC = () => {
     setIsSaving(true);
     try {
       const response = await vendorsApi.createOrUpdateProfile(formData);
-      if (response.status) {
-        // Update local state with returned data
+
+      // Check if status is true OR if we have valid data returned
+      // This handles cases where backend might return data but status is missing/false
+      // Also check for 'id' in case data is returned directly (response IS the data)
+      const resAny = response as any;
+      const isSuccess = response.status === true ||
+        (response.data && (response.data.vendor || response.data.profile || resAny.data?.id)) ||
+        resAny.id ||
+        resAny.vendor_id;
+
+      if (isSuccess) {
+        // Update local state with returned data if available
         if (response.data) {
-          setVendor(response.data.vendor);
-          setProfile(response.data.profile);
+          const vData = response.data.vendor || (resAny.data?.id ? response.data : null);
+          const pData = response.data.profile || (resAny.data?.id ? response.data : null);
+
+          if (vData) setVendor(vData);
+          if (pData) setProfile(pData);
+        } else if (resAny.id) {
+          // If response is the data itself
+          setProfile(resAny);
         }
+
+        // Always navigate back to profile view as requested
         toast.success('Profile saved successfully');
-        navigate(getBackUrl());
+        navigate('/vendor/profile');
       } else {
+        console.error('Save profile failed. Response:', response);
         toast.error(response.message || 'Failed to save profile');
       }
     } catch (error: any) {
+      console.error('Save profile error:', error);
       toast.error(error.response?.data?.message || error.response?.data?.error || 'Failed to save profile');
     } finally {
       setIsSaving(false);
@@ -335,7 +355,7 @@ export const VendorProfile: React.FC = () => {
     }
 
     // Determine file type
-    const fileType = selectedFileType === 'other' 
+    const fileType = selectedFileType === 'other'
       ? (customFileType.trim() || 'other')
       : selectedFileType;
 
@@ -459,8 +479,8 @@ export const VendorProfile: React.FC = () => {
                 const code = e.target.value;
                 const selected = provinces.find(p => p.code === code);
                 setSelectedProvinceCode(code);
-                setFormData({ 
-                  ...formData, 
+                setFormData({
+                  ...formData,
                   province_id: code,
                   province_name: selected?.name || '',
                   city_id: '',
@@ -486,8 +506,8 @@ export const VendorProfile: React.FC = () => {
                 const code = e.target.value;
                 const selected = cities.find(c => c.code === code);
                 setSelectedCityCode(code);
-                setFormData({ 
-                  ...formData, 
+                setFormData({
+                  ...formData,
                   city_id: code,
                   city_name: selected?.name || '',
                   district_id: '',
@@ -511,8 +531,8 @@ export const VendorProfile: React.FC = () => {
               onChange={(e) => {
                 const code = e.target.value;
                 const selected = districts.find(d => d.code === code);
-                setFormData({ 
-                  ...formData, 
+                setFormData({
+                  ...formData,
                   district_id: code,
                   district_name: selected?.name || ''
                 });
@@ -682,31 +702,28 @@ export const VendorProfile: React.FC = () => {
               <p className="text-sm text-secondary-500 mb-3">Uploaded Documents</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {profile.files.map((file) => (
-                  <div 
-                    key={file.id} 
-                    className={`flex flex-col p-3 border rounded-lg ${
-                      file.status === 'rejected' 
-                        ? 'border-danger-300 bg-danger-50' 
-                        : file.status === 'approved'
+                  <div
+                    key={file.id}
+                    className={`flex flex-col p-3 border rounded-lg ${file.status === 'rejected'
+                      ? 'border-danger-300 bg-danger-50'
+                      : file.status === 'approved'
                         ? 'border-success-300 bg-success-50'
                         : 'border-secondary-200 bg-secondary-50'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <FileText className={`flex-shrink-0 ${
-                          file.status === 'rejected' ? 'text-danger-500' : 
+                        <FileText className={`flex-shrink-0 ${file.status === 'rejected' ? 'text-danger-500' :
                           file.status === 'approved' ? 'text-success-500' : 'text-primary-600'
-                        }`} size={20} />
+                          }`} size={20} />
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-secondary-900 capitalize truncate">
                             {formatFileType(file.file_type)}
                           </p>
                           <div className="flex items-center gap-2">
-                            <span className={`text-xs capitalize ${
-                              file.status === 'rejected' ? 'text-danger-600' : 
+                            <span className={`text-xs capitalize ${file.status === 'rejected' ? 'text-danger-600' :
                               file.status === 'approved' ? 'text-success-600' : 'text-warning-600'
-                            }`}>
+                              }`}>
                               {file.status}
                             </span>
                             <span className="text-secondary-300">•</span>
@@ -780,11 +797,10 @@ export const VendorProfile: React.FC = () => {
             )}
 
             {/* Upload Button */}
-            <label className={`cursor-pointer inline-flex items-center justify-center gap-2 px-4 py-2.5 font-medium rounded-lg transition-colors ${
-              uploadingFile 
-                ? 'bg-secondary-300 text-secondary-500 cursor-not-allowed' 
-                : 'bg-primary-600 hover:bg-primary-700 text-white'
-            }`}>
+            <label className={`cursor-pointer inline-flex items-center justify-center gap-2 px-4 py-2.5 font-medium rounded-lg transition-colors ${uploadingFile
+              ? 'bg-secondary-300 text-secondary-500 cursor-not-allowed'
+              : 'bg-primary-600 hover:bg-primary-700 text-white'
+              }`}>
               {uploadingFile ? (
                 <Spinner size="sm" />
               ) : (
@@ -875,8 +891,8 @@ export const VendorProfile: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-secondary-100">
                     {vendorList.map((item, index) => (
-                      <tr 
-                        key={item?.vendor?.id || index} 
+                      <tr
+                        key={item?.vendor?.id || index}
                         className="hover:bg-secondary-50 cursor-pointer"
                         onClick={() => navigate(`/vendor/profile/${item?.vendor?.id}/detail`)}
                       >
@@ -1204,15 +1220,13 @@ export const VendorProfile: React.FC = () => {
                           className="flex items-center justify-between py-2.5 px-4 hover:bg-secondary-50"
                         >
                           <div className="flex items-center gap-3">
-                            <FileText size={18} className={`flex-shrink-0 ${
-                              file.status === 'rejected' ? 'text-danger-500' : 
+                            <FileText size={18} className={`flex-shrink-0 ${file.status === 'rejected' ? 'text-danger-500' :
                               file.status === 'approved' ? 'text-success-500' : 'text-secondary-400'
-                            }`} />
+                              }`} />
                             <span className="text-sm font-medium text-secondary-900">{formatFileType(file.file_type)}</span>
-                            <span className={`text-xs capitalize ${
-                              file.status === 'rejected' ? 'text-danger-600' : 
+                            <span className={`text-xs capitalize ${file.status === 'rejected' ? 'text-danger-600' :
                               file.status === 'approved' ? 'text-success-600' : 'text-warning-600'
-                            }`}>({file.status})</span>
+                              }`}>({file.status})</span>
                           </div>
                         </a>
                       ))}

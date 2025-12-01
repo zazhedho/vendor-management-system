@@ -84,7 +84,16 @@ export const RoleForm: React.FC = () => {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    
+    // Validate name field: lowercase, no spaces
+    if (name === 'name') {
+      const sanitizedValue = value.toLowerCase().replace(/\s/g, '');
+      setFormData({ ...formData, [name]: sanitizedValue });
+      return;
+    }
+    
+    setFormData({ ...formData, [name]: value });
   };
 
   const togglePermission = (permissionId: string) => {
@@ -194,7 +203,7 @@ export const RoleForm: React.FC = () => {
                 value={formData.name}
                 onChange={handleChange}
                 placeholder="e.g., vendor_manager"
-                helperText="Use lowercase with underscores"
+                helperText="Lowercase, no spaces. Used internally."
                 required
               />
 

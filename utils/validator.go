@@ -6,12 +6,31 @@ import (
 	"mime/multipart"
 	"net/http"
 	"reflect"
+	"regexp"
 	"vendor-management-system/pkg/response"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
+
+func init() {
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		v.RegisterValidation("lowercase_nospace", validateLowercaseNoSpace)
+	}
+}
+
+// validateLowercaseNoSpace validates that a string is lowercase and has no spaces
+func validateLowercaseNoSpace(fl validator.FieldLevel) bool {
+	value := fl.Field().String()
+	if value == "" {
+		return true
+	}
+	// Check: lowercase only and no spaces
+	matched, _ := regexp.MatchString(`^[a-z0-9_-]+$`, value)
+	return matched
+}
 
 type ValidateMessage struct {
 	Field   string `json:"field"`
@@ -38,6 +57,8 @@ func mapValidateMessage(fe validator.FieldError) string {
 		return "Should be less than " + fe.Param()
 	case "gtefield":
 		return "Should be greater than " + fe.Param()
+	case "lowercase_nospace":
+		return "Must be lowercase with no spaces (only a-z, 0-9, underscore, and hyphen allowed)"
 	}
 
 	return "Invalid value"
