@@ -292,6 +292,26 @@ func (h *HandlerEvent) GetSubmissionsByEventID(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, res)
 }
 
+func (h *HandlerEvent) GetAllSubmissions(ctx *gin.Context) {
+	logId := utils.GenerateLogId(ctx)
+	logPrefix := fmt.Sprintf("[%s][EventHandler][GetAllSubmissions]", logId)
+
+	params, _ := filter.GetBaseParams(ctx, "created_at", "desc", 10)
+	params.Filters = filter.WhitelistFilter(params.Filters, []string{"event_id", "vendor_id", "is_shortlisted", "is_winner"})
+
+	data, totalData, err := h.Service.GetAllSubmissions(params)
+	if err != nil {
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetAllSubmissions; ERROR: %s;", logPrefix, err))
+		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
+		res.Error = err.Error()
+		ctx.JSON(http.StatusInternalServerError, res)
+		return
+	}
+
+	res := response.PaginationResponse(http.StatusOK, int(totalData), params.Page, params.Limit, logId, data)
+	ctx.JSON(http.StatusOK, res)
+}
+
 func (h *HandlerEvent) GetMySubmissions(ctx *gin.Context) {
 	authData := utils.GetAuthData(ctx)
 	userId := utils.InterfaceString(authData["user_id"])

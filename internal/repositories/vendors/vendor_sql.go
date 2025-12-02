@@ -41,11 +41,13 @@ func (r *repo) UpdateVendor(m domainvendors.Vendor) error {
 }
 
 func (r *repo) GetAllVendors(params filter.BaseParams) (ret []domainvendors.Vendor, totalData int64, err error) {
-	query := r.DB.Model(&domainvendors.Vendor{}).Debug()
+	query := r.DB.Model(&domainvendors.Vendor{}).
+		Joins("LEFT JOIN vendor_profiles ON vendors.id = vendor_profiles.vendor_id").
+		Debug()
 
 	if params.Search != "" {
 		searchPattern := "%" + params.Search + "%"
-		query = query.Where("LOWER(id) LIKE LOWER(?)", searchPattern)
+		query = query.Where("LOWER(vendor_profiles.vendor_name) LIKE LOWER(?)", searchPattern)
 	}
 
 	for key, value := range params.Filters {
@@ -58,11 +60,11 @@ func (r *repo) GetAllVendors(params filter.BaseParams) (ret []domainvendors.Vend
 			if v == "" {
 				continue
 			}
-			query = query.Where(fmt.Sprintf("%s = ?", key), v)
+			query = query.Where(fmt.Sprintf("vendors.%s = ?", key), v)
 		case []string, []int:
-			query = query.Where(fmt.Sprintf("%s IN ?", key), v)
+			query = query.Where(fmt.Sprintf("vendors.%s IN ?", key), v)
 		default:
-			query = query.Where(fmt.Sprintf("%s = ?", key), v)
+			query = query.Where(fmt.Sprintf("vendors.%s = ?", key), v)
 		}
 	}
 
@@ -81,7 +83,7 @@ func (r *repo) GetAllVendors(params filter.BaseParams) (ret []domainvendors.Vend
 			return nil, 0, fmt.Errorf("invalid orderBy column: %s", params.OrderBy)
 		}
 
-		query = query.Order(fmt.Sprintf("%s %s", params.OrderBy, params.OrderDirection))
+		query = query.Order(fmt.Sprintf("vendors.%s %s", params.OrderBy, params.OrderDirection))
 	}
 
 	if err := query.Offset(params.Offset).Limit(params.Limit).Find(&ret).Error; err != nil {

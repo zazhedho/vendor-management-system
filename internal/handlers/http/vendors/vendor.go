@@ -90,7 +90,7 @@ func (h *HandlerVendor) GetAllVendors(ctx *gin.Context) {
 	logPrefix := fmt.Sprintf("[%s][VendorHandler][GetAllVendors]", logId)
 
 	params, _ := filter.GetBaseParams(ctx, "created_at", "desc", 10)
-	params.Filters = filter.WhitelistFilter(params.Filters, []string{"status"})
+	params.Filters = filter.WhitelistFilter(params.Filters, []string{"status", "vendor_type"})
 
 	vendors, totalData, err := h.Service.GetAllVendors(params)
 	if err != nil {

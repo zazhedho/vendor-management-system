@@ -25,6 +25,7 @@ type ServiceEventInterface interface {
 	SubmitPitch(eventId, vendorId string, req dto.SubmitPitchRequest) (domainevents.EventSubmission, error)
 	SubmitPitchWithFile(ctx context.Context, eventId, vendorId string, req dto.SubmitPitchRequest, fileHeader *multipart.FileHeader, fileType, caption string) (domainevents.EventSubmission, error)
 	GetSubmissionsByEventID(eventId string) ([]domainevents.EventSubmission, error)
+	GetAllSubmissions(params filter.BaseParams) ([]map[string]interface{}, int64, error)
 	GetMySubmissions(vendorId string) ([]domainevents.EventSubmission, error)
 	ScoreSubmission(submissionId string, req dto.ScoreSubmissionRequest) (domainevents.EventSubmission, error)
 	ShortlistSubmission(submissionId string, isShortlisted bool) (domainevents.EventSubmission, error)

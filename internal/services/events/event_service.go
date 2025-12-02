@@ -219,6 +219,35 @@ func (s *ServiceEvent) GetSubmissionsByEventID(eventId string) ([]domainevents.E
 	return s.EventRepo.GetSubmissionsByEventID(eventId)
 }
 
+func (s *ServiceEvent) GetAllSubmissions(params filter.BaseParams) ([]map[string]interface{}, int64, error) {
+	submissions, total, err := s.EventRepo.GetAllSubmissions(params)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	result := make([]map[string]interface{}, len(submissions))
+	for i, sub := range submissions {
+		result[i] = map[string]interface{}{
+			"id":                   sub.Id,
+			"event_id":             sub.EventID,
+			"event":                sub.Event,
+			"vendor_id":            sub.VendorID,
+			"vendor":               sub.Vendor,
+			"proposal_details":     sub.ProposalDetails,
+			"additional_materials": sub.AdditionalMaterials,
+			"score":                sub.Score,
+			"comments":             sub.Comments,
+			"is_shortlisted":       sub.IsShortlisted,
+			"is_winner":            sub.IsWinner,
+			"files":                sub.File,
+			"created_at":           sub.CreatedAt,
+			"updated_at":           sub.UpdatedAt,
+		}
+	}
+
+	return result, total, nil
+}
+
 func (s *ServiceEvent) GetMySubmissions(vendorId string) ([]domainevents.EventSubmission, error) {
 	return s.EventRepo.GetSubmissionsByVendorID(vendorId)
 }

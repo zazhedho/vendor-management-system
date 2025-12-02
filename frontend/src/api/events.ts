@@ -92,6 +92,11 @@ export const eventsApi = {
     return response.data;
   },
 
+  getAllSubmissions: async (params?: { page?: number; limit?: number; search?: string }) => {
+    const response = await apiClient.get<PaginatedResponse<EventSubmission>>('/event/submissions', { params });
+    return response.data;
+  },
+
   scoreSubmission: async (submissionId: string, score: number, comments?: string) => {
     const response = await apiClient.put<ApiResponse<EventSubmission>>(`/event/submission/${submissionId}/score`, {
       score,

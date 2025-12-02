@@ -156,10 +156,21 @@ export const VendorProfile: React.FC = () => {
 
   useEffect(() => {
     if (!user || !showListView) return;
-    if (currentPage > 1 || searchTerm) {
+    if (currentPage > 1) {
       fetchVendorsList();
     }
-  }, [currentPage, searchTerm]);
+  }, [currentPage]);
+
+  const handleSearch = () => {
+    setCurrentPage(1);
+    fetchVendorsList();
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   useEffect(() => {
     if (selectedProvinceCode) {
@@ -931,9 +942,14 @@ export const VendorProfile: React.FC = () => {
                 placeholder="Search vendors..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyPress={handleKeyPress}
                 className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
               />
             </div>
+            <Button onClick={handleSearch}>
+              <Search size={16} className="mr-2" />
+              Search
+            </Button>
           </div>
         </Card>
 

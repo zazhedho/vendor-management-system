@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { eventsApi } from '../../api/events';
-import { EventSubmission, Event } from '../../types';
-import { FileText, Award, Trophy, Star, Eye, Filter } from 'lucide-react';
+import { EventSubmission } from '../../types';
+import { FileText, Award, Trophy, Star, Eye, Search } from 'lucide-react';
 import { Button, Card, Badge, Spinner } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
@@ -13,29 +13,36 @@ export const SubmissionList: React.FC = () => {
   const navigate = useNavigate();
   const { hasRole } = useAuth();
   const [submissions, setSubmissions] = useState<EventSubmission[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [scoreModalData, setScoreModalData] = useState<{ submissionId: string; currentScore?: number } | null>(null);
   const [winnerModalData, setWinnerModalData] = useState<{ eventId: string; eventTitle: string } | null>(null);
 
   const isVendor = hasRole(['vendor']);
-  const isClient = hasRole(['client']);
   const canManage = hasRole(['admin', 'superadmin', 'client']);
 
   useEffect(() => {
     if (isVendor) {
       fetchVendorSubmissions();
     } else if (canManage) {
-      fetchEvents();
+      fetchAllSubmissions();
     }
-  }, []);
+  }, [currentPage]);
 
-  useEffect(() => {
-    if (canManage && selectedEvent) {
-      fetchEventSubmissions(selectedEvent);
+  const handleSearch = () => {
+    setCurrentPage(1);
+    if (canManage) {
+      fetchAllSubmissions();
     }
-  }, [selectedEvent]);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   const fetchVendorSubmissions = async () => {
     setIsLoading(true);
@@ -51,33 +58,20 @@ export const SubmissionList: React.FC = () => {
     }
   };
 
-  const fetchEvents = async () => {
+  const fetchAllSubmissions = async () => {
     setIsLoading(true);
     try {
-      const response = await eventsApi.getAll({ limit: 100 });
-      if (response.status && response.data) {
-        setEvents(response.data);
-        // Auto-select first event
-        if (response.data.length > 0) {
-          setSelectedEvent(response.data[0].id);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch events:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchEventSubmissions = async (eventId: string) => {
-    setIsLoading(true);
-    try {
-      const response = await eventsApi.getSubmissions(eventId);
+      const response = await eventsApi.getAllSubmissions({
+        page: currentPage,
+        limit: 10,
+        search: searchTerm
+      });
       if (response.status && response.data) {
         setSubmissions(response.data);
+        setTotalPages(response.total_pages || 1);
       }
     } catch (error) {
-      console.error('Failed to fetch event submissions:', error);
+      console.error('Failed to fetch submissions:', error);
     } finally {
       setIsLoading(false);
     }
@@ -90,8 +84,8 @@ export const SubmissionList: React.FC = () => {
         toast.success(currentStatus ? 'Removed from shortlist' : 'Added to shortlist');
         if (isVendor) {
           fetchVendorSubmissions();
-        } else if (selectedEvent) {
-          fetchEventSubmissions(selectedEvent);
+        } else {
+          fetchAllSubmissions();
         }
       }
     } catch (error) {
@@ -151,50 +145,23 @@ export const SubmissionList: React.FC = () => {
         </div>
       </div>
 
-      {/* Admin Event Filter */}
+      {/* Admin Search */}
       {canManage && (
         <Card>
           <div className="flex items-center gap-4">
-            <Filter size={20} className="text-secondary-500" />
-            <select
-              value={selectedEvent}
-              onChange={(e) => setSelectedEvent(e.target.value)}
+            <Search size={20} className="text-secondary-500" />
+            <input
+              type="text"
+              placeholder="Search by event name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyPress={handleKeyPress}
               className="flex-1 px-4 py-2 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            >
-              <option value="">Select Event</option>
-              {events.map((event) => (
-                <option key={event.id} value={event.id}>
-                  {event.title} - {event.status}
-                </option>
-              ))}
-            </select>
-            {isClient && selectedEvent && (() => {
-              const event = events.find(e => e.id === selectedEvent);
-              const hasWinner = event?.winner_vendor_id;
-              const winnerVendorSuspended = event?.winner_vendor?.status === 'suspended';
-              
-              if (hasWinner && !winnerVendorSuspended) {
-                return (
-                  <Badge variant="success" className="flex items-center gap-1 px-3 py-2">
-                    <Trophy size={14} />
-                    Winner Selected
-                  </Badge>
-                );
-              }
-              return (
-                <Button
-                  variant={winnerVendorSuspended ? "secondary" : "primary"}
-                  onClick={() => {
-                    if (event) {
-                      setWinnerModalData({ eventId: selectedEvent, eventTitle: event.title });
-                    }
-                  }}
-                >
-                  <Trophy size={16} className="mr-2" />
-                  {winnerVendorSuspended ? 'Change Winner' : 'Select Winner'}
-                </Button>
-              );
-            })()}
+            />
+            <Button onClick={handleSearch}>
+              <Search size={16} className="mr-2" />
+              Search
+            </Button>
           </div>
         </Card>
       )}
@@ -208,9 +175,7 @@ export const SubmissionList: React.FC = () => {
           <p className="text-secondary-600 mb-4">
             {isVendor
               ? "You haven't submitted any pitches to events yet."
-              : selectedEvent
-                ? 'No vendors have submitted pitches for this event yet.'
-                : 'Please select an event to view submissions.'}
+              : 'No submissions found. Try adjusting your search.'}
           </p>
           {isVendor && <Button onClick={() => navigate('/events')}>Browse Events</Button>}
         </Card>
@@ -318,6 +283,33 @@ export const SubmissionList: React.FC = () => {
         </div>
       )}
 
+      {/* Pagination */}
+      {canManage && totalPages > 1 && (
+        <Card>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-secondary-500">Page {currentPage} of {totalPages}</span>
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => p - 1)}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(p => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Score Modal */}
       {scoreModalData && (
         <ScoreSubmissionModal
@@ -328,8 +320,8 @@ export const SubmissionList: React.FC = () => {
             setScoreModalData(null);
             if (isVendor) {
               fetchVendorSubmissions();
-            } else if (selectedEvent) {
-              fetchEventSubmissions(selectedEvent);
+            } else {
+              fetchAllSubmissions();
             }
           }}
         />
@@ -344,9 +336,7 @@ export const SubmissionList: React.FC = () => {
           onClose={() => setWinnerModalData(null)}
           onSuccess={() => {
             setWinnerModalData(null);
-            if (selectedEvent) {
-              fetchEventSubmissions(selectedEvent);
-            }
+            fetchAllSubmissions();
           }}
         />
       )}
