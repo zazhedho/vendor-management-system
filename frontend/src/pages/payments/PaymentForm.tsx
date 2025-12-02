@@ -267,7 +267,7 @@ export const PaymentForm: React.FC = () => {
                 name="amount"
                 value={formData.amount}
                 onChange={handleChange}
-                placeholder="0"
+                placeholder="Enter payment amount"
                 step="0.01"
                 min="0"
                 required

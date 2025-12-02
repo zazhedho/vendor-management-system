@@ -91,7 +91,10 @@ func (r *repo) GetAllPayments(params filter.BaseParams) (ret []domainpayments.Pa
 		query = query.Order(fmt.Sprintf("%s %s", params.OrderBy, params.OrderDirection))
 	}
 
-	if err := query.Offset(params.Offset).Limit(params.Limit).Find(&ret).Error; err != nil {
+	if err := query.Offset(params.Offset).Limit(params.Limit).
+		Preload("Vendor").
+		Preload("Vendor.Profile").
+		Find(&ret).Error; err != nil {
 		return nil, 0, err
 	}
 

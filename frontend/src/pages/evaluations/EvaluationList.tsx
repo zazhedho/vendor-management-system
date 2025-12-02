@@ -5,7 +5,6 @@ import { Evaluation } from '../../types';
 import { Plus, Search, Star, Image, Upload, Award, Eye } from 'lucide-react';
 import { Button, Card, Table, Badge, ActionMenu } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
-import { toast } from 'react-toastify';
 
 export const EvaluationList: React.FC = () => {
   const navigate = useNavigate();

@@ -97,6 +97,14 @@ export const PaymentList: React.FC = () => {
       )
     },
     {
+      header: 'Vendor',
+      accessor: (payment: Payment) => (
+        <span className="font-semibold text-secondary-900">
+          {payment.vendor?.profile?.vendor_name || '-'}
+        </span>
+      )
+    },
+    {
       header: 'Amount',
       accessor: (payment: Payment) => (
         <span className="font-semibold text-secondary-900">{formatCurrency(payment.amount)}</span>

@@ -4,15 +4,16 @@ import "time"
 
 type CreateVendorRequest struct {
 	UserID     string `json:"user_id" binding:"required,uuid"`
-	VendorType string `json:"vendor_type" binding:"required,max=100"`
+	VendorType string `json:"vendor_type" binding:"required,oneof=company individual"`
 }
 
 type UpdateVendorRequest struct {
-	VendorType string `json:"vendor_type" binding:"omitempty,max=100"`
+	VendorType string `json:"vendor_type" binding:"omitempty,oneof=company individual"`
 	Status     string `json:"status" binding:"omitempty,oneof=pending verified rejected active suspended"`
 }
 
 type VendorProfileRequest struct {
+	VendorType    string `json:"vendor_type" binding:"omitempty,oneof=company individual"`
 	VendorName    string `json:"vendor_name" binding:"required,min=3,max=255"`
 	Email         string `json:"email" binding:"required,email"`
 	Telephone     string `json:"telephone" binding:"omitempty,max=20"`

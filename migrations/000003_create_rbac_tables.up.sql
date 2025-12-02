@@ -101,7 +101,7 @@ INSERT INTO menu_items (id, name, display_name, path, icon, order_index) VALUES
     (gen_random_uuid(), 'profile', 'Profile', '/profile', 'bi-person-circle', 2),
     (gen_random_uuid(), 'vendor_profile', 'Vendor Profile', '/vendor/profile', 'bi-building', 3),
     (gen_random_uuid(), 'vendor_submissions', 'My Submissions', '/vendor/submissions', 'bi-file-earmark-text', 4),
-    (gen_random_uuid(), 'events', 'Events', '/events', 'bi-calendar-event', 5),
+    (gen_random_uuid(), 'events', 'Pitching Events', '/events', 'bi-calendar-event', 5),
     (gen_random_uuid(), 'evaluations', 'Evaluations', '/evaluations', 'bi-star', 6),
     (gen_random_uuid(), 'payments', 'Payments', '/payments', 'bi-credit-card', 7),
     (gen_random_uuid(), 'users', 'Users', '/users', 'bi-people', 900),

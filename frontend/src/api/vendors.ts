@@ -12,18 +12,8 @@ export const vendorsApi = {
     return response.data;
   },
 
-  create: async (data: { user_id: string; vendor_type: string; status?: string }) => {
-    const response = await apiClient.post<ApiResponse<Vendor>>('/vendor', data);
-    return response.data;
-  },
-
-  update: async (id: string, data: Partial<Vendor>) => {
-    const response = await apiClient.put<ApiResponse<Vendor>>(`/vendor/${id}`, data);
-    return response.data;
-  },
-
   delete: async (id: string) => {
-    const response = await apiClient.delete<ApiResponse>(`/vendor/${id}`);
+    const response = await apiClient.delete<ApiResponse>(`/vendors/${id}`);
     return response.data;
   },
 

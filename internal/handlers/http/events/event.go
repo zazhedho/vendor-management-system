@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"reflect"
 
+	domainevents "vendor-management-system/internal/domain/events"
 	"vendor-management-system/internal/dto"
 	interfaceevents "vendor-management-system/internal/interfaces/events"
 	interfacevendors "vendor-management-system/internal/interfaces/vendors"
@@ -62,6 +63,8 @@ func (h *HandlerEvent) CreateEvent(ctx *gin.Context) {
 }
 
 func (h *HandlerEvent) GetEventByID(ctx *gin.Context) {
+	authData := utils.GetAuthData(ctx)
+	userRole := utils.InterfaceString(authData["role"])
 	logId := utils.GenerateLogId(ctx)
 	logPrefix := fmt.Sprintf("[%s][EventHandler][GetEventByID]", logId)
 
@@ -85,11 +88,21 @@ func (h *HandlerEvent) GetEventByID(ctx *gin.Context) {
 		return
 	}
 
+	// Block draft events for vendors
+	if userRole == "vendor" && data.Status == "draft" {
+		res := response.Response(http.StatusNotFound, messages.MsgNotFound, logId, nil)
+		res.Error = response.Errors{Code: http.StatusNotFound, Message: "event not found"}
+		ctx.JSON(http.StatusNotFound, res)
+		return
+	}
+
 	res := response.Response(http.StatusOK, "success", logId, data)
 	ctx.JSON(http.StatusOK, res)
 }
 
 func (h *HandlerEvent) GetAllEvents(ctx *gin.Context) {
+	authData := utils.GetAuthData(ctx)
+	userRole := utils.InterfaceString(authData["role"])
 	logId := utils.GenerateLogId(ctx)
 	logPrefix := fmt.Sprintf("[%s][EventHandler][GetAllEvents]", logId)
 
@@ -103,6 +116,18 @@ func (h *HandlerEvent) GetAllEvents(ctx *gin.Context) {
 		res.Error = err.Error()
 		ctx.JSON(http.StatusInternalServerError, res)
 		return
+	}
+
+	// Filter out draft events for vendors
+	if userRole == "vendor" {
+		var filteredEvents []domainevents.Event
+		for _, event := range events {
+			if event.Status != utils.EventDraft {
+				filteredEvents = append(filteredEvents, event)
+			}
+		}
+		events = filteredEvents
+		totalData = int64(len(filteredEvents))
 	}
 
 	res := response.PaginationResponse(http.StatusOK, int(totalData), params.Page, params.Limit, logId, events)

@@ -85,22 +85,33 @@ func (s *ServiceVendor) CreateOrUpdateVendorProfile(userId string, req dto.Vendo
 	vendor, err := s.VendorRepo.GetVendorByUserID(userId)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// Create vendor if not exists - vendor_type will be set later or default to empty
+			// Create vendor if not exists
 			now := time.Now()
 			vendor = domainvendors.Vendor{
-				Id:        utils.CreateUUID(),
-				UserId:    userId,
-				Status:    utils.VendorPending,
-				CreatedAt: now,
-				CreatedBy: userId,
-				UpdatedAt: now,
-				UpdatedBy: userId,
+				Id:         utils.CreateUUID(),
+				UserId:     userId,
+				VendorType: req.VendorType,
+				Status:     utils.VendorPending,
+				CreatedAt:  now,
+				CreatedBy:  userId,
+				UpdatedAt:  now,
+				UpdatedBy:  userId,
 			}
 			if err := s.VendorRepo.CreateVendor(vendor); err != nil {
 				return nil, err
 			}
 		} else {
 			return nil, err
+		}
+	} else {
+		// Update vendor_type if provided
+		if req.VendorType != "" && vendor.VendorType != req.VendorType {
+			vendor.VendorType = req.VendorType
+			vendor.UpdatedAt = time.Now()
+			vendor.UpdatedBy = userId
+			if err := s.VendorRepo.UpdateVendor(vendor); err != nil {
+				return nil, err
+			}
 		}
 	}
 

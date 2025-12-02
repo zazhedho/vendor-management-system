@@ -4,9 +4,19 @@ import { vendorsApi } from '../../api/vendors';
 import { Vendor } from '../../types';
 import { Plus, Search, Eye, Edit, Trash2 } from 'lucide-react';
 import { Button, Card, Table, Badge, ConfirmModal, ActionMenu } from '../../components/ui';
+import { useAuth } from '../../context/AuthContext';
 
 export const VendorList: React.FC = () => {
   const navigate = useNavigate();
+  const { hasRole, user } = useAuth();
+  const isSuperAdmin = hasRole(['superadmin']);
+  
+  console.log('=== VendorList Debug ===');
+  console.log('User:', user);
+  console.log('User role:', user?.role);
+  console.log('hasRole result:', isSuperAdmin);
+  console.log('========================');
+  
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -104,6 +114,7 @@ export const VendorList: React.FC = () => {
               icon: <Trash2 size={14} />,
               onClick: () => setDeleteId(vendor.id),
               variant: 'danger',
+              hidden: !isSuperAdmin,
             },
           ]}
         />
@@ -118,12 +129,14 @@ export const VendorList: React.FC = () => {
           <h1 className="text-2xl font-bold text-secondary-900">Vendors</h1>
           <p className="text-secondary-500">Manage your vendor database</p>
         </div>
-        <Button
-          onClick={() => navigate('/vendors/new')}
-          leftIcon={<Plus size={20} />}
-        >
-          Add Vendor
-        </Button>
+        {isSuperAdmin && (
+          <Button
+            onClick={() => navigate('/vendors/new')}
+            leftIcon={<Plus size={20} />}
+          >
+            Add Vendor
+          </Button>
+        )}
       </div>
 
       <Card className="p-4">

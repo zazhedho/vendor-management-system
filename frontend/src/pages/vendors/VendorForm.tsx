@@ -180,45 +180,33 @@ export const VendorForm: React.FC = () => {
   const handleSubmit = async () => {
     setIsLoading(true);
     try {
-      let vendorId = id;
+      // Create/Update Profile (akan auto create vendor jika belum ada)
+      const profileSubmitData = {
+        ...profileData,
+        vendor_type: vendorData.vendor_type,
+        bank_account_number: profileData.account_number,
+        bank_account_name: profileData.account_holder_name,
+      };
 
-      // 1. Create/Update Vendor
-      if (isEditMode && id) {
-        const response = await vendorsApi.update(id, vendorData);
-        if (!response.status) throw new Error(response.message || 'Failed to update vendor');
+      let response;
+      if (profileData.id) {
+        response = await vendorsApi.updateProfile(profileData.id, profileSubmitData);
       } else {
-        const response = await vendorsApi.create(vendorData);
-        if (!response.status) throw new Error(response.message || 'Failed to create vendor');
-        vendorId = response.data?.id;
+        response = await vendorsApi.createProfile(profileSubmitData);
       }
 
-      // 2. Create/Update Profile
-      if (vendorId) {
-        // Map frontend fields to backend DTO fields
-        const profileSubmitData = {
-          ...profileData,
-          vendor_id: vendorId,
-          bank_account_number: profileData.account_number,
-          bank_account_name: profileData.account_holder_name,
-        };
+      if (!response.status) throw new Error(response.message || 'Failed to save profile');
+      
+      const savedProfile = (response.data as any)?.profile || response.data;
+      if (savedProfile) setProfileData(savedProfile);
 
-        if (profileData.id) {
-          const response = await vendorsApi.updateProfile(profileData.id, profileSubmitData);
-          if (!response.status) throw new Error(response.message || 'Failed to update profile');
-        } else {
-          const response = await vendorsApi.createProfile(profileSubmitData);
-          if (!response.status) throw new Error(response.message || 'Failed to create profile');
-          if (response.data) setProfileData(response.data);
-        }
-      }
-
-      // 3. Upload Files
-      if (newFiles.length > 0 && profileData.id) {
+      // Upload Files
+      if (newFiles.length > 0 && savedProfile?.id) {
         let uploadedCount = 0;
         for (const fileData of newFiles) {
           try {
-            const response = await vendorsApi.uploadProfileFile(profileData.id, fileData.file, fileData.type);
-            if (response.status) uploadedCount++;
+            const fileResponse = await vendorsApi.uploadProfileFile(savedProfile.id, fileData.file, fileData.type);
+            if (fileResponse.status) uploadedCount++;
           } catch (e) { console.error(e); }
         }
         if (uploadedCount > 0) toast.success(`${uploadedCount} files uploaded`);
@@ -273,21 +261,19 @@ export const VendorForm: React.FC = () => {
                 placeholder="UUID"
               />
               <div>
-                <label className="block text-sm font-medium text-secondary-700 mb-1.5">Vendor Type</label>
+                <label className="block text-sm font-medium text-secondary-700 mb-1.5">
+                  Vendor Type <span className="text-danger-500">*</span>
+                </label>
                 <select
                   name="vendor_type"
                   value={vendorData.vendor_type}
                   onChange={handleVendorChange}
                   className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
+                  required
                 >
                   <option value="">Select Type</option>
-                  <option value="catering">Catering</option>
-                  <option value="decoration">Decoration</option>
-                  <option value="photography">Photography</option>
-                  <option value="entertainment">Entertainment</option>
-                  <option value="venue">Venue</option>
-                  <option value="transportation">Transportation</option>
-                  <option value="other">Other</option>
+                  <option value="company">Company</option>
+                  <option value="individual">Individual</option>
                 </select>
               </div>
               <Input
@@ -295,6 +281,7 @@ export const VendorForm: React.FC = () => {
                 name="vendor_name"
                 value={profileData.vendor_name}
                 onChange={handleProfileChange}
+                placeholder="Enter vendor company name"
                 required
               />
               <Input
@@ -303,6 +290,7 @@ export const VendorForm: React.FC = () => {
                 name="email"
                 value={profileData.email}
                 onChange={handleProfileChange}
+                placeholder="vendor@example.com"
                 required
               />
               <Input
@@ -310,24 +298,28 @@ export const VendorForm: React.FC = () => {
                 name="phone"
                 value={profileData.phone}
                 onChange={handleProfileChange}
+                placeholder="08123456789"
               />
               <Input
                 label="Telephone"
                 name="telephone"
                 value={profileData.telephone}
                 onChange={handleProfileChange}
+                placeholder="021-12345678"
               />
               <Input
                 label="Fax"
                 name="fax"
                 value={profileData.fax}
                 onChange={handleProfileChange}
+                placeholder="021-87654321"
               />
               <Input
                 label="Business Field"
                 name="business_field"
                 value={profileData.business_field}
                 onChange={handleProfileChange}
+                placeholder="e.g., Catering Services, Event Management"
                 className="md:col-span-2"
               />
             </div>
@@ -344,42 +336,49 @@ export const VendorForm: React.FC = () => {
                 name="province_id"
                 value={profileData.province_id}
                 onChange={handleProfileChange}
+                placeholder="e.g., 31"
               />
               <Input
                 label="Province Name"
                 name="province_name"
                 value={profileData.province_name}
                 onChange={handleProfileChange}
+                placeholder="e.g., DKI Jakarta"
               />
               <Input
                 label="City ID"
                 name="city_id"
                 value={profileData.city_id}
                 onChange={handleProfileChange}
+                placeholder="e.g., 3171"
               />
               <Input
                 label="City Name"
                 name="city_name"
                 value={profileData.city_name}
                 onChange={handleProfileChange}
+                placeholder="e.g., Jakarta Selatan"
               />
               <Input
                 label="District ID"
                 name="district_id"
                 value={profileData.district_id}
                 onChange={handleProfileChange}
+                placeholder="e.g., 317101"
               />
               <Input
                 label="District Name"
                 name="district_name"
                 value={profileData.district_name}
                 onChange={handleProfileChange}
+                placeholder="e.g., Kebayoran Baru"
               />
               <Input
                 label="Postal Code"
                 name="postal_code"
                 value={profileData.postal_code}
                 onChange={handleProfileChange}
+                placeholder="e.g., 12345"
               />
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-secondary-700 mb-1.5">Full Address</label>
@@ -388,6 +387,7 @@ export const VendorForm: React.FC = () => {
                   value={profileData.address}
                   onChange={handleProfileChange}
                   rows={4}
+                  placeholder="Enter complete address including street name, building number, etc."
                   className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
                 />
               </div>
@@ -406,6 +406,7 @@ export const VendorForm: React.FC = () => {
                   name="ktp_number"
                   value={profileData.ktp_number}
                   onChange={handleProfileChange}
+                  placeholder="16 digit KTP number"
                   maxLength={16}
                 />
                 <Input
@@ -413,12 +414,14 @@ export const VendorForm: React.FC = () => {
                   name="ktp_name"
                   value={profileData.ktp_name}
                   onChange={handleProfileChange}
+                  placeholder="Full name as on KTP"
                 />
                 <Input
                   label="NPWP Number"
                   name="npwp_number"
                   value={profileData.npwp_number}
                   onChange={handleProfileChange}
+                  placeholder="15 digit NPWP number"
                   maxLength={15}
                 />
                 <Input
@@ -426,12 +429,14 @@ export const VendorForm: React.FC = () => {
                   name="npwp_name"
                   value={profileData.npwp_name}
                   onChange={handleProfileChange}
+                  placeholder="Full name as on NPWP"
                 />
                 <Input
                   label="NIB Number"
                   name="nib_number"
                   value={profileData.nib_number}
                   onChange={handleProfileChange}
+                  placeholder="Business identification number"
                 />
               </div>
 
@@ -443,18 +448,21 @@ export const VendorForm: React.FC = () => {
                     name="bank_name"
                     value={profileData.bank_name}
                     onChange={handleProfileChange}
+                    placeholder="e.g., BCA, Mandiri"
                   />
                   <Input
                     label="Account Number"
                     name="account_number"
                     value={profileData.account_number}
                     onChange={handleProfileChange}
+                    placeholder="Bank account number"
                   />
                   <Input
                     label="Account Holder"
                     name="account_holder_name"
                     value={profileData.account_holder_name}
                     onChange={handleProfileChange}
+                    placeholder="Account holder name"
                   />
                 </div>
               </div>

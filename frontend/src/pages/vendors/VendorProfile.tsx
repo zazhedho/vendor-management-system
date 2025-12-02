@@ -16,7 +16,8 @@ import {
   CreditCard,
   User,
   AlertCircle,
-  Search
+  Search,
+  Plus
 } from 'lucide-react';
 import { Button, Card, Badge, Spinner, Input, ConfirmModal } from '../../components/ui';
 import { toast } from 'react-toastify';
@@ -84,6 +85,7 @@ export const VendorProfile: React.FC = () => {
   const [selectedCityCode, setSelectedCityCode] = useState('');
 
   const [formData, setFormData] = useState({
+    vendor_type: '',
     vendor_name: '',
     email: '',
     telephone: '',
@@ -132,6 +134,10 @@ export const VendorProfile: React.FC = () => {
   const [deleteFileId, setDeleteFileId] = useState<string | null>(null);
   const [isDeletingFile, setIsDeletingFile] = useState(false);
 
+  // Delete vendor modal
+  const [deleteVendorId, setDeleteVendorId] = useState<string | null>(null);
+  const [isDeletingVendor, setIsDeletingVendor] = useState(false);
+
   useEffect(() => {
     if (!user) return;
 
@@ -170,6 +176,10 @@ export const VendorProfile: React.FC = () => {
       setDistricts([]);
     }
   }, [selectedCityCode]);
+
+  useEffect(() => {
+    console.log('deleteVendorId changed:', deleteVendorId);
+  }, [deleteVendorId]);
 
   // Fetch vendors list for admin/superadmin/client
   const fetchVendorsList = async () => {
@@ -242,6 +252,7 @@ export const VendorProfile: React.FC = () => {
 
         if (profileData) {
           setFormData({
+            vendor_type: vendorData?.vendor_type || '',
             vendor_name: profileData.vendor_name || '',
             email: profileData.email || '',
             telephone: profileData.telephone || '',
@@ -404,6 +415,25 @@ export const VendorProfile: React.FC = () => {
     }
   };
 
+  const handleDeleteVendorConfirm = async () => {
+    if (!deleteVendorId) return;
+    setIsDeletingVendor(true);
+    try {
+      const response = await vendorsApi.delete(deleteVendorId);
+      if (response.status) {
+        toast.success('Vendor deleted successfully');
+        await fetchVendorsList();
+      } else {
+        toast.error('Failed to delete vendor');
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to delete vendor');
+    } finally {
+      setIsDeletingVendor(false);
+      setDeleteVendorId(null);
+    }
+  };
+
   const getStatusVariant = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'active': return 'success';
@@ -417,10 +447,26 @@ export const VendorProfile: React.FC = () => {
   const renderFormFields = () => (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-secondary-700 mb-1.5">
+            Vendor Type <span className="text-danger-500">*</span>
+          </label>
+          <select
+            value={formData.vendor_type}
+            onChange={(e) => setFormData({ ...formData, vendor_type: e.target.value })}
+            className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
+            required
+          >
+            <option value="">Select Type</option>
+            <option value="company">Company</option>
+            <option value="individual">Individual</option>
+          </select>
+        </div>
         <Input
           label="Vendor/Company Name"
           value={formData.vendor_name}
           onChange={(e) => setFormData({ ...formData, vendor_name: e.target.value })}
+          placeholder="Enter vendor or company name"
           leftIcon={<Building size={18} />}
           required
         />
@@ -428,6 +474,7 @@ export const VendorProfile: React.FC = () => {
           label="Business Field"
           value={formData.business_field}
           onChange={(e) => setFormData({ ...formData, business_field: e.target.value })}
+          placeholder="e.g., Catering, Event Management"
         />
       </div>
 
@@ -437,6 +484,7 @@ export const VendorProfile: React.FC = () => {
           type="email"
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          placeholder="vendor@example.com"
           leftIcon={<Mail size={18} />}
           required
         />
@@ -444,6 +492,7 @@ export const VendorProfile: React.FC = () => {
           label="Phone (Mobile)"
           value={formData.phone}
           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+          placeholder="08123456789"
           leftIcon={<Phone size={18} />}
         />
       </div>
@@ -453,12 +502,14 @@ export const VendorProfile: React.FC = () => {
           label="Telephone"
           value={formData.telephone}
           onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
+          placeholder="021-12345678"
           leftIcon={<Phone size={18} />}
         />
         <Input
           label="Fax"
           value={formData.fax}
           onChange={(e) => setFormData({ ...formData, fax: e.target.value })}
+          placeholder="021-87654321"
         />
       </div>
 
@@ -468,6 +519,7 @@ export const VendorProfile: React.FC = () => {
           label="Full Address"
           value={formData.address}
           onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+          placeholder="Enter complete address"
           leftIcon={<MapPin size={18} />}
         />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
@@ -565,12 +617,14 @@ export const VendorProfile: React.FC = () => {
             label="KTP Number"
             value={formData.ktp_number}
             onChange={(e) => setFormData({ ...formData, ktp_number: e.target.value })}
+            placeholder="16 digit KTP number"
             leftIcon={<CreditCard size={18} />}
           />
           <Input
             label="KTP Name"
             value={formData.ktp_name}
             onChange={(e) => setFormData({ ...formData, ktp_name: e.target.value })}
+            placeholder="Full name as on KTP"
             leftIcon={<User size={18} />}
           />
         </div>
@@ -583,11 +637,13 @@ export const VendorProfile: React.FC = () => {
             label="NPWP Number"
             value={formData.npwp_number}
             onChange={(e) => setFormData({ ...formData, npwp_number: e.target.value })}
+            placeholder="15 digit NPWP number"
           />
           <Input
             label="NPWP Name"
             value={formData.npwp_name}
             onChange={(e) => setFormData({ ...formData, npwp_name: e.target.value })}
+            placeholder="Full name as on NPWP"
           />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
@@ -595,19 +651,14 @@ export const VendorProfile: React.FC = () => {
             label="NPWP Address"
             value={formData.npwp_address}
             onChange={(e) => setFormData({ ...formData, npwp_address: e.target.value })}
+            placeholder="Enter NPWP address"
           />
-          <div>
-            <label className="block text-sm font-medium text-secondary-700 mb-1.5">Tax Status</label>
-            <select
-              value={formData.tax_status}
-              onChange={(e) => setFormData({ ...formData, tax_status: e.target.value })}
-              className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
-            >
-              <option value="">Select Tax Status</option>
-              <option value="PKP">PKP</option>
-              <option value="non-PKP">Non-PKP</option>
-            </select>
-          </div>
+          <Input
+            label="Tax Status"
+            value={formData.tax_status}
+            onChange={(e) => setFormData({ ...formData, tax_status: e.target.value })}
+            placeholder="e.g., PKP, Non-PKP"
+          />
           <Input
             label="NIB Number"
             value={formData.nib_number}
@@ -625,11 +676,13 @@ export const VendorProfile: React.FC = () => {
             label="Bank Name"
             value={formData.bank_name}
             onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
+            placeholder="e.g., BCA, Mandiri"
           />
           <Input
             label="Bank Branch"
             value={formData.bank_branch}
             onChange={(e) => setFormData({ ...formData, bank_branch: e.target.value })}
+            placeholder="e.g., Jakarta Pusat"
           />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
@@ -637,11 +690,13 @@ export const VendorProfile: React.FC = () => {
             label="Account Number"
             value={formData.account_number}
             onChange={(e) => setFormData({ ...formData, account_number: e.target.value })}
+            placeholder="Bank account number"
           />
           <Input
             label="Account Holder Name"
             value={formData.account_holder_name}
             onChange={(e) => setFormData({ ...formData, account_holder_name: e.target.value })}
+            placeholder="Account holder name"
           />
         </div>
       </div>
@@ -653,16 +708,19 @@ export const VendorProfile: React.FC = () => {
             label="Transaction Type"
             value={formData.transaction_type}
             onChange={(e) => setFormData({ ...formData, transaction_type: e.target.value })}
+            placeholder="e.g., B2B, B2C"
           />
           <Input
             label="Purch Group"
             value={formData.purch_group}
             onChange={(e) => setFormData({ ...formData, purch_group: e.target.value })}
+            placeholder="Purchase group code"
           />
           <Input
             label="Region/SO"
             value={formData.region_or_so}
             onChange={(e) => setFormData({ ...formData, region_or_so: e.target.value })}
+            placeholder="Region or sales office"
           />
         </div>
       </div>
@@ -674,17 +732,20 @@ export const VendorProfile: React.FC = () => {
             label="Contact Person Name"
             value={formData.contact_person}
             onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
+            placeholder="Contact person name"
           />
           <Input
             label="Contact Email"
             type="email"
             value={formData.contact_email}
             onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+            placeholder="contact@example.com"
           />
           <Input
             label="Contact Phone"
             value={formData.contact_phone}
             onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+            placeholder="08123456789"
           />
         </div>
       </div>
@@ -850,6 +911,14 @@ export const VendorProfile: React.FC = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-secondary-900">Vendor Profiles</h1>
+          {user?.role === 'superadmin' && (
+            <Button
+              onClick={() => navigate('/vendor/profile/new')}
+              leftIcon={<Plus size={20} />}
+            >
+              Add Vendor
+            </Button>
+          )}
         </div>
 
         {/* Search */}
@@ -887,25 +956,60 @@ export const VendorProfile: React.FC = () => {
                       <th className="text-left py-2.5 px-4 font-medium text-secondary-600">Phone</th>
                       <th className="text-left py-2.5 px-4 font-medium text-secondary-600">Type</th>
                       <th className="text-left py-2.5 px-4 font-medium text-secondary-600">Status</th>
+                      {user?.role === 'superadmin' && (
+                        <th className="text-right py-2.5 px-4 font-medium text-secondary-600">Actions</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-secondary-100">
                     {vendorList.map((item, index) => (
                       <tr
                         key={item?.vendor?.id || index}
-                        className="hover:bg-secondary-50 cursor-pointer"
-                        onClick={() => navigate(`/vendor/profile/${item?.vendor?.id}/detail`)}
+                        className="hover:bg-secondary-50"
                       >
-                        <td className="py-2.5 px-4">
+                        <td 
+                          className="py-2.5 px-4 cursor-pointer"
+                          onClick={() => navigate(`/vendor/profile/${item?.vendor?.id}/detail`)}
+                        >
                           <p className="font-medium text-secondary-900">{item?.profile?.vendor_name || '-'}</p>
                           <p className="text-xs text-secondary-500">{item?.profile?.city_name || '-'}, {item?.profile?.province_name || '-'}</p>
                         </td>
-                        <td className="py-2.5 px-4 text-secondary-700">{item?.profile?.email || '-'}</td>
-                        <td className="py-2.5 px-4 text-secondary-700">{item?.profile?.phone || '-'}</td>
-                        <td className="py-2.5 px-4 text-secondary-700 capitalize">{item?.vendor?.vendor_type || '-'}</td>
-                        <td className="py-2.5 px-4">
+                        <td 
+                          className="py-2.5 px-4 text-secondary-700 cursor-pointer"
+                          onClick={() => navigate(`/vendor/profile/${item?.vendor?.id}/detail`)}
+                        >{item?.profile?.email || '-'}</td>
+                        <td 
+                          className="py-2.5 px-4 text-secondary-700 cursor-pointer"
+                          onClick={() => navigate(`/vendor/profile/${item?.vendor?.id}/detail`)}
+                        >{item?.profile?.phone || '-'}</td>
+                        <td 
+                          className="py-2.5 px-4 text-secondary-700 capitalize cursor-pointer"
+                          onClick={() => navigate(`/vendor/profile/${item?.vendor?.id}/detail`)}
+                        >{item?.vendor?.vendor_type || '-'}</td>
+                        <td 
+                          className="py-2.5 px-4 cursor-pointer"
+                          onClick={() => navigate(`/vendor/profile/${item?.vendor?.id}/detail`)}
+                        >
                           <Badge variant={getStatusVariant(item?.vendor?.status || '')}>{item?.vendor?.status || 'pending'}</Badge>
                         </td>
+                        {user?.role === 'superadmin' && (
+                          <td className="py-2.5 px-4 text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                console.log('Delete clicked, vendor ID:', item?.vendor?.id);
+                                const vendorId = item?.vendor?.id || '';
+                                console.log('Setting deleteVendorId to:', vendorId);
+                                setDeleteVendorId(vendorId);
+                              }}
+                              className="text-danger-600 hover:bg-danger-50"
+                            >
+                              Delete
+                            </Button>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -923,6 +1027,17 @@ export const VendorProfile: React.FC = () => {
             </>
           )}
         </Card>
+
+        <ConfirmModal
+          show={!!deleteVendorId}
+          title="Delete Vendor"
+          message="Are you sure you want to delete this vendor? This action cannot be undone."
+          confirmText="Delete"
+          variant="danger"
+          isLoading={isDeletingVendor}
+          onConfirm={handleDeleteVendorConfirm}
+          onCancel={() => setDeleteVendorId(null)}
+        />
       </div>
     );
   }
@@ -1291,6 +1406,17 @@ export const VendorProfile: React.FC = () => {
         isLoading={isDeletingFile}
         onConfirm={handleDeleteFileConfirm}
         onCancel={() => setDeleteFileId(null)}
+      />
+
+      <ConfirmModal
+        show={!!deleteVendorId}
+        title="Delete Vendor"
+        message="Are you sure you want to delete this vendor? This action cannot be undone."
+        confirmText="Delete"
+        variant="danger"
+        isLoading={isDeletingVendor}
+        onConfirm={handleDeleteVendorConfirm}
+        onCancel={() => setDeleteVendorId(null)}
       />
     </div>
   );

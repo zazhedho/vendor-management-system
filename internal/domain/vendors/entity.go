@@ -13,7 +13,7 @@ func (Vendor) TableName() string {
 type Vendor struct {
 	Id         string `json:"id" gorm:"column:id;primaryKey"`
 	UserId     string `json:"user_id" gorm:"column:user_id"`
-	VendorType string `json:"vendor_type" gorm:"column:vendor_type;default:perusahaan"`
+	VendorType string `json:"vendor_type" gorm:"column:vendor_type;default:company"`
 	Status     string `json:"status" gorm:"column:status"` // pending, verified, rejected, active, suspended
 
 	Profile *VendorProfile `json:"profile,omitempty" gorm:"foreignKey:VendorId;references:Id"`

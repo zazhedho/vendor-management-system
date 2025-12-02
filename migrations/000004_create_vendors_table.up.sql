@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS vendors (
     id VARCHAR(36) PRIMARY KEY,
     user_id UUID NOT NULL,
 
-    vendor_type VARCHAR(50) NOT NULL DEFAULT 'perusahaan',
+    vendor_type VARCHAR(50) NOT NULL DEFAULT 'company',
     status vendor_status NOT NULL DEFAULT 'pending',
 
     verified_at TIMESTAMP NULL,
