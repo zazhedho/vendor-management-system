@@ -73,12 +73,54 @@ func (s *ServiceEvent) CreateEvent(userId string, req dto.CreateEventRequest) (d
 	return event, nil
 }
 
-func (s *ServiceEvent) GetEventByID(id string) (domainevents.Event, error) {
-	return s.EventRepo.GetEventByID(id)
+func (s *ServiceEvent) GetAllEvents(params filter.BaseParams) ([]domainevents.Event, int64, error) {
+	events, total, err := s.EventRepo.GetAllEvents(params)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Auto-update status for expired events
+	now := time.Now()
+	for i := range events {
+		// If end_date passed and status is still open/pending, change to closed
+		if events[i].EndDate.Before(now) && (events[i].Status == utils.EventOpen || events[i].Status == utils.EventPending) {
+			events[i].Status = utils.EventClosed
+			events[i].UpdatedAt = now
+			_ = s.EventRepo.UpdateEvent(events[i])
+		}
+		// If has winner, change to completed
+		if events[i].WinnerVendorID != nil && *events[i].WinnerVendorID != "" && events[i].Status != utils.EventCompleted && events[i].Status != utils.EventCancelled {
+			events[i].Status = utils.EventCompleted
+			events[i].UpdatedAt = now
+			_ = s.EventRepo.UpdateEvent(events[i])
+		}
+	}
+
+	return events, total, nil
 }
 
-func (s *ServiceEvent) GetAllEvents(params filter.BaseParams) ([]domainevents.Event, int64, error) {
-	return s.EventRepo.GetAllEvents(params)
+func (s *ServiceEvent) GetEventByID(id string) (domainevents.Event, error) {
+	event, err := s.EventRepo.GetEventByID(id)
+	if err != nil {
+		return domainevents.Event{}, err
+	}
+
+	// Auto-update status
+	now := time.Now()
+	// If end_date passed and status is still open/pending, change to closed
+	if event.EndDate.Before(now) && (event.Status == utils.EventOpen || event.Status == utils.EventPending) {
+		event.Status = utils.EventClosed
+		event.UpdatedAt = now
+		_ = s.EventRepo.UpdateEvent(event)
+	}
+	// If has winner, change to completed
+	if event.WinnerVendorID != nil && *event.WinnerVendorID != "" && event.Status != utils.EventCompleted && event.Status != utils.EventCancelled {
+		event.Status = utils.EventCompleted
+		event.UpdatedAt = now
+		_ = s.EventRepo.UpdateEvent(event)
+	}
+
+	return event, nil
 }
 
 func (s *ServiceEvent) UpdateEvent(id string, req dto.UpdateEventRequest) (domainevents.Event, error) {

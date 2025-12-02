@@ -185,7 +185,9 @@ export interface EventSubmission {
   event_id: string;
   vendor_id: string;
   proposal_details?: string;
+  additional_materials?: string;
   score?: number;
+  comments?: string;
   is_shortlisted: boolean;
   is_winner: boolean;
 

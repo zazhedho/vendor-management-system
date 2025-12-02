@@ -10,9 +10,9 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
 
         const variants = {
             default: 'bg-white border border-secondary-200 shadow-soft hover:shadow-soft-lg',
-            bordered: 'bg-white border-2 border-secondary-300 shadow-sm',
-            glass: 'bg-white/80 backdrop-blur-md border border-white/20 shadow-glass',
-            elevated: 'bg-white border border-secondary-100 shadow-lg hover:shadow-xl',
+            bordered: 'bg-white border border-secondary-200 shadow-sm',
+            glass: 'bg-white/70 backdrop-blur-xl border border-white/40 shadow-glass',
+            elevated: 'bg-white border border-secondary-100 shadow-lg hover:shadow-xl hover:-translate-y-1',
         };
 
         return (

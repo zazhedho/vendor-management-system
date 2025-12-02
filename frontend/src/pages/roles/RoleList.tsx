@@ -84,7 +84,7 @@ export const RoleList: React.FC = () => {
       )
     },
     {
-      header: '',
+      header: 'Actions',
       accessor: (role: Role) => (
         <ActionMenu
           items={[
@@ -108,10 +108,10 @@ export const RoleList: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-secondary-900">Roles Management</h1>
-          <p className="text-secondary-500">Manage system roles and permissions</p>
+          <p className="text-secondary-500 text-sm mt-1">Manage system roles and permissions</p>
         </div>
         <Button
           onClick={() => navigate('/roles/new')}
@@ -121,49 +121,55 @@ export const RoleList: React.FC = () => {
         </Button>
       </div>
 
-      <Card className="p-4">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search roles..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg border border-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-          />
+      <Card>
+        <div className="flex gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary-400" size={20} />
+            <input
+              type="text"
+              placeholder="Search roles..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
+            />
+          </div>
         </div>
       </Card>
 
-      <Table
-        data={roles}
-        columns={columns}
-        keyField="id"
-        isLoading={isLoading}
-        onRowClick={(role) => navigate(`/roles/${role.id}/edit`)}
-        emptyMessage="No roles found."
-      />
+      <Card className="p-0 overflow-hidden">
+        <Table
+          data={roles}
+          columns={columns}
+          keyField="id"
+          isLoading={isLoading}
+          onRowClick={(role) => navigate(`/roles/${role.id}/edit`)}
+          emptyMessage="No roles found."
+        />
 
-      {totalPages > 1 && (
-        <div className="flex justify-center gap-2">
-          <Button
-            variant="secondary"
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-          >
-            Previous
-          </Button>
-          <span className="flex items-center px-4 text-sm text-secondary-600">
-            Page {currentPage} of {totalPages}
-          </span>
-          <Button
-            variant="secondary"
-            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-          >
-            Next
-          </Button>
-        </div>
-      )}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-secondary-100 bg-secondary-50">
+            <span className="text-xs text-secondary-500">Page {currentPage} of {totalPages}</span>
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+      </Card>
 
       <ConfirmModal
         show={!!deleteId}

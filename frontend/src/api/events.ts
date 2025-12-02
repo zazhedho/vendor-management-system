@@ -33,6 +33,11 @@ export const eventsApi = {
     return response.data;
   },
 
+  updateStatus: async (id: string, status: string) => {
+    const response = await apiClient.put<ApiResponse<Event>>(`/event/${id}`, { status });
+    return response.data;
+  },
+
   // Event Files Management
   uploadFile: async (eventId: string, file: File, fileType: string, caption?: string) => {
     const formData = new FormData();

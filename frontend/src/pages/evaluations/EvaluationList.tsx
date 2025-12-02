@@ -100,7 +100,7 @@ export const EvaluationList: React.FC = () => {
       )
     },
     {
-      header: '',
+      header: 'Actions',
       accessor: (evaluation: Evaluation) => (
         <ActionMenu
           items={[

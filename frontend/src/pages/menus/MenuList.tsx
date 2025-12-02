@@ -79,7 +79,7 @@ export const MenuList: React.FC = () => {
       )
     },
     {
-      header: '',
+      header: 'Actions',
       accessor: (menu: Menu) => (
         <ActionMenu
           items={[

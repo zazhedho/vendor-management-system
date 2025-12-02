@@ -5,6 +5,7 @@ import { Event } from '../../types';
 import { Plus, Search, Eye, Edit, Trash2 } from 'lucide-react';
 import { Button, Card, Table, Badge, ConfirmModal, ActionMenu } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
+import { toast } from 'react-toastify';
 
 export const EventList: React.FC = () => {
   const navigate = useNavigate();
@@ -67,6 +68,17 @@ export const EventList: React.FC = () => {
     }
   };
 
+  const handleStatusChange = async (eventId: string, newStatus: string) => {
+    try {
+      await eventsApi.updateStatus(eventId, newStatus);
+      toast.success('Event status updated successfully');
+      fetchEvents();
+    } catch (error) {
+      console.error('Failed to update status:', error);
+      toast.error('Failed to update event status');
+    }
+  };
+
   const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
       case 'open': return 'success';
@@ -115,13 +127,29 @@ export const EventList: React.FC = () => {
     {
       header: 'Status',
       accessor: (event: Event) => (
-        <Badge variant={getStatusVariant(event.status)} className="capitalize">
-          {event.status}
-        </Badge>
+        isVendor ? (
+          <Badge variant={getStatusVariant(event.status)} className="capitalize">
+            {event.status}
+          </Badge>
+        ) : (
+          <select
+            value={event.status}
+            onChange={(e) => handleStatusChange(event.id, e.target.value)}
+            className="px-2 py-1 text-sm border border-secondary-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <option value="draft">Draft</option>
+            <option value="open">Open</option>
+            <option value="pending">Pending</option>
+            <option value="closed">Closed</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        )
       )
     },
     {
-      header: '',
+      header: 'Actions',
       accessor: (event: Event) => (
         <ActionMenu
           items={[

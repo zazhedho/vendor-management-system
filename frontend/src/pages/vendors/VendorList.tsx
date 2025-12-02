@@ -106,7 +106,7 @@ export const VendorList: React.FC = () => {
       accessor: (vendor: Vendor) => new Date(vendor.created_at).toLocaleDateString()
     },
     {
-      header: '',
+      header: 'Actions',
       accessor: (vendor: Vendor) => (
         <ActionMenu
           items={[

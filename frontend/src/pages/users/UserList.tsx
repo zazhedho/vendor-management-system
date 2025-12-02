@@ -107,7 +107,7 @@ export const UserList: React.FC = () => {
       accessor: (user: User) => new Date(user.created_at).toLocaleDateString()
     },
     {
-      header: '',
+      header: 'Actions',
       accessor: (user: User) => (
         <ActionMenu
           items={[

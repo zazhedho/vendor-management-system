@@ -17,9 +17,11 @@ import {
   User,
   AlertCircle,
   Search,
-  Plus
+  Plus,
+  Eye,
+  Trash2
 } from 'lucide-react';
-import { Button, Card, Badge, Spinner, Input, ConfirmModal } from '../../components/ui';
+import { Button, Card, Badge, Spinner, Input, ConfirmModal, ActionMenu } from '../../components/ui';
 import { toast } from 'react-toastify';
 
 // Helper to format file type with proper capitalization
@@ -456,76 +458,87 @@ export const VendorProfile: React.FC = () => {
   };
 
   const renderFormFields = () => (
-    <>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-secondary-700 mb-1.5">
-            Vendor Type <span className="text-danger-500">*</span>
-          </label>
-          <select
-            value={formData.vendor_type}
-            onChange={(e) => setFormData({ ...formData, vendor_type: e.target.value })}
-            className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
+    <div className="space-y-6">
+      {/* Company Information */}
+      <Card>
+        <h4 className="text-lg font-semibold text-secondary-900 mb-4 flex items-center gap-2">
+          <Building size={20} className="text-primary-600" />
+          Company Information
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-secondary-700 mb-1.5">
+              Vendor Type <span className="text-danger-500">*</span>
+            </label>
+            <select
+              value={formData.vendor_type}
+              onChange={(e) => setFormData({ ...formData, vendor_type: e.target.value })}
+              className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
+              required
+            >
+              <option value="">Select Type</option>
+              <option value="company">Company</option>
+              <option value="individual">Individual</option>
+            </select>
+          </div>
+          <Input
+            label="Vendor/Company Name"
+            value={formData.vendor_name}
+            onChange={(e) => setFormData({ ...formData, vendor_name: e.target.value })}
+            placeholder="Enter vendor or company name"
+            leftIcon={<Building size={18} />}
             required
-          >
-            <option value="">Select Type</option>
-            <option value="company">Company</option>
-            <option value="individual">Individual</option>
-          </select>
+          />
+          <Input
+            label="Business Field"
+            value={formData.business_field}
+            onChange={(e) => setFormData({ ...formData, business_field: e.target.value })}
+            placeholder="e.g., Catering, Event Management"
+          />
         </div>
-        <Input
-          label="Vendor/Company Name"
-          value={formData.vendor_name}
-          onChange={(e) => setFormData({ ...formData, vendor_name: e.target.value })}
-          placeholder="Enter vendor or company name"
-          leftIcon={<Building size={18} />}
-          required
-        />
-        <Input
-          label="Business Field"
-          value={formData.business_field}
-          onChange={(e) => setFormData({ ...formData, business_field: e.target.value })}
-          placeholder="e.g., Catering, Event Management"
-        />
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input
-          label="Email"
-          type="email"
-          value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          placeholder="vendor@example.com"
-          leftIcon={<Mail size={18} />}
-          required
-        />
-        <Input
-          label="Phone (Mobile)"
-          value={formData.phone}
-          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-          placeholder="08123456789"
-          leftIcon={<Phone size={18} />}
-        />
-      </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <Input
+            label="Email"
+            type="email"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            placeholder="vendor@example.com"
+            leftIcon={<Mail size={18} />}
+            required
+          />
+          <Input
+            label="Phone (Mobile)"
+            value={formData.phone}
+            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            placeholder="08123456789"
+            leftIcon={<Phone size={18} />}
+          />
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input
-          label="Telephone"
-          value={formData.telephone}
-          onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
-          placeholder="021-12345678"
-          leftIcon={<Phone size={18} />}
-        />
-        <Input
-          label="Fax"
-          value={formData.fax}
-          onChange={(e) => setFormData({ ...formData, fax: e.target.value })}
-          placeholder="021-87654321"
-        />
-      </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <Input
+            label="Telephone"
+            value={formData.telephone}
+            onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
+            placeholder="021-12345678"
+            leftIcon={<Phone size={18} />}
+          />
+          <Input
+            label="Fax"
+            value={formData.fax}
+            onChange={(e) => setFormData({ ...formData, fax: e.target.value })}
+            placeholder="021-87654321"
+          />
+        </div>
+      </Card>
 
-      <div className="border-t pt-4">
-        <h4 className="font-medium text-secondary-700 mb-4">Address</h4>
+      {/* Address */}
+      <Card>
+        <h4 className="text-lg font-semibold text-secondary-900 mb-4 flex items-center gap-2">
+          <MapPin size={20} className="text-primary-600" />
+          Address
+        </h4>
         <Input
           label="Full Address"
           value={formData.address}
@@ -552,7 +565,7 @@ export const VendorProfile: React.FC = () => {
                   district_name: ''
                 });
               }}
-              className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
+              className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
               required
             >
               <option value="">Select Province</option>
@@ -578,7 +591,7 @@ export const VendorProfile: React.FC = () => {
                 });
               }}
               disabled={!selectedProvinceCode}
-              className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none disabled:bg-secondary-100 disabled:cursor-not-allowed"
+              className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none disabled:bg-secondary-50 disabled:cursor-not-allowed transition-all"
               required
             >
               <option value="">Select City</option>
@@ -601,7 +614,7 @@ export const VendorProfile: React.FC = () => {
                 });
               }}
               disabled={!selectedCityCode}
-              className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none disabled:bg-secondary-100 disabled:cursor-not-allowed"
+              className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none disabled:bg-secondary-50 disabled:cursor-not-allowed transition-all"
               required
             >
               <option value="">Select District</option>
@@ -619,10 +632,14 @@ export const VendorProfile: React.FC = () => {
             placeholder="e.g. 12345"
           />
         </div>
-      </div>
+      </Card>
 
-      <div className="border-t pt-4">
-        <h4 className="font-medium text-secondary-700 mb-4">KTP Information</h4>
+      {/* Legal Information */}
+      <Card>
+        <h4 className="text-lg font-semibold text-secondary-900 mb-4 flex items-center gap-2">
+          <FileText size={20} className="text-primary-600" />
+          Legal Information
+        </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
             label="KTP Number"
@@ -639,11 +656,7 @@ export const VendorProfile: React.FC = () => {
             leftIcon={<User size={18} />}
           />
         </div>
-      </div>
-
-      <div className="border-t pt-4">
-        <h4 className="font-medium text-secondary-700 mb-4">NPWP & NIB Information</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
           <Input
             label="NPWP Number"
             value={formData.npwp_number}
@@ -678,10 +691,14 @@ export const VendorProfile: React.FC = () => {
             leftIcon={<FileText size={18} />}
           />
         </div>
-      </div>
+      </Card>
 
-      <div className="border-t pt-4">
-        <h4 className="font-medium text-secondary-700 mb-4">Bank Account</h4>
+      {/* Bank Account */}
+      <Card>
+        <h4 className="text-lg font-semibold text-secondary-900 mb-4 flex items-center gap-2">
+          <CreditCard size={20} className="text-primary-600" />
+          Bank Account
+        </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
             label="Bank Name"
@@ -710,10 +727,14 @@ export const VendorProfile: React.FC = () => {
             placeholder="Account holder name"
           />
         </div>
-      </div>
+      </Card>
 
-      <div className="border-t pt-4">
-        <h4 className="font-medium text-secondary-700 mb-4">Business Information</h4>
+      {/* Business Information */}
+      <Card>
+        <h4 className="text-lg font-semibold text-secondary-900 mb-4 flex items-center gap-2">
+          <Building size={20} className="text-primary-600" />
+          Business Details
+        </h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Input
             label="Transaction Type"
@@ -734,10 +755,14 @@ export const VendorProfile: React.FC = () => {
             placeholder="Region or sales office"
           />
         </div>
-      </div>
+      </Card>
 
-      <div className="border-t pt-4">
-        <h4 className="font-medium text-secondary-700 mb-4">Contact Person</h4>
+      {/* Contact Person */}
+      <Card>
+        <h4 className="text-lg font-semibold text-secondary-900 mb-4 flex items-center gap-2">
+          <User size={20} className="text-primary-600" />
+          Contact Person
+        </h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Input
             label="Contact Person Name"
@@ -759,143 +784,8 @@ export const VendorProfile: React.FC = () => {
             placeholder="08123456789"
           />
         </div>
-      </div>
-
-      {profile && (
-        <div className="border-t pt-4">
-          <h4 className="font-medium text-secondary-700 mb-4 flex items-center gap-2">
-            <FileText size={18} />
-            Document Uploads
-          </h4>
-
-          {/* Existing Files */}
-          {profile.files && profile.files.length > 0 && (
-            <div className="mb-6">
-              <p className="text-sm text-secondary-500 mb-3">Uploaded Documents</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {profile.files.map((file) => (
-                  <div
-                    key={file.id}
-                    className={`flex flex-col p-3 border rounded-lg ${file.status === 'rejected'
-                      ? 'border-danger-300 bg-danger-50'
-                      : file.status === 'approved'
-                        ? 'border-success-300 bg-success-50'
-                        : 'border-secondary-200 bg-secondary-50'
-                      }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <FileText className={`flex-shrink-0 ${file.status === 'rejected' ? 'text-danger-500' :
-                          file.status === 'approved' ? 'text-success-500' : 'text-primary-600'
-                          }`} size={20} />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-secondary-900 capitalize truncate">
-                            {formatFileType(file.file_type)}
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs capitalize ${file.status === 'rejected' ? 'text-danger-600' :
-                              file.status === 'approved' ? 'text-success-600' : 'text-warning-600'
-                              }`}>
-                              {file.status}
-                            </span>
-                            <span className="text-secondary-300">•</span>
-                            <a
-                              href={file.file_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-xs text-primary-600 hover:underline"
-                            >
-                              View File
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteFileClick(file.id)}
-                        className="text-danger-600 hover:bg-danger-50 flex-shrink-0"
-                        leftIcon={<AlertCircle size={14} />}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                    {file.status === 'rejected' && file.reject_reason && (
-                      <div className="mt-2 pt-2 border-t border-danger-200">
-                        <p className="text-xs text-danger-700">
-                          <span className="font-medium">Rejection Reason:</span> {file.reject_reason}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Upload Section */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-4">
-            {/* File Type Dropdown */}
-            <div className="flex-1">
-              <select
-                value={selectedFileType}
-                onChange={(e) => setSelectedFileType(e.target.value)}
-                className="w-full px-4 py-2.5 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              >
-                <option value="ktp">KTP</option>
-                <option value="npwp">NPWP</option>
-                <option value="bank_book">Bank Book</option>
-                <option value="nib">NIB</option>
-                <option value="siup">SIUP</option>
-                <option value="akta">Akta</option>
-                <option value="sppkp">SPPKP</option>
-                <option value="tdp">TDP</option>
-                <option value="skdp">SKDP</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-
-            {/* Custom Type Input (shown when "other" is selected) */}
-            {selectedFileType === 'other' && (
-              <div className="flex-1">
-                <Input
-                  type="text"
-                  value={customFileType}
-                  onChange={(e) => setCustomFileType(e.target.value)}
-                  placeholder="Enter custom document type..."
-                />
-              </div>
-            )}
-
-            {/* Upload Button */}
-            <label className={`cursor-pointer inline-flex items-center justify-center gap-2 px-4 py-2.5 font-medium rounded-lg transition-colors ${uploadingFile
-              ? 'bg-secondary-300 text-secondary-500 cursor-not-allowed'
-              : 'bg-primary-600 hover:bg-primary-700 text-white'
-              }`}>
-              {uploadingFile ? (
-                <Spinner size="sm" />
-              ) : (
-                <>
-                  <Upload size={16} />
-                  Select File
-                </>
-              )}
-              <input
-                type="file"
-                accept=".jpg,.jpeg,.png,.pdf"
-                onChange={handleFileUpload}
-                className="hidden"
-                disabled={uploadingFile}
-              />
-            </label>
-          </div>
-          <p className="text-xs text-secondary-500">
-            Accepted formats: JPG, PNG, PDF (Max 5MB per file)
-          </p>
-        </div>
-      )}
-    </>
+      </Card>
+    </div>
   );
 
   if (!user || isLoading) {
@@ -920,8 +810,11 @@ export const VendorProfile: React.FC = () => {
 
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-secondary-900">Vendor Profiles</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-secondary-900">Vendor Profiles</h1>
+            <p className="text-secondary-500 text-sm mt-1">Manage and view all registered vendors</p>
+          </div>
           {user?.role === 'superadmin' && (
             <Button
               onClick={() => navigate('/vendor/profile/new')}
@@ -983,26 +876,26 @@ export const VendorProfile: React.FC = () => {
                         key={item?.vendor?.id || index}
                         className="hover:bg-secondary-50"
                       >
-                        <td 
+                        <td
                           className="py-2.5 px-4 cursor-pointer"
                           onClick={() => navigate(`/vendor/profile/${item?.vendor?.id}/detail`)}
                         >
                           <p className="font-medium text-secondary-900">{item?.profile?.vendor_name || '-'}</p>
                           <p className="text-xs text-secondary-500">{item?.profile?.city_name || '-'}, {item?.profile?.province_name || '-'}</p>
                         </td>
-                        <td 
+                        <td
                           className="py-2.5 px-4 text-secondary-700 cursor-pointer"
                           onClick={() => navigate(`/vendor/profile/${item?.vendor?.id}/detail`)}
                         >{item?.profile?.email || '-'}</td>
-                        <td 
+                        <td
                           className="py-2.5 px-4 text-secondary-700 cursor-pointer"
                           onClick={() => navigate(`/vendor/profile/${item?.vendor?.id}/detail`)}
                         >{item?.profile?.phone || '-'}</td>
-                        <td 
+                        <td
                           className="py-2.5 px-4 text-secondary-700 capitalize cursor-pointer"
                           onClick={() => navigate(`/vendor/profile/${item?.vendor?.id}/detail`)}
                         >{item?.vendor?.vendor_type || '-'}</td>
-                        <td 
+                        <td
                           className="py-2.5 px-4 cursor-pointer"
                           onClick={() => navigate(`/vendor/profile/${item?.vendor?.id}/detail`)}
                         >
@@ -1010,20 +903,21 @@ export const VendorProfile: React.FC = () => {
                         </td>
                         {user?.role === 'superadmin' && (
                           <td className="py-2.5 px-4 text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                console.log('Delete clicked, vendor ID:', item?.vendor?.id);
-                                const vendorId = item?.vendor?.id || '';
-                                console.log('Setting deleteVendorId to:', vendorId);
-                                setDeleteVendorId(vendorId);
-                              }}
-                              className="text-danger-600 hover:bg-danger-50"
-                            >
-                              Delete
-                            </Button>
+                            <ActionMenu
+                              items={[
+                                {
+                                  label: 'View',
+                                  icon: <Eye size={14} />,
+                                  onClick: () => navigate(`/vendor/profile/${item?.vendor?.id}/detail`),
+                                },
+                                {
+                                  label: 'Delete',
+                                  icon: <Trash2 size={14} />,
+                                  onClick: () => setDeleteVendorId(item?.vendor?.id || ''),
+                                  variant: 'danger',
+                                },
+                              ]}
+                            />
                           </td>
                         )}
                       </tr>
@@ -1153,20 +1047,163 @@ export const VendorProfile: React.FC = () => {
       </Card>
 
       {isEditing ? (
-        <Card>
-          <h3 className="text-lg font-semibold mb-6">Edit Profile</h3>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {renderFormFields()}
+        <div className="max-w-4xl mx-auto">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <h3 className="text-2xl font-bold text-secondary-900">Edit Profile</h3>
+              <p className="text-secondary-500 text-sm mt-1">Update vendor information and documents</p>
+            </div>
             <div className="flex gap-3">
-              <Button type="submit" isLoading={isSaving} leftIcon={<Save size={16} />}>
-                Save Changes
-              </Button>
               <Button type="button" variant="secondary" onClick={() => navigate(getBackUrl())}>
                 Cancel
               </Button>
+              <Button type="submit" isLoading={isSaving} leftIcon={<Save size={16} />} onClick={handleSubmit}>
+                Save Changes
+              </Button>
+            </div>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {renderFormFields()}
+            {/* Document Upload Section */}
+            <Card>
+              <h4 className="text-lg font-semibold text-secondary-900 mb-4 flex items-center gap-2">
+                <FileText size={20} className="text-primary-600" />
+                Document Uploads
+              </h4>
+              {/* Existing Files */}
+              {profile && profile.files && profile.files.length > 0 && (
+                <div className="mb-6">
+                  <p className="text-sm text-secondary-500 mb-3">Uploaded Documents</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {profile.files.map((file) => (
+                      <div
+                        key={file.id}
+                        className={`flex flex-col p-3 border rounded-lg ${file.status === 'rejected'
+                          ? 'border-danger-300 bg-danger-50'
+                          : file.status === 'approved'
+                            ? 'border-success-300 bg-success-50'
+                            : 'border-secondary-200 bg-secondary-50'
+                          }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <FileText className={`flex-shrink-0 ${file.status === 'rejected' ? 'text-danger-500' :
+                              file.status === 'approved' ? 'text-success-500' : 'text-primary-600'
+                              }`} size={20} />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-secondary-900 capitalize truncate">
+                                {formatFileType(file.file_type)}
+                              </p>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-xs capitalize ${file.status === 'rejected' ? 'text-danger-600' :
+                                  file.status === 'approved' ? 'text-success-600' : 'text-warning-600'
+                                  }`}>
+                                  {file.status}
+                                </span>
+                                <span className="text-secondary-300">•</span>
+                                <a
+                                  href={file.file_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-xs text-primary-600 hover:underline"
+                                >
+                                  View File
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteFileClick(file.id)}
+                            className="text-danger-600 hover:bg-danger-50 flex-shrink-0"
+                            leftIcon={<AlertCircle size={14} />}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                        {file.status === 'rejected' && file.reject_reason && (
+                          <div className="mt-2 pt-2 border-t border-danger-200">
+                            <p className="text-xs text-danger-700">
+                              <span className="font-medium">Rejection Reason:</span> {file.reject_reason}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Upload Section */}
+              <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                {/* File Type Dropdown */}
+                <div className="flex-1">
+                  <select
+                    value={selectedFileType}
+                    onChange={(e) => setSelectedFileType(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  >
+                    <option value="ktp">KTP</option>
+                    <option value="npwp">NPWP</option>
+                    <option value="bank_book">Bank Book</option>
+                    <option value="nib">NIB</option>
+                    <option value="siup">SIUP</option>
+                    <option value="akta">Akta</option>
+                    <option value="sppkp">SPPKP</option>
+                    <option value="tdp">TDP</option>
+                    <option value="skdp">SKDP</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                {/* Custom Type Input (shown when "other" is selected) */}
+                {selectedFileType === 'other' && (
+                  <div className="flex-1">
+                    <Input
+                      type="text"
+                      value={customFileType}
+                      onChange={(e) => setCustomFileType(e.target.value)}
+                      placeholder="Enter custom document type..."
+                    />
+                  </div>
+                )}
+
+                {/* Upload Button */}
+                <label className={`cursor-pointer inline-flex items-center justify-center gap-2 px-4 py-2.5 font-medium rounded-lg transition-colors ${uploadingFile
+                  ? 'bg-secondary-300 text-secondary-500 cursor-not-allowed'
+                  : 'bg-primary-600 hover:bg-primary-700 text-white'
+                  }`}>
+                  {uploadingFile ? (
+                    <Spinner size="sm" />
+                  ) : (
+                    <>
+                      <Upload size={16} />
+                      Select File
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.pdf"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    disabled={uploadingFile}
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-secondary-500">
+                Accepted formats: JPG, PNG, PDF (Max 5MB per file)
+              </p>
+            </Card>
+
+            <div className="flex gap-3 pt-4">
+              <Button type="submit" isLoading={isSaving} leftIcon={<Save size={16} />} className="w-full sm:w-auto">
+                Save Changes
+              </Button>
             </div>
           </form>
-        </Card>
+        </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 space-y-4">

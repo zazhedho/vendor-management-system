@@ -127,7 +127,7 @@ export const PaymentList: React.FC = () => {
       )
     },
     {
-      header: '',
+      header: 'Actions',
       accessor: (payment: Payment) => (
         <ActionMenu
           items={[
