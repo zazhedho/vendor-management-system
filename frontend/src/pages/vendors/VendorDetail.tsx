@@ -73,6 +73,7 @@ export const VendorDetail: React.FC = () => {
             user_id: data.created_by || '',
             vendor_type: data.vendor_type || 'perusahaan',
             status: data.status || data.vendor_status || 'pending',
+            reject_reason: data.reject_reason,
             created_at: data.created_at,
             created_by: data.created_by,
             updated_at: data.updated_at,
@@ -219,6 +220,17 @@ export const VendorDetail: React.FC = () => {
               </Badge>
               <span className="text-secondary-300 capitalize text-sm">{vendor.vendor_type}</span>
             </div>
+            {vendor.status === 'rejected' && vendor.reject_reason && (
+              <div className="mt-2 bg-red-50 border border-red-200 rounded-lg p-3">
+                <div className="flex items-start gap-2">
+                  <XCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-semibold text-red-900 mb-1">Rejection Reason</p>
+                    <p className="text-xs text-red-700">{vendor.reject_reason}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </Card>
@@ -399,32 +411,41 @@ export const VendorDetail: React.FC = () => {
                 {profile.files && profile.files.length > 0 ? (
                   <div className="divide-y divide-secondary-100">
                     {profile.files.map((file) => (
-                      <div key={file.id} className="flex items-center justify-between py-2.5 px-4 hover:bg-secondary-50">
-                        <div className="flex items-center gap-3">
-                          {getFileStatusIcon(file.status)}
-                          <div>
-                            <span className="text-sm font-medium text-secondary-900">{formatFileType(file.file_type)}</span>
-                            <span className={`ml-2 text-xs capitalize ${
-                              file.status === 'rejected' ? 'text-danger-600' : 
-                              file.status === 'approved' ? 'text-success-600' : 'text-warning-600'
-                            }`}>({file.status})</span>
+                      <div key={file.id} className="py-2.5 px-4 hover:bg-secondary-50">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            {getFileStatusIcon(file.status)}
+                            <div>
+                              <span className="text-sm font-medium text-secondary-900">{formatFileType(file.file_type)}</span>
+                              <span className={`ml-2 text-xs capitalize ${
+                                file.status === 'rejected' ? 'text-danger-600' : 
+                                file.status === 'approved' ? 'text-success-600' : 'text-warning-600'
+                              }`}>({file.status})</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <a href={file.file_url} target="_blank" rel="noreferrer" className="p-1.5 text-secondary-400 hover:text-primary-600 rounded">
+                              <ExternalLink size={16} />
+                            </a>
+                            {file.status === 'pending' && (
+                              <>
+                                <button onClick={() => handleApproveFile(file.id)} disabled={updatingFileId === file.id} className="p-1.5 text-success-500 hover:bg-success-50 rounded">
+                                  <CheckCircle size={16} />
+                                </button>
+                                <button onClick={() => setShowRejectModal(file.id)} disabled={updatingFileId === file.id} className="p-1.5 text-danger-500 hover:bg-danger-50 rounded">
+                                  <XCircle size={16} />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <a href={file.file_url} target="_blank" rel="noreferrer" className="p-1.5 text-secondary-400 hover:text-primary-600 rounded">
-                            <ExternalLink size={16} />
-                          </a>
-                          {file.status === 'pending' && (
-                            <>
-                              <button onClick={() => handleApproveFile(file.id)} disabled={updatingFileId === file.id} className="p-1.5 text-success-500 hover:bg-success-50 rounded">
-                                <CheckCircle size={16} />
-                              </button>
-                              <button onClick={() => setShowRejectModal(file.id)} disabled={updatingFileId === file.id} className="p-1.5 text-danger-500 hover:bg-danger-50 rounded">
-                                <XCircle size={16} />
-                              </button>
-                            </>
-                          )}
-                        </div>
+                        {file.status === 'rejected' && file.reject_reason && (
+                          <div className="mt-2 pt-2 border-t border-danger-200">
+                            <p className="text-xs text-danger-700">
+                              <span className="font-medium">Rejection Reason:</span> {file.reject_reason}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

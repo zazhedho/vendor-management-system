@@ -1,47 +1,72 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { eventsApi } from '../../api/events';
-import { EventSubmission } from '../../types';
-import { FileText, Award, Trophy, Star, Eye, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { EventSubmission, GroupedSubmissionsResponse, EventSubmissionGroup } from '../../types';
+import { FileText, Award, Trophy, Star, Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Button, Card, Badge, Spinner } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
-import { toast } from 'react-toastify';
 import { ScoreSubmissionModal } from './ScoreSubmissionModal';
 import { SelectWinnerModal } from './SelectWinnerModal';
 
 export const SubmissionList: React.FC = () => {
-  const navigate = useNavigate();
   const { hasRole } = useAuth();
-  const [submissions, setSubmissions] = useState<EventSubmission[]>([]);
+  const [vendorSubmissions, setVendorSubmissions] = useState<EventSubmission[]>([]);
+  const [groupedData, setGroupedData] = useState<GroupedSubmissionsResponse | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [scoreModalData, setScoreModalData] = useState<{ submissionId: string; currentScore?: number } | null>(null);
-  const [winnerModalData, setWinnerModalData] = useState<{ eventId: string; eventTitle: string } | null>(null);
+  const [winnerModalData, setWinnerModalData] = useState<{ eventId: string; eventTitle: string; submissions: EventSubmission[] } | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
 
   const isVendor = hasRole(['vendor']);
   const canManage = hasRole(['admin', 'superadmin', 'client']);
+  const isClient = hasRole(['client']);
 
   useEffect(() => {
     if (isVendor) {
       fetchVendorSubmissions();
     } else if (canManage) {
-      fetchAllSubmissions();
+      fetchGroupedSubmissions();
     }
   }, [currentPage]);
 
   const handleSearch = () => {
-    setCurrentPage(1);
+    setAppliedSearch(searchTerm);
     if (canManage) {
-      fetchAllSubmissions();
+      setCurrentPage(1);
+      fetchGroupedSubmissions();
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleSearch();
+    }
+  };
+
+  const handleReset = async () => {
+    setSearchTerm('');
+    setAppliedSearch('');
+    setCurrentPage(1);
+    
+    if (isVendor) {
+      const response = await eventsApi.getMySubmissions();
+      if (response.status && response.data) {
+        setVendorSubmissions(response.data);
+      }
+    } else if (canManage) {
+      const response = await eventsApi.getGroupedSubmissions({
+        page: 1,
+        limit: 10,
+        search: '',
+        submission_page: 1,
+        submission_limit: 10
+      });
+      if (response.status && response.data) {
+        setGroupedData(response.data);
+      }
     }
   };
 
@@ -55,12 +80,27 @@ export const SubmissionList: React.FC = () => {
     setExpandedRows(newExpanded);
   };
 
+  const toggleEvent = (eventId: string) => {
+    const newExpanded = new Set(expandedEvents);
+    if (newExpanded.has(eventId)) {
+      newExpanded.delete(eventId);
+    } else {
+      newExpanded.add(eventId);
+    }
+    setExpandedEvents(newExpanded);
+  };
+
+  const handleSubmissionPageChange = async (newPage: number) => {
+    // Fetch with new submission page for this event
+    await fetchGroupedSubmissions(newPage);
+  };
+
   const fetchVendorSubmissions = async () => {
     setIsLoading(true);
     try {
       const response = await eventsApi.getMySubmissions();
       if (response.status && response.data) {
-        setSubmissions(response.data);
+        setVendorSubmissions(response.data);
       }
     } catch (error) {
       console.error('Failed to fetch submissions:', error);
@@ -69,68 +109,37 @@ export const SubmissionList: React.FC = () => {
     }
   };
 
-  const fetchAllSubmissions = async () => {
+  const fetchGroupedSubmissions = async (submissionPage: number = 1) => {
     setIsLoading(true);
     try {
-      const response = await eventsApi.getAllSubmissions({
+      const response = await eventsApi.getGroupedSubmissions({
         page: currentPage,
         limit: 10,
-        search: searchTerm
+        search: searchTerm,
+        submission_page: submissionPage,
+        submission_limit: 10
       });
       if (response.status && response.data) {
-        setSubmissions(response.data);
-        setTotalPages(response.total_pages || 1);
+        setGroupedData(response.data);
       }
     } catch (error) {
       console.error('Failed to fetch submissions:', error);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleShortlist = async (submissionId: string, currentStatus: boolean) => {
-    try {
-      const response = await eventsApi.shortlistSubmission(submissionId, !currentStatus);
-      if (response.status) {
-        toast.success(currentStatus ? 'Removed from shortlist' : 'Added to shortlist');
-        if (isVendor) {
-          fetchVendorSubmissions();
-        } else {
-          fetchAllSubmissions();
-        }
-      }
-    } catch (error) {
-      toast.error('Failed to update shortlist status');
     }
   };
 
   const getStatusBadge = (submission: EventSubmission) => {
     if (submission.is_winner) {
-      return (
-        <Badge variant="success">
-          <Trophy size={14} className="inline mr-1" />
-          Winner
-        </Badge>
-      );
+      return <Badge variant="success"><Trophy className="w-3 h-3 inline mr-1" />Winner</Badge>;
     }
     if (submission.is_shortlisted) {
-      return (
-        <Badge variant="info">
-          <Award size={14} className="inline mr-1" />
-          Shortlisted
-        </Badge>
-      );
+      return <Badge variant="info"><Star className="w-3 h-3 inline mr-1" />Shortlisted</Badge>;
     }
-    return <Badge variant="secondary">Submitted</Badge>;
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('id-ID', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+    if (submission.score !== null && submission.score !== undefined) {
+      return <Badge variant="warning">Scored</Badge>;
+    }
+    return <Badge variant="secondary">Pending</Badge>;
   };
 
   if (isLoading) {
@@ -141,263 +150,411 @@ export const SubmissionList: React.FC = () => {
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-secondary-900">
-            {isVendor ? 'My Submissions' : 'Event Submissions Management'}
-          </h1>
-          <p className="text-secondary-600 mt-1">
-            {isVendor
-              ? 'View all your event submissions and their status'
-              : 'Manage and review vendor submissions for events'}
-          </p>
-        </div>
-      </div>
+  // Vendor view - show their submissions
+  if (isVendor) {
+    // Filter submissions based on applied search
+    const filteredSubmissions = vendorSubmissions.filter(submission => 
+      submission.event?.title?.toLowerCase().includes(appliedSearch.toLowerCase())
+    );
 
-      {/* Admin Search */}
-      {canManage && (
-        <Card>
-          <div className="flex items-center gap-4">
-            <Search size={20} className="text-secondary-500" />
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gray-900">My Submissions</h1>
+        </div>
+
+        <div className="flex gap-4">
+          <div className="flex-1">
             <input
               type="text"
               placeholder="Search by event name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyPress={handleKeyPress}
-              className="flex-1 px-4 py-2 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-            <Button onClick={handleSearch}>
-              <Search size={16} className="mr-2" />
-              Search
-            </Button>
-            {hasRole(['client']) && submissions.length > 0 && submissions[0].event && (
-              <Button
-                variant="primary"
-                onClick={() => {
-                  const event = submissions[0].event;
-                  if (event) {
-                    setWinnerModalData({ eventId: event.id, eventTitle: event.title });
-                  }
-                }}
-                leftIcon={<Trophy size={16} />}
-              >
-                Select Winner
-              </Button>
-            )}
           </div>
-        </Card>
-      )}
+          <Button onClick={handleSearch} leftIcon={<Search className="w-4 h-4" />}>
+            Search
+          </Button>
+          {searchTerm && (
+            <Button onClick={handleReset} variant="secondary" leftIcon={<X className="w-4 h-4" />}>
+              Reset
+            </Button>
+          )}
+        </div>
 
-      {submissions.length === 0 ? (
-        <Card className="text-center py-12">
-          <FileText size={48} className="mx-auto text-secondary-400 mb-4" />
-          <h3 className="text-lg font-medium text-secondary-900 mb-2">
-            {isVendor ? 'No Submissions Yet' : 'No Submissions Found'}
-          </h3>
-          <p className="text-secondary-600 mb-4">
-            {isVendor
-              ? "You haven't submitted any pitches to events yet."
-              : 'No submissions found. Try adjusting your search.'}
-          </p>
-          {isVendor && <Button onClick={() => navigate('/events')}>Browse Events</Button>}
-        </Card>
-      ) : (
-        <Card className="p-0 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-secondary-50">
+        {filteredSubmissions.length === 0 ? (
+          <Card>
+            <div className="text-center py-12">
+              <FileText className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No submissions found</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                {appliedSearch ? 'Try adjusting your search terms.' : "You haven't submitted any pitches yet."}
+              </p>
+            </div>
+          </Card>
+        ) : (
+          <div className="bg-white shadow-sm rounded-lg overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left py-3 px-4 font-medium text-secondary-600 w-8"></th>
-                  <th className="text-left py-3 px-4 font-medium text-secondary-600">
-                    {canManage ? 'Vendor' : 'Event'}
-                  </th>
-                  {canManage && (
-                    <th className="text-left py-3 px-4 font-medium text-secondary-600">Event</th>
-                  )}
-                  <th className="text-left py-3 px-4 font-medium text-secondary-600">Status</th>
-                  <th className="text-center py-3 px-4 font-medium text-secondary-600">Score</th>
-                  <th className="text-center py-3 px-4 font-medium text-secondary-600">Files</th>
-                  <th className="text-left py-3 px-4 font-medium text-secondary-600">Submitted</th>
-                  <th className="text-right py-3 px-4 font-medium text-secondary-600">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-secondary-100">
-                {submissions.map((submission) => (
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredSubmissions.map((submission) => (
                   <React.Fragment key={submission.id}>
-                    <tr className="hover:bg-secondary-50">
-                      <td className="py-3 px-4">
-                        <button
+                    <tr className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-medium text-gray-900">{submission.event?.title}</div>
+                        <div className="text-sm text-gray-500">{submission.event?.category}</div>
+                      </td>
+                      <td className="px-6 py-4">{getStatusBadge(submission)}</td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {submission.score !== null && submission.score !== undefined ? submission.score.toFixed(1) : '-'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {new Date(submission.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4">
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => toggleRow(submission.id)}
-                          className="text-secondary-600 hover:text-secondary-900"
+                          leftIcon={expandedRows.has(submission.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         >
-                          {expandedRows.has(submission.id) ? (
-                            <ChevronUp size={16} />
-                          ) : (
-                            <ChevronDown size={16} />
-                          )}
-                        </button>
-                      </td>
-                    <td className="py-3 px-4">
-                      <div>
-                        <p className="font-medium text-secondary-900">
-                          {canManage
-                            ? submission.vendor?.profile?.vendor_name || `Vendor ${submission.vendor_id.slice(0, 8)}...`
-                            : submission.event?.title || `Event ${submission.event_id.slice(0, 8)}...`
-                          }
-                        </p>
-                        {canManage && submission.vendor?.profile && (
-                          <p className="text-xs text-secondary-500">
-                            {submission.vendor.profile.email}
-                          </p>
-                        )}
-                      </div>
-                    </td>
-                    {canManage && (
-                      <td className="py-3 px-4">
-                        <p className="text-secondary-700">{submission.event?.title || '-'}</p>
-                      </td>
-                    )}
-                    <td className="py-3 px-4">
-                      {getStatusBadge(submission)}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      {submission.score !== null && submission.score !== undefined ? (
-                        <span className="inline-flex items-center gap-1 text-yellow-600 font-medium">
-                          <Star size={14} className="fill-yellow-500" />
-                          {submission.score}
-                        </span>
-                      ) : (
-                        <span className="text-secondary-400">-</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <span className="text-secondary-600">{submission.files?.length || 0}</span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="text-secondary-600">{formatDate(submission.created_at)}</span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center justify-end gap-2">
-                        {isVendor && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate(`/events/${submission.event_id}`)}
-                            leftIcon={<Eye size={14} />}
-                          >
-                            View
-                          </Button>
-                        )}
-                        {canManage && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setScoreModalData({
-                                submissionId: submission.id,
-                                currentScore: submission.score
-                              })}
-                              leftIcon={<Star size={14} />}
-                            >
-                              Score
-                            </Button>
-                            <Button
-                              variant={submission.is_shortlisted ? 'secondary' : 'primary'}
-                              size="sm"
-                              onClick={() => handleShortlist(submission.id, submission.is_shortlisted)}
-                              leftIcon={<Award size={14} />}
-                            >
-                              {submission.is_shortlisted ? 'Remove' : 'Shortlist'}
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                  {expandedRows.has(submission.id) && (
-                    <tr>
-                      <td colSpan={canManage ? 8 : 7} className="py-4 px-4 bg-secondary-25">
-                        <div className="space-y-3">
-                          {submission.proposal_details && (
-                            <div>
-                              <p className="text-xs font-medium text-secondary-600 mb-1">Proposal Details:</p>
-                              <p className="text-sm text-secondary-800 whitespace-pre-wrap">{submission.proposal_details}</p>
-                            </div>
-                          )}
-                          {submission.additional_materials && (
-                            <div>
-                              <p className="text-xs font-medium text-secondary-600 mb-1">Additional Materials:</p>
-                              <p className="text-sm text-secondary-800 whitespace-pre-wrap">{submission.additional_materials}</p>
-                            </div>
-                          )}
-                          {submission.comments && (
-                            <div>
-                              <p className="text-xs font-medium text-secondary-600 mb-1">Comments:</p>
-                              <p className="text-sm text-secondary-800 whitespace-pre-wrap">{submission.comments}</p>
-                            </div>
-                          )}
-                          {submission.files && submission.files.length > 0 && (
-                            <div>
-                              <p className="text-xs font-medium text-secondary-600 mb-2">Attached Files:</p>
-                              <div className="flex flex-wrap gap-2">
-                                {submission.files.map((file) => (
-                                  <a
-                                    key={file.id}
-                                    href={file.file_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-secondary-200 hover:border-primary-500 rounded text-sm text-secondary-700 hover:text-primary-600 transition-colors"
-                                  >
-                                    <FileText size={14} />
-                                    {file.caption || file.file_type}
-                                  </a>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                          {expandedRows.has(submission.id) ? 'Hide' : 'Show'} Details
+                        </Button>
                       </td>
                     </tr>
-                  )}
+                    {expandedRows.has(submission.id) && (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-6 bg-gradient-to-br from-gray-50 to-gray-100">
+                          <div className="grid grid-cols-1 gap-4">
+                            <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                              <div className="flex items-start gap-2 mb-2">
+                                <FileText className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                                <h4 className="text-sm font-semibold text-gray-900">Proposal Details</h4>
+                              </div>
+                              <p className="text-sm text-gray-700 leading-relaxed pl-7">{submission.proposal_details}</p>
+                            </div>
+                            
+                            {submission.additional_materials && (
+                              <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                                <div className="flex items-start gap-2 mb-2">
+                                  <FileText className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                                  <h4 className="text-sm font-semibold text-gray-900">Additional Materials</h4>
+                                </div>
+                                <p className="text-sm text-gray-700 leading-relaxed pl-7">{submission.additional_materials}</p>
+                              </div>
+                            )}
+                            
+                            {submission.comments && (
+                              <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                                <div className="flex items-start gap-2 mb-2">
+                                  <Award className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
+                                  <h4 className="text-sm font-semibold text-gray-900">Evaluator Comments</h4>
+                                </div>
+                                <p className="text-sm text-gray-700 leading-relaxed pl-7">{submission.comments}</p>
+                              </div>
+                            )}
+                            
+                            {submission.files && submission.files.length > 0 && (
+                              <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                                <div className="flex items-start gap-2 mb-3">
+                                  <FileText className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                                  <h4 className="text-sm font-semibold text-gray-900">Attachments ({submission.files.length})</h4>
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 pl-7">
+                                  {submission.files.map((file) => (
+                                    <a
+                                      key={file.id}
+                                      href={file.file_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                                    >
+                                      <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                      <span className="truncate">{file.caption || file.file_type}</span>
+                                    </a>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                   </React.Fragment>
                 ))}
               </tbody>
             </table>
           </div>
-        </Card>
-      )}
+        )}
+      </div>
+    );
+  }
 
-      {/* Pagination */}
-      {canManage && totalPages > 1 && (
+  // Admin/Client view - show grouped submissions
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-900">All Submissions</h1>
+      </div>
+
+      <div className="flex gap-4">
+        <div className="flex-1">
+          <input
+            type="text"
+            placeholder="Search by event name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyPress={handleKeyPress}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        <Button onClick={handleSearch} leftIcon={<Search className="w-4 h-4" />}>
+          Search
+        </Button>
+        {searchTerm && (
+          <Button onClick={handleReset} variant="secondary" leftIcon={<X className="w-4 h-4" />}>
+            Reset
+          </Button>
+        )}
+      </div>
+
+      {!groupedData || groupedData.event_groups.length === 0 ? (
         <Card>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-secondary-500">Page {currentPage} of {totalPages}</span>
-            <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(p => p - 1)}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(p => p + 1)}
-              >
-                Next
-              </Button>
-            </div>
+          <div className="text-center py-12">
+            <FileText className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No submissions found</h3>
+            <p className="mt-1 text-sm text-gray-500">No submissions match your search criteria.</p>
           </div>
         </Card>
+      ) : (
+        <div className="space-y-4">
+          {groupedData.event_groups.map((group: EventSubmissionGroup) => (
+            <Card key={group.event.id}>
+              <div className="p-4 border-b border-gray-200">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900">{group.event.title}</h3>
+                    <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
+                      <span>{group.event.category}</span>
+                      <span>•</span>
+                      <span>{group.total_submissions} submission{group.total_submissions !== 1 ? 's' : ''}</span>
+                      {group.event.winner_vendor && (
+                        <>
+                          <span>•</span>
+                          <Badge variant="success">
+                            <Trophy className="w-3 h-3 inline mr-1" />
+                            Winner: {group.event.winner_vendor.profile?.vendor_name}
+                          </Badge>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    {isClient && !group.event.winner_vendor_id && (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => setWinnerModalData({ eventId: group.event.id, eventTitle: group.event.title, submissions: group.submissions })}
+                        leftIcon={<Trophy className="w-4 h-4" />}
+                      >
+                        Select Winner
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleEvent(group.event.id)}
+                      leftIcon={expandedEvents.has(group.event.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    >
+                      {expandedEvents.has(group.event.id) ? 'Collapse' : 'Expand'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {expandedEvents.has(group.event.id) && (
+                <div>
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {group.submissions.map((submission) => (
+                        <React.Fragment key={submission.id}>
+                          <tr className="hover:bg-gray-50">
+                            <td className="px-6 py-4">
+                              <div className="text-sm font-medium text-gray-900">{submission.vendor?.profile?.vendor_name}</div>
+                              <div className="text-sm text-gray-500">{submission.vendor?.profile?.business_field}</div>
+                            </td>
+                            <td className="px-6 py-4">{getStatusBadge(submission)}</td>
+                            <td className="px-6 py-4 text-sm text-gray-900">
+                              {submission.score !== null && submission.score !== undefined ? submission.score.toFixed(1) : '-'}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-500">
+                              {new Date(submission.created_at).toLocaleDateString()}
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setScoreModalData({ submissionId: submission.id, currentScore: submission.score || undefined })}
+                                  leftIcon={<Award className="w-4 h-4" />}
+                                >
+                                  Score
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => toggleRow(submission.id)}
+                                  leftIcon={expandedRows.has(submission.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                >
+                                  Details
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                          {expandedRows.has(submission.id) && (
+                            <tr>
+                              <td colSpan={5} className="px-6 py-6 bg-gradient-to-br from-gray-50 to-gray-100">
+                                <div className="grid grid-cols-1 gap-4">
+                                  <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                                    <div className="flex items-start gap-2 mb-2">
+                                      <FileText className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                                      <h4 className="text-sm font-semibold text-gray-900">Proposal Details</h4>
+                                    </div>
+                                    <p className="text-sm text-gray-700 leading-relaxed pl-7">{submission.proposal_details}</p>
+                                  </div>
+                                  
+                                  {submission.additional_materials && (
+                                    <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                                      <div className="flex items-start gap-2 mb-2">
+                                        <FileText className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                                        <h4 className="text-sm font-semibold text-gray-900">Additional Materials</h4>
+                                      </div>
+                                      <p className="text-sm text-gray-700 leading-relaxed pl-7">{submission.additional_materials}</p>
+                                    </div>
+                                  )}
+                                  
+                                  {submission.comments && (
+                                    <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                                      <div className="flex items-start gap-2 mb-2">
+                                        <Award className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
+                                        <h4 className="text-sm font-semibold text-gray-900">Evaluator Comments</h4>
+                                      </div>
+                                      <p className="text-sm text-gray-700 leading-relaxed pl-7">{submission.comments}</p>
+                                    </div>
+                                  )}
+                                  
+                                  {submission.files && submission.files.length > 0 && (
+                                    <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                                      <div className="flex items-start gap-2 mb-3">
+                                        <FileText className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                                        <h4 className="text-sm font-semibold text-gray-900">Attachments ({submission.files.length})</h4>
+                                      </div>
+                                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 pl-7">
+                                        {submission.files.map((file) => (
+                                          <a
+                                            key={file.id}
+                                            href={file.file_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                                          >
+                                            <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                            <span className="truncate">{file.caption || file.file_type}</span>
+                                          </a>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  {/* Submission pagination per event */}
+                  {group.total_submission_pages > 1 && (
+                    <div className="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
+                      <div className="text-sm text-gray-700">
+                        Page {group.submission_page} of {group.total_submission_pages}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSubmissionPageChange(group.submission_page - 1)}
+                          disabled={group.submission_page === 1}
+                          leftIcon={<ChevronLeft className="w-4 h-4" />}
+                        >
+                          Previous
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSubmissionPageChange(group.submission_page + 1)}
+                          disabled={group.submission_page === group.total_submission_pages}
+                          leftIcon={<ChevronRight className="w-4 h-4" />}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </Card>
+          ))}
+
+          {/* Event pagination */}
+          {groupedData.total_pages > 1 && (
+            <div className="flex justify-between items-center">
+              <div className="text-sm text-gray-700">
+                Page {groupedData.current_page} of {groupedData.total_pages} ({groupedData.total_events} events)
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  leftIcon={<ChevronLeft className="w-4 h-4" />}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage(prev => Math.min(groupedData.total_pages, prev + 1))}
+                  disabled={currentPage === groupedData.total_pages}
+                  leftIcon={<ChevronRight className="w-4 h-4" />}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
-      {/* Score Modal */}
       {scoreModalData && (
         <ScoreSubmissionModal
           submissionId={scoreModalData.submissionId}
@@ -408,22 +565,21 @@ export const SubmissionList: React.FC = () => {
             if (isVendor) {
               fetchVendorSubmissions();
             } else {
-              fetchAllSubmissions();
+              fetchGroupedSubmissions();
             }
           }}
         />
       )}
 
-      {/* Winner Selection Modal */}
       {winnerModalData && (
         <SelectWinnerModal
           eventId={winnerModalData.eventId}
           eventTitle={winnerModalData.eventTitle}
-          submissions={submissions.filter(s => s.is_shortlisted && s.event_id === winnerModalData.eventId)}
+          submissions={winnerModalData.submissions}
           onClose={() => setWinnerModalData(null)}
           onSuccess={() => {
             setWinnerModalData(null);
-            fetchAllSubmissions();
+            fetchGroupedSubmissions();
           }}
         />
       )}

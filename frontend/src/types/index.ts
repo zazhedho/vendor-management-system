@@ -221,6 +221,23 @@ export interface EventSubmissionFile {
   deleted_at?: string;
 }
 
+export interface EventSubmissionGroup {
+  event: Event;
+  submissions: EventSubmission[];
+  total_submissions: number;
+  submission_page: number;
+  submission_per_page: number;
+  total_submission_pages: number;
+}
+
+export interface GroupedSubmissionsResponse {
+  event_groups: EventSubmissionGroup[];
+  total_events: number;
+  current_page: number;
+  events_per_page: number;
+  total_pages: number;
+}
+
 export interface Payment {
   id: string;
   invoice_number: string;

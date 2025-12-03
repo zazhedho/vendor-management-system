@@ -45,11 +45,14 @@ func (r *repo) GetPaymentsByVendorID(vendorId string) (ret []domainpayments.Paym
 }
 
 func (r *repo) GetAllPayments(params filter.BaseParams) (ret []domainpayments.Payment, totalData int64, err error) {
-	query := r.DB.Model(&domainpayments.Payment{})
+	query := r.DB.Model(&domainpayments.Payment{}).
+		Select("payments.*").
+		Joins("LEFT JOIN vendors ON payments.vendor_id = vendors.id AND vendors.deleted_at IS NULL").
+		Joins("LEFT JOIN vendor_profiles ON vendors.id = vendor_profiles.vendor_id AND vendor_profiles.deleted_at IS NULL")
 
 	if params.Search != "" {
 		searchPattern := "%" + params.Search + "%"
-		query = query.Where("LOWER(invoice_number) LIKE LOWER(?) OR LOWER(description) LIKE LOWER(?)", searchPattern, searchPattern)
+		query = query.Where("LOWER(payments.invoice_number) LIKE LOWER(?) OR LOWER(vendor_profiles.vendor_name) LIKE LOWER(?)", searchPattern, searchPattern)
 	}
 
 	for key, value := range params.Filters {
@@ -62,15 +65,42 @@ func (r *repo) GetAllPayments(params filter.BaseParams) (ret []domainpayments.Pa
 			if v == "" {
 				continue
 			}
-			query = query.Where(fmt.Sprintf("%s = ?", key), v)
+			query = query.Where(fmt.Sprintf("payments.%s = ?", key), v)
 		case []string, []int:
-			query = query.Where(fmt.Sprintf("%s IN ?", key), v)
+			query = query.Where(fmt.Sprintf("payments.%s IN ?", key), v)
 		default:
-			query = query.Where(fmt.Sprintf("%s = ?", key), v)
+			query = query.Where(fmt.Sprintf("payments.%s = ?", key), v)
 		}
 	}
 
-	if err := query.Count(&totalData).Error; err != nil {
+	// Count query without Select
+	countQuery := r.DB.Model(&domainpayments.Payment{}).
+		Joins("LEFT JOIN vendors ON payments.vendor_id = vendors.id AND vendors.deleted_at IS NULL").
+		Joins("LEFT JOIN vendor_profiles ON vendors.id = vendor_profiles.vendor_id AND vendor_profiles.deleted_at IS NULL")
+
+	if params.Search != "" {
+		searchPattern := "%" + params.Search + "%"
+		countQuery = countQuery.Where("LOWER(payments.invoice_number) LIKE LOWER(?) OR LOWER(vendor_profiles.vendor_name) LIKE LOWER(?)", searchPattern, searchPattern)
+	}
+
+	for key, value := range params.Filters {
+		if value == nil {
+			continue
+		}
+		switch v := value.(type) {
+		case string:
+			if v == "" {
+				continue
+			}
+			countQuery = countQuery.Where(fmt.Sprintf("payments.%s = ?", key), v)
+		case []string, []int:
+			countQuery = countQuery.Where(fmt.Sprintf("payments.%s IN ?", key), v)
+		default:
+			countQuery = countQuery.Where(fmt.Sprintf("payments.%s = ?", key), v)
+		}
+	}
+
+	if err := countQuery.Count(&totalData).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -88,7 +118,7 @@ func (r *repo) GetAllPayments(params filter.BaseParams) (ret []domainpayments.Pa
 			return nil, 0, fmt.Errorf("invalid orderBy column: %s", params.OrderBy)
 		}
 
-		query = query.Order(fmt.Sprintf("%s %s", params.OrderBy, params.OrderDirection))
+		query = query.Order(fmt.Sprintf("payments.%s %s", params.OrderBy, params.OrderDirection))
 	}
 
 	if err := query.Offset(params.Offset).Limit(params.Limit).

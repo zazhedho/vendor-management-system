@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import { ApiResponse, PaginatedResponse, Event, EventSubmission, EventFile, EventSubmissionFile } from '../types';
+import { ApiResponse, PaginatedResponse, Event, EventSubmission, EventFile, EventSubmissionFile, GroupedSubmissionsResponse } from '../types';
 
 export const eventsApi = {
   getAll: async (params?: { page?: number; limit?: number; search?: string }) => {
@@ -99,6 +99,17 @@ export const eventsApi = {
 
   getAllSubmissions: async (params?: { page?: number; limit?: number; search?: string }) => {
     const response = await apiClient.get<PaginatedResponse<EventSubmission>>('/event/submissions', { params });
+    return response.data;
+  },
+
+  getGroupedSubmissions: async (params?: { 
+    page?: number; 
+    limit?: number; 
+    search?: string;
+    submission_page?: number;
+    submission_limit?: number;
+  }) => {
+    const response = await apiClient.get<ApiResponse<GroupedSubmissionsResponse>>('/event/submissions/grouped', { params });
     return response.data;
   },
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strconv"
 
 	domainevents "vendor-management-system/internal/domain/events"
 	"vendor-management-system/internal/dto"
@@ -309,6 +310,39 @@ func (h *HandlerEvent) GetAllSubmissions(ctx *gin.Context) {
 	}
 
 	res := response.PaginationResponse(http.StatusOK, int(totalData), params.Page, params.Limit, logId, data)
+	ctx.JSON(http.StatusOK, res)
+}
+
+func (h *HandlerEvent) GetGroupedSubmissions(ctx *gin.Context) {
+	logId := utils.GenerateLogId(ctx)
+	logPrefix := fmt.Sprintf("[%s][EventHandler][GetGroupedSubmissions]", logId)
+
+	params, _ := filter.GetBaseParams(ctx, "created_at", "desc", 10)
+
+	submissionPage := 1
+	if page := ctx.Query("submission_page"); page != "" {
+		if p, err := strconv.Atoi(page); err == nil && p > 0 {
+			submissionPage = p
+		}
+	}
+
+	submissionLimit := 10
+	if limit := ctx.Query("submission_limit"); limit != "" {
+		if l, err := strconv.Atoi(limit); err == nil && l > 0 {
+			submissionLimit = l
+		}
+	}
+
+	data, err := h.Service.GetGroupedSubmissions(params, submissionPage, submissionLimit)
+	if err != nil {
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetGroupedSubmissions; ERROR: %s;", logPrefix, err))
+		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
+		res.Error = err.Error()
+		ctx.JSON(http.StatusInternalServerError, res)
+		return
+	}
+
+	res := response.Response(http.StatusOK, messages.MsgSuccess, logId, data)
 	ctx.JSON(http.StatusOK, res)
 }
 

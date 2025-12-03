@@ -290,6 +290,10 @@ func (s *ServiceEvent) GetAllSubmissions(params filter.BaseParams) ([]map[string
 	return result, total, nil
 }
 
+func (s *ServiceEvent) GetGroupedSubmissions(params filter.BaseParams, submissionPage int, submissionLimit int) (*domainevents.GroupedSubmissionsResponse, error) {
+	return s.EventRepo.GetGroupedSubmissions(params, submissionPage, submissionLimit)
+}
+
 func (s *ServiceEvent) GetMySubmissions(vendorId string) ([]domainevents.EventSubmission, error) {
 	return s.EventRepo.GetSubmissionsByVendorID(vendorId)
 }

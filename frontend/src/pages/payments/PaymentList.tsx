@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { paymentsApi } from '../../api/payments';
 import { Payment } from '../../types';
-import { Plus, Search, CreditCard, Eye, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, CreditCard, Eye, Edit, Trash2, X } from 'lucide-react';
 import { Button, Card, Table, Badge, ConfirmModal, ActionMenu } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
@@ -17,6 +17,7 @@ export const PaymentList: React.FC = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [deletePaymentId, setDeletePaymentId] = useState<string | null>(null);
@@ -24,7 +25,51 @@ export const PaymentList: React.FC = () => {
 
   useEffect(() => {
     fetchPayments();
-  }, [currentPage, searchTerm, isVendor]);
+  }, [currentPage, isVendor]);
+
+  useEffect(() => {
+    fetchPayments();
+  }, [statusFilter]);
+
+  const handleSearch = () => {
+    setCurrentPage(1);
+    fetchPayments();
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  const handleReset = async () => {
+    setSearchTerm('');
+    setStatusFilter('');
+    setCurrentPage(1);
+    
+    // Fetch with empty params
+    setIsLoading(true);
+    try {
+      const params: any = {
+        page: 1,
+        limit: 10,
+        search: '',
+      };
+
+      const response = isVendor 
+        ? await paymentsApi.getMyPayments(params)
+        : await paymentsApi.getAll(params);
+
+      if (response.status) {
+        setPayments(response.data || []);
+        setTotalPages(response.total_pages || 1);
+      }
+    } catch (error) {
+      console.error('Failed to fetch payments:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleDelete = async () => {
     if (!deletePaymentId) return;
@@ -44,23 +89,22 @@ export const PaymentList: React.FC = () => {
   const fetchPayments = async () => {
     setIsLoading(true);
     try {
-      // Vendor uses different endpoint
-      if (isVendor) {
-        const response = await paymentsApi.getMyPayments();
-        if (response.status) {
-          setPayments(response.data || []);
-          setTotalPages(1); // No pagination for vendor endpoint
-        }
-      } else {
-        const response = await paymentsApi.getAll({
-          page: currentPage,
-          limit: 10,
-          search: searchTerm,
-        });
-        if (response.status) {
-          setPayments(response.data || []);
-          setTotalPages(response.total_pages || 1);
-        }
+      const params: any = {
+        page: currentPage,
+        limit: 10,
+        search: searchTerm,
+      };
+      if (statusFilter) {
+        params['filters[status]'] = statusFilter;
+      }
+
+      const response = isVendor 
+        ? await paymentsApi.getMyPayments(params)
+        : await paymentsApi.getAll(params);
+
+      if (response.status) {
+        setPayments(response.data || []);
+        setTotalPages(response.total_pages || 1);
       }
     } catch (error) {
       console.error('Failed to fetch payments:', error);
@@ -73,8 +117,7 @@ export const PaymentList: React.FC = () => {
     switch (status.toLowerCase()) {
       case 'paid': return 'success';
       case 'pending': return 'warning';
-      case 'failed': return 'danger';
-      case 'processing': return 'info';
+      case 'cancelled': return 'danger';
       default: return 'secondary';
     }
   };
@@ -173,15 +216,38 @@ export const PaymentList: React.FC = () => {
       </div>
 
       <Card className="p-4">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search invoice number..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg border border-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-          />
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Search by invoice number or vendor name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="w-full px-4 py-2 rounded-lg border border-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="px-4 py-2 rounded-lg border border-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          >
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="paid">Paid</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <Button onClick={handleSearch} leftIcon={<Search size={20} />}>
+            Search
+          </Button>
+          {(searchTerm || statusFilter) && (
+            <Button onClick={handleReset} variant="secondary" leftIcon={<X size={20} />}>
+              Reset
+            </Button>
+          )}
         </div>
       </Card>
 

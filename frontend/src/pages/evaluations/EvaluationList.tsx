@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { evaluationsApi } from '../../api/evaluations';
 import { Evaluation } from '../../types';
-import { Plus, Search, Star, Image, Upload, Award, Eye } from 'lucide-react';
+import { Plus, Search, Star, Image, Upload, Award, Eye, X } from 'lucide-react';
 import { Button, Card, Table, Badge, ActionMenu } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 
@@ -20,7 +20,47 @@ export const EvaluationList: React.FC = () => {
 
   useEffect(() => {
     fetchEvaluations();
-  }, [currentPage, searchTerm]);
+  }, [currentPage]);
+
+  const handleSearch = () => {
+    setCurrentPage(1);
+    fetchEvaluations();
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  const handleReset = async () => {
+    setSearchTerm('');
+    setCurrentPage(1);
+    
+    setIsLoading(true);
+    try {
+      if (isVendor) {
+        const response = await evaluationsApi.getMyEvaluations();
+        if (response.status) {
+          setEvaluations(response.data || []);
+        }
+      } else {
+        const response = await evaluationsApi.getAll({
+          page: 1,
+          limit: 10,
+          search: '',
+        });
+        if (response.status) {
+          setEvaluations(response.data || []);
+          setTotalPages(response.total_pages || 1);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch evaluations:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const fetchEvaluations = async () => {
     setIsLoading(true);
@@ -229,15 +269,25 @@ export const EvaluationList: React.FC = () => {
       </div>
 
       <Card className="p-4">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search evaluations..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg border border-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-          />
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Search evaluations..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="w-full px-4 py-2 rounded-lg border border-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
+          </div>
+          <Button onClick={handleSearch} leftIcon={<Search size={20} />}>
+            Search
+          </Button>
+          {searchTerm && (
+            <Button onClick={handleReset} variant="secondary" leftIcon={<X size={20} />}>
+              Reset
+            </Button>
+          )}
         </div>
       </Card>
 

@@ -68,7 +68,15 @@ func (r *repo) GetEvaluationsByVendorID(vendorId string) (ret []domainevaluation
 }
 
 func (r *repo) GetAllEvaluations(params filter.BaseParams) (ret []domainevaluations.Evaluation, totalData int64, err error) {
-	query := r.DB.Model(&domainevaluations.Evaluation{})
+	query := r.DB.Model(&domainevaluations.Evaluation{}).
+		Joins("LEFT JOIN events ON evaluations.event_id = events.id AND events.deleted_at IS NULL").
+		Joins("LEFT JOIN vendors ON evaluations.vendor_id = vendors.id AND vendors.deleted_at IS NULL").
+		Joins("LEFT JOIN vendor_profiles ON vendors.id = vendor_profiles.vendor_id AND vendor_profiles.deleted_at IS NULL")
+
+	if params.Search != "" {
+		searchPattern := "%" + params.Search + "%"
+		query = query.Where("LOWER(events.title) LIKE LOWER(?) OR LOWER(vendor_profiles.vendor_name) LIKE LOWER(?)", searchPattern, searchPattern)
+	}
 
 	for key, value := range params.Filters {
 		if value == nil {
@@ -80,17 +88,20 @@ func (r *repo) GetAllEvaluations(params filter.BaseParams) (ret []domainevaluati
 			if v == "" {
 				continue
 			}
-			query = query.Where(fmt.Sprintf("%s = ?", key), v)
+			query = query.Where(fmt.Sprintf("evaluations.%s = ?", key), v)
 		case []string, []int:
-			query = query.Where(fmt.Sprintf("%s IN ?", key), v)
+			query = query.Where(fmt.Sprintf("evaluations.%s IN ?", key), v)
 		default:
-			query = query.Where(fmt.Sprintf("%s = ?", key), v)
+			query = query.Where(fmt.Sprintf("evaluations.%s = ?", key), v)
 		}
 	}
 
 	if err := query.Count(&totalData).Error; err != nil {
 		return nil, 0, err
 	}
+
+	// Add Select after Count to specify columns for final query
+	query = query.Select("evaluations.*")
 
 	if params.OrderBy != "" && params.OrderDirection != "" {
 		validColumns := map[string]bool{
@@ -103,7 +114,7 @@ func (r *repo) GetAllEvaluations(params filter.BaseParams) (ret []domainevaluati
 			return nil, 0, fmt.Errorf("invalid orderBy column: %s", params.OrderBy)
 		}
 
-		query = query.Order(fmt.Sprintf("%s %s", params.OrderBy, params.OrderDirection))
+		query = query.Order(fmt.Sprintf("evaluations.%s %s", params.OrderBy, params.OrderDirection))
 	}
 
 	if err := query.

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { usersApi } from '../../api/users';
 import { useAuth } from '../../context/AuthContext';
 import { User } from '../../types';
-import { Plus, Search, Edit, Trash2, Shield } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Shield, X } from 'lucide-react';
 import { Button, Card, Table, Badge, ConfirmModal, ActionMenu } from '../../components/ui';
 
 export const UserList: React.FC = () => {
@@ -12,7 +12,6 @@ export const UserList: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -20,7 +19,46 @@ export const UserList: React.FC = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [currentPage, searchTerm, roleFilter]);
+  }, [currentPage]);
+
+  const handleSearch = () => {
+    setCurrentPage(1);
+    fetchUsers();
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  const handleReset = async () => {
+    setSearchTerm('');
+    setCurrentPage(1);
+    
+    // Fetch with empty search
+    setIsLoading(true);
+    try {
+      const response = await usersApi.getAll({
+        page: 1,
+        limit: 10,
+        search: '',
+      });
+
+      if (response.status) {
+        let userData = response.data || [];
+        if (currentUser?.role !== 'superadmin') {
+          userData = userData.filter((u: User) => u.role !== 'superadmin');
+        }
+        setUsers(userData);
+        setTotalPages(response.total_pages || 1);
+      }
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -29,7 +67,6 @@ export const UserList: React.FC = () => {
         page: currentPage,
         limit: 10,
         search: searchTerm,
-        role: roleFilter || undefined,
       });
 
       if (response.status) {
@@ -155,29 +192,25 @@ export const UserList: React.FC = () => {
       </div>
 
       <Card className="p-4">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-400" size={20} />
+        <div className="flex gap-4">
+          <div className="flex-1">
             <input
               type="text"
-              placeholder="Search users..."
+              placeholder="Search users by name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              onKeyPress={handleKeyPress}
+              className="w-full px-4 py-2 rounded-lg border border-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
             />
           </div>
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="px-4 py-2 rounded-lg border border-secondary-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-          >
-            <option value="">All Roles</option>
-            {currentUser?.role === 'superadmin' && <option value="superadmin">Superadmin</option>}
-            <option value="admin">Admin</option>
-            <option value="staff">Staff</option>
-            <option value="vendor">Vendor</option>
-            <option value="viewer">Viewer</option>
-          </select>
+          <Button onClick={handleSearch} leftIcon={<Search size={20} />}>
+            Search
+          </Button>
+          {searchTerm && (
+            <Button onClick={handleReset} variant="secondary" leftIcon={<X size={20} />}>
+              Reset
+            </Button>
+          )}
         </div>
       </Card>
 

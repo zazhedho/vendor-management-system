@@ -93,3 +93,20 @@ type EventSubmissionFile struct {
 	CreatedBy string         `json:"created_by" gorm:"column:created_by"`
 	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
 }
+
+type EventSubmissionGroup struct {
+	Event                Event             `json:"event"`
+	Submissions          []EventSubmission `json:"submissions"`
+	TotalSubmissions     int64             `json:"total_submissions"`
+	SubmissionPage       int               `json:"submission_page"`
+	SubmissionPerPage    int               `json:"submission_per_page"`
+	TotalSubmissionPages int               `json:"total_submission_pages"`
+}
+
+type GroupedSubmissionsResponse struct {
+	EventGroups   []EventSubmissionGroup `json:"event_groups"`
+	TotalEvents   int64                  `json:"total_events"`
+	CurrentPage   int                    `json:"current_page"`
+	EventsPerPage int                    `json:"events_per_page"`
+	TotalPages    int                    `json:"total_pages"`
+}

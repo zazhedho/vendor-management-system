@@ -42,7 +42,7 @@ func (r *repo) UpdateVendor(m domainvendors.Vendor) error {
 
 func (r *repo) GetAllVendors(params filter.BaseParams) (ret []domainvendors.Vendor, totalData int64, err error) {
 	query := r.DB.Model(&domainvendors.Vendor{}).
-		Joins("LEFT JOIN vendor_profiles ON vendors.id = vendor_profiles.vendor_id").
+		Joins("LEFT JOIN vendor_profiles ON vendors.id = vendor_profiles.vendor_id AND vendor_profiles.deleted_at IS NULL").
 		Debug()
 
 	if params.Search != "" {

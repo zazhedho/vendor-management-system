@@ -281,6 +281,7 @@ func (r *Routes) EventRoutes() {
 		eventAdmin.POST("/:id/files", h.UploadEventFile)
 		eventAdmin.DELETE("/:id/files/:fileId", h.DeleteEventFile)
 		eventAdmin.GET("/submissions", h.GetAllSubmissions)
+		eventAdmin.GET("/submissions/grouped", h.GetGroupedSubmissions)
 		eventAdmin.GET("/:id/submissions", h.GetSubmissionsByEventID)
 		eventAdmin.PUT("/submission/:id/score", h.ScoreSubmission)
 		eventAdmin.PUT("/submission/:id/shortlist", h.ShortlistSubmission)

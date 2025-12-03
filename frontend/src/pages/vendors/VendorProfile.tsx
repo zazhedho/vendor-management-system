@@ -19,7 +19,8 @@ import {
   Search,
   Plus,
   Eye,
-  Trash2
+  Trash2,
+  X
 } from 'lucide-react';
 import { Button, Card, Badge, Spinner, Input, ConfirmModal, ActionMenu } from '../../components/ui';
 import { toast } from 'react-toastify';
@@ -171,6 +172,29 @@ export const VendorProfile: React.FC = () => {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleSearch();
+    }
+  };
+
+  const handleReset = async () => {
+    setSearchTerm('');
+    setCurrentPage(1);
+    
+    // Fetch with empty search
+    setIsLoading(true);
+    try {
+      const response = await vendorsApi.getAll({
+        page: 1,
+        limit: 10,
+        search: ''
+      });
+      if (response.status) {
+        setVendorList((response.data || []) as unknown as VendorWithProfile[]);
+        setTotalPages(response.total_pages || 1);
+      }
+    } catch (error) {
+      console.error('Failed to fetch vendors:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -826,23 +850,26 @@ export const VendorProfile: React.FC = () => {
         </div>
 
         {/* Search */}
-        <Card>
+        <Card className="p-4">
           <div className="flex gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary-400" size={20} />
+            <div className="flex-1">
               <input
                 type="text"
                 placeholder="Search vendors..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyPress={handleKeyPress}
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
+                className="w-full px-4 py-2 rounded-lg border border-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
               />
             </div>
-            <Button onClick={handleSearch}>
-              <Search size={16} className="mr-2" />
+            <Button onClick={handleSearch} leftIcon={<Search size={20} />}>
               Search
             </Button>
+            {searchTerm && (
+              <Button onClick={handleReset} variant="secondary" leftIcon={<X size={20} />}>
+                Reset
+              </Button>
+            )}
           </div>
         </Card>
 
@@ -1380,23 +1407,31 @@ export const VendorProfile: React.FC = () => {
                   {profile.files && profile.files.length > 0 ? (
                     <div className="divide-y divide-secondary-100">
                       {profile.files.map((file) => (
-                        <a
-                          key={file.id}
-                          href={file.file_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center justify-between py-2.5 px-4 hover:bg-secondary-50"
-                        >
-                          <div className="flex items-center gap-3">
-                            <FileText size={18} className={`flex-shrink-0 ${file.status === 'rejected' ? 'text-danger-500' :
-                              file.status === 'approved' ? 'text-success-500' : 'text-secondary-400'
-                              }`} />
-                            <span className="text-sm font-medium text-secondary-900">{formatFileType(file.file_type)}</span>
-                            <span className={`text-xs capitalize ${file.status === 'rejected' ? 'text-danger-600' :
-                              file.status === 'approved' ? 'text-success-600' : 'text-warning-600'
-                              }`}>({file.status})</span>
-                          </div>
-                        </a>
+                        <div key={file.id} className="py-2.5 px-4 hover:bg-secondary-50">
+                          <a
+                            href={file.file_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center justify-between"
+                          >
+                            <div className="flex items-center gap-3">
+                              <FileText size={18} className={`flex-shrink-0 ${file.status === 'rejected' ? 'text-danger-500' :
+                                file.status === 'approved' ? 'text-success-500' : 'text-secondary-400'
+                                }`} />
+                              <span className="text-sm font-medium text-secondary-900">{formatFileType(file.file_type)}</span>
+                              <span className={`text-xs capitalize ${file.status === 'rejected' ? 'text-danger-600' :
+                                file.status === 'approved' ? 'text-success-600' : 'text-warning-600'
+                                }`}>({file.status})</span>
+                            </div>
+                          </a>
+                          {file.status === 'rejected' && file.reject_reason && (
+                            <div className="mt-2 pt-2 border-t border-danger-200">
+                              <p className="text-xs text-danger-700">
+                                <span className="font-medium">Rejection Reason:</span> {file.reject_reason}
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       ))}
                     </div>
                   ) : (

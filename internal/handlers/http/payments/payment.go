@@ -122,16 +122,20 @@ func (h *HandlerPayment) GetMyPayments(ctx *gin.Context) {
 		return
 	}
 
-	data, err := h.Service.GetPaymentsByVendorID(vendor.Id)
+	params, _ := filter.GetBaseParams(ctx, "created_at", "desc", 10)
+	params.Filters = filter.WhitelistFilter(params.Filters, []string{"status"})
+	params.Filters["vendor_id"] = vendor.Id
+
+	data, totalData, err := h.Service.GetAllPayments(params)
 	if err != nil {
-		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetPaymentsByVendorID; ERROR: %s;", logPrefix, err))
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetAllPayments; ERROR: %s;", logPrefix, err))
 		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
 		res.Error = err.Error()
 		ctx.JSON(http.StatusInternalServerError, res)
 		return
 	}
 
-	res := response.Response(http.StatusOK, "success", logId, data)
+	res := response.PaginationResponse(http.StatusOK, int(totalData), params.Page, params.Limit, logId, data)
 	ctx.JSON(http.StatusOK, res)
 }
 

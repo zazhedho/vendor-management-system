@@ -64,8 +64,8 @@ export const paymentsApi = {
     return response.data;
   },
 
-  getMyPayments: async () => {
-    const response = await apiClient.get<ApiResponse<Payment[]>>('/vendor/payments');
+  getMyPayments: async (params?: { page?: number; limit?: number; search?: string; 'filters[status]'?: string }) => {
+    const response = await apiClient.get<PaginatedResponse<Payment>>('/vendor/payments', { params });
     return response.data;
   },
 

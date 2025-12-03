@@ -136,7 +136,7 @@ func (r *repo) GetSubmissionsByEventID(eventId string) (ret []domainevents.Event
 
 func (r *repo) GetAllSubmissions(params filter.BaseParams) (ret []domainevents.EventSubmission, totalData int64, err error) {
 	query := r.DB.Model(&domainevents.EventSubmission{}).
-		Joins("LEFT JOIN events ON event_submissions.event_id = events.id")
+		Joins("LEFT JOIN events ON event_submissions.event_id = events.id AND events.deleted_at IS NULL")
 
 	if params.Search != "" {
 		searchPattern := "%" + params.Search + "%"
@@ -182,6 +182,89 @@ func (r *repo) GetSubmissionsByVendorID(vendorId string) (ret []domainevents.Eve
 		return nil, err
 	}
 	return ret, nil
+}
+
+func (r *repo) GetGroupedSubmissions(params filter.BaseParams, submissionPage int, submissionLimit int) (*domainevents.GroupedSubmissionsResponse, error) {
+	// Build base query
+	baseQuery := r.DB.Table("events").
+		Joins("INNER JOIN event_submissions ON event_submissions.event_id = events.id").
+		Where("events.deleted_at IS NULL")
+
+	if params.Search != "" {
+		searchPattern := "%" + params.Search + "%"
+		baseQuery = baseQuery.Where("LOWER(events.title) LIKE LOWER(?)", searchPattern)
+	}
+
+	// Count total events
+	var totalEvents int64
+	if err := baseQuery.Distinct("events.id").Count(&totalEvents).Error; err != nil {
+		return nil, err
+	}
+
+	// Get paginated event IDs using raw query
+	var eventIDs []string
+	query := `
+		SELECT DISTINCT events.id 
+		FROM events 
+		INNER JOIN event_submissions ON event_submissions.event_id = events.id 
+		WHERE events.deleted_at IS NULL
+	`
+	var args []interface{}
+
+	if params.Search != "" {
+		query += " AND LOWER(events.title) LIKE LOWER(?)"
+		args = append(args, "%"+params.Search+"%")
+	}
+
+	query += " ORDER BY events.id DESC LIMIT ? OFFSET ?"
+	args = append(args, params.Limit, params.Offset)
+
+	if err := r.DB.Raw(query, args...).Pluck("id", &eventIDs).Error; err != nil {
+		return nil, err
+	}
+
+	// Build response
+	response := &domainevents.GroupedSubmissionsResponse{
+		EventGroups:   make([]domainevents.EventSubmissionGroup, 0),
+		TotalEvents:   totalEvents,
+		CurrentPage:   params.Page,
+		EventsPerPage: params.Limit,
+		TotalPages:    int((totalEvents + int64(params.Limit) - 1) / int64(params.Limit)),
+	}
+
+	// For each event, get submissions with pagination
+	for _, eventID := range eventIDs {
+		var event domainevents.Event
+		if err := r.DB.Preload("WinnerVendor").Preload("WinnerVendor.Profile").First(&event, "id = ?", eventID).Error; err != nil {
+			continue
+		}
+
+		// Count submissions for this event
+		var totalSubmissions int64
+		r.DB.Model(&domainevents.EventSubmission{}).Where("event_id = ?", eventID).Count(&totalSubmissions)
+
+		// Get paginated submissions
+		var submissions []domainevents.EventSubmission
+		submissionOffset := (submissionPage - 1) * submissionLimit
+		r.DB.Preload("Vendor").Preload("Vendor.Profile").Preload("File").
+			Where("event_id = ?", eventID).
+			Order("created_at DESC").
+			Offset(submissionOffset).Limit(submissionLimit).
+			Find(&submissions)
+
+		totalSubmissionPages := int((totalSubmissions + int64(submissionLimit) - 1) / int64(submissionLimit))
+
+		response.EventGroups = append(response.EventGroups, domainevents.EventSubmissionGroup{
+			Event:                event,
+			Submissions:          submissions,
+			TotalSubmissions:     totalSubmissions,
+			SubmissionPage:       submissionPage,
+			SubmissionPerPage:    submissionLimit,
+			TotalSubmissionPages: totalSubmissionPages,
+		})
+	}
+
+	return response, nil
 }
 
 func (r *repo) UpdateSubmission(m domainevents.EventSubmission) error {
