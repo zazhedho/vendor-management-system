@@ -135,8 +135,10 @@ INSERT INTO permissions (id, name, display_name, resource, action) VALUES
     -- Vendor permissions
     (gen_random_uuid(), 'view_vendor_profile', 'View Vendor Profile', 'vendor', 'view'),
     (gen_random_uuid(), 'update_vendor_profile', 'Update Vendor Profile', 'vendor', 'update'),
+    (gen_random_uuid(), 'update_vendor_status', 'Update Vendor Status', 'vendor', 'update_status'),
     (gen_random_uuid(), 'view_vendor_submissions', 'View Vendor Submissions', 'vendor', 'view_submissions'),
     (gen_random_uuid(), 'create_vendor_submission', 'Create Vendor Submission', 'vendor', 'create_submission'),
+    (gen_random_uuid(), 'delete_vendor', 'Delete Vendor', 'vendor', 'delete'),
 
     -- Event permissions
     (gen_random_uuid(), 'view_events', 'View Events', 'event', 'view'),

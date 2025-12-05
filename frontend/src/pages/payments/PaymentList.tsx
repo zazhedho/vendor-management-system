@@ -9,11 +9,11 @@ import { toast } from 'react-toastify';
 
 export const PaymentList: React.FC = () => {
   const navigate = useNavigate();
-  const { hasRole, hasPermission } = useAuth();
-  const isVendor = hasRole(['vendor']);
-  const canCreate = hasPermission('create_payment');
-  const canUpdate = hasPermission('update_payment');
-  const canDelete = hasPermission('delete_payment');
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission('payment', 'create');
+  const canUpdate = hasPermission('payment', 'update');
+  const canDelete = hasPermission('payment', 'delete');
+  const isSelfService = !(canCreate || canUpdate || canDelete);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,7 +25,7 @@ export const PaymentList: React.FC = () => {
 
   useEffect(() => {
     fetchPayments();
-  }, [currentPage, isVendor]);
+  }, [currentPage, isSelfService]);
 
   useEffect(() => {
     fetchPayments();
@@ -56,9 +56,9 @@ export const PaymentList: React.FC = () => {
         search: '',
       };
 
-      const response = isVendor 
-        ? await paymentsApi.getMyPayments(params)
-        : await paymentsApi.getAll(params);
+      const response = canCreate || canUpdate || canDelete
+        ? await paymentsApi.getAll(params)
+        : await paymentsApi.getMyPayments(params);
 
       if (response.status) {
         setPayments(response.data || []);
@@ -98,7 +98,7 @@ export const PaymentList: React.FC = () => {
         params['filters[status]'] = statusFilter;
       }
 
-      const response = isVendor 
+      const response = isSelfService
         ? await paymentsApi.getMyPayments(params)
         : await paymentsApi.getAll(params);
 
@@ -203,7 +203,7 @@ export const PaymentList: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-secondary-900">Payments</h1>
-          <p className="text-secondary-500">{isVendor ? "View your payment history" : "Track and manage payment transactions"}</p>
+          <p className="text-secondary-500">{isSelfService ? "View your payment history" : "Track and manage payment transactions"}</p>
         </div>
         {canCreate && (
           <Button
@@ -257,7 +257,7 @@ export const PaymentList: React.FC = () => {
         keyField="id"
         isLoading={isLoading}
         onRowClick={(payment) => navigate(`/payments/${payment.id}`)}
-        emptyMessage={isVendor ? "No payments found for your account." : "No payments found."}
+        emptyMessage={isSelfService ? "No payments found for your account." : "No payments found."}
       />
 
       {totalPages > 1 && (

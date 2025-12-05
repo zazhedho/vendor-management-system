@@ -11,22 +11,23 @@ import { SubmitPitchModal } from '../submissions/SubmitPitchModal';
 export const EventDetail: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { hasRole } = useAuth();
+  const { hasPermission } = useAuth();
   const [event, setEvent] = useState<Event | null>(null);
   const [vendorProfile, setVendorProfile] = useState<any>(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
 
-  const isVendor = hasRole(['vendor']);
+  const canSubmit = hasPermission('event', 'submit_pitch');
+  const canUpdate = hasPermission('event', 'update');
 
   useEffect(() => {
     if (id) fetchEvent(id);
-    if (isVendor) {
+    if (canSubmit) {
       fetchVendorProfile();
       checkExistingSubmission();
     }
-  }, [id, isVendor]);
+  }, [id, canSubmit]);
 
   const checkExistingSubmission = async () => {
     try {
@@ -102,15 +103,15 @@ export const EventDetail: React.FC = () => {
     );
   }
 
-  const canEdit = hasRole(['admin', 'client']);
+  const canEdit = canUpdate;
   const vendorStatus = vendorProfile?.vendor?.status;
   const isVendorActive = vendorStatus === 'active';
   const isEventOpen = event.status === 'open';
-  const canSubmit = isVendor && isEventOpen && isVendorActive && !hasSubmitted;
+  const canSubmitToEvent = canSubmit && isEventOpen && isVendorActive && !hasSubmitted;
   
   // Check if current vendor is the winner
   const currentVendorId = vendorProfile?.vendor?.id;
-  const isCurrentVendorWinner = isVendor && event.winner_vendor_id && currentVendorId === event.winner_vendor_id;
+  const isCurrentVendorWinner = canSubmit && event.winner_vendor_id && currentVendorId === event.winner_vendor_id;
 
   const getEventStatusMessage = (status: string) => {
     const messages: Record<string, string> = {
@@ -136,7 +137,7 @@ export const EventDetail: React.FC = () => {
               Edit Event
             </Button>
           )}
-          {canSubmit && (
+          {canSubmitToEvent && (
             <Button variant="primary" onClick={() => setShowSubmitModal(true)}>
               Submit Pitch
             </Button>
@@ -145,7 +146,7 @@ export const EventDetail: React.FC = () => {
       </div>
 
       {/* Winner Announcement - Show at top for vendors when winner is selected */}
-      {isVendor && event.winner_vendor_id && (
+      {canSubmit && event.winner_vendor_id && (
         isCurrentVendorWinner ? (
           <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-300">
             <div className="flex items-center gap-4">
@@ -178,7 +179,7 @@ export const EventDetail: React.FC = () => {
       )}
 
       {/* Event Status Alert - Not Open (only show if no winner yet) */}
-      {isVendor && !isEventOpen && !event.winner_vendor_id && (
+      {canSubmit && !isEventOpen && !event.winner_vendor_id && (
         <Card className="bg-secondary-50 border-secondary-200">
           <div className="flex items-start gap-3">
             <AlertCircle className="text-secondary-600 mt-0.5" size={20} />
@@ -193,7 +194,7 @@ export const EventDetail: React.FC = () => {
       )}
 
       {/* Vendor Status Alert - Not Active (only show if no winner yet) */}
-      {isVendor && isEventOpen && !isVendorActive && !hasSubmitted && !event.winner_vendor_id && (
+      {canSubmit && isEventOpen && !isVendorActive && !hasSubmitted && !event.winner_vendor_id && (
         <Card className="bg-warning-50 border-warning-200">
           <div className="flex items-start gap-3">
             <AlertCircle className="text-warning-600 mt-0.5" size={20} />
@@ -210,7 +211,7 @@ export const EventDetail: React.FC = () => {
       )}
 
       {/* Already Submitted Alert (only show if no winner yet) */}
-      {isVendor && hasSubmitted && !event.winner_vendor_id && (
+      {canSubmit && hasSubmitted && !event.winner_vendor_id && (
         <Card className="bg-success-50 border-success-200">
           <div className="flex items-start gap-3">
             <FileText className="text-success-600 mt-0.5" size={20} />
@@ -273,7 +274,7 @@ export const EventDetail: React.FC = () => {
       </Card>
 
       {/* Winner Card - For Admin/Client/Superadmin below title */}
-      {event.winner_vendor_id && !isVendor && (
+      {event.winner_vendor_id && !canSubmit && (
         <Card className="bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600 shrink-0">

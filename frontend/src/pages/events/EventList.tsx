@@ -9,8 +9,10 @@ import { toast } from 'react-toastify';
 
 export const EventList: React.FC = () => {
   const navigate = useNavigate();
-  const { hasRole } = useAuth();
-  const isVendor = hasRole(['vendor']);
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission('event', 'create');
+  const canUpdate = hasPermission('event', 'update');
+  const canDelete = hasPermission('event', 'delete');
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -149,11 +151,7 @@ export const EventList: React.FC = () => {
     {
       header: 'Status',
       accessor: (event: Event) => (
-        isVendor ? (
-          <Badge variant={getStatusVariant(event.status)} className="capitalize">
-            {event.status}
-          </Badge>
-        ) : (
+        canUpdate ? (
           <select
             value={event.status}
             onChange={(e) => handleStatusChange(event.id, e.target.value)}
@@ -167,6 +165,10 @@ export const EventList: React.FC = () => {
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
           </select>
+        ) : (
+          <Badge variant={getStatusVariant(event.status)} className="capitalize">
+            {event.status}
+          </Badge>
         )
       )
     },
@@ -184,14 +186,14 @@ export const EventList: React.FC = () => {
               label: 'Edit',
               icon: <Edit size={14} />,
               onClick: () => navigate(`/events/${event.id}/edit`),
-              hidden: isVendor,
+              hidden: !canUpdate,
             },
             {
               label: 'Delete',
               icon: <Trash2 size={14} />,
               onClick: () => setDeleteId(event.id),
               variant: 'danger',
-              hidden: isVendor,
+              hidden: !canDelete,
             },
           ]}
         />
@@ -204,9 +206,9 @@ export const EventList: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-secondary-900">Events</h1>
-          <p className="text-secondary-500">{isVendor ? "Browse available events and submit your proposals" : "Manage and track all your events"}</p>
+          <p className="text-secondary-500">{canCreate || canUpdate ? "Manage and track all your events" : "Browse available events and submit your proposals"}</p>
         </div>
-        {!isVendor && (
+        {canCreate && (
           <Button
             onClick={() => navigate('/events/new')}
             leftIcon={<Plus size={20} />}
@@ -245,7 +247,7 @@ export const EventList: React.FC = () => {
         keyField="id"
         isLoading={isLoading}
         onRowClick={(event) => navigate(`/events/${event.id}`)}
-        emptyMessage={isVendor ? "No events available at the moment." : "No events found. Create one to get started."}
+        emptyMessage={canUpdate ? "No events found. Create one to get started." : "No events available at the moment."}
       />
 
       {totalPages > 1 && (

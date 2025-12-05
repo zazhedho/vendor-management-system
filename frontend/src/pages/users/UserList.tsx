@@ -8,7 +8,11 @@ import { Button, Card, Table, Badge, ConfirmModal, ActionMenu } from '../../comp
 
 export const UserList: React.FC = () => {
   const navigate = useNavigate();
-  const { user: currentUser, hasRole } = useAuth();
+  const { user: currentUser, hasPermission } = useAuth();
+  const canViewUsers = hasPermission('users', 'view');
+  const canCreateUser = hasPermission('users', 'create');
+  const canUpdateUser = hasPermission('users', 'update');
+  const canDeleteUser = hasPermission('users', 'delete');
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -18,8 +22,9 @@ export const UserList: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
+    if (!canViewUsers) return;
     fetchUsers();
-  }, [currentPage]);
+  }, [currentPage, canViewUsers]);
 
   const handleSearch = () => {
     setCurrentPage(1);
@@ -36,6 +41,8 @@ export const UserList: React.FC = () => {
     setSearchTerm('');
     setCurrentPage(1);
     
+    if (!canViewUsers) return;
+
     // Fetch with empty search
     setIsLoading(true);
     try {
@@ -61,6 +68,8 @@ export const UserList: React.FC = () => {
   };
 
   const fetchUsers = async () => {
+    if (!canViewUsers) return;
+
     setIsLoading(true);
     try {
       const response = await usersApi.getAll({
@@ -152,13 +161,14 @@ export const UserList: React.FC = () => {
               label: 'Edit',
               icon: <Edit size={14} />,
               onClick: () => navigate(`/users/${user.id}/edit`),
+              hidden: !canUpdateUser,
             },
             {
               label: 'Delete',
               icon: <Trash2 size={14} />,
               onClick: () => setDeleteId(user.id),
               variant: 'danger',
-              hidden: user.id === currentUser?.id,
+              hidden: user.id === currentUser?.id || !canDeleteUser,
             },
           ]}
         />
@@ -166,7 +176,7 @@ export const UserList: React.FC = () => {
     }
   ];
 
-  if (!hasRole(['admin', 'superadmin'])) {
+  if (!canViewUsers) {
     return (
       <Card className="text-center py-12">
         <Shield className="mx-auto text-secondary-400 mb-4" size={48} />
@@ -183,12 +193,14 @@ export const UserList: React.FC = () => {
           <h1 className="text-2xl font-bold text-secondary-900">Users</h1>
           <p className="text-secondary-500">Manage user accounts and permissions</p>
         </div>
-        <Button
-          onClick={() => navigate('/users/new')}
-          leftIcon={<Plus size={20} />}
-        >
-          Add User
-        </Button>
+        {canCreateUser && (
+          <Button
+            onClick={() => navigate('/users/new')}
+            leftIcon={<Plus size={20} />}
+          >
+            Add User
+          </Button>
+        )}
       </div>
 
       <Card className="p-4">
@@ -219,7 +231,7 @@ export const UserList: React.FC = () => {
         columns={columns}
         keyField="id"
         isLoading={isLoading}
-        onRowClick={(user) => navigate(`/users/${user.id}/edit`)}
+        onRowClick={canUpdateUser ? (user) => navigate(`/users/${user.id}/edit`) : undefined}
         emptyMessage="No users found."
       />
 

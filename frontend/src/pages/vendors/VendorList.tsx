@@ -8,14 +8,9 @@ import { useAuth } from '../../context/AuthContext';
 
 export const VendorList: React.FC = () => {
   const navigate = useNavigate();
-  const { hasRole, user } = useAuth();
-  const isSuperAdmin = hasRole(['superadmin']);
-  
-  console.log('=== VendorList Debug ===');
-  console.log('User:', user);
-  console.log('User role:', user?.role);
-  console.log('hasRole result:', isSuperAdmin);
-  console.log('========================');
+  const { hasPermission } = useAuth();
+  const canUpdateVendor = hasPermission('vendor', 'update');
+  const canDeleteVendor = hasPermission('vendor', 'delete');
   
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -119,13 +114,14 @@ export const VendorList: React.FC = () => {
               label: 'Edit',
               icon: <Edit size={14} />,
               onClick: () => navigate(`/vendors/${vendor.id}/edit`),
+              hidden: !canUpdateVendor,
             },
             {
               label: 'Delete',
               icon: <Trash2 size={14} />,
               onClick: () => setDeleteId(vendor.id),
               variant: 'danger',
-              hidden: !isSuperAdmin,
+              hidden: !canDeleteVendor,
             },
           ]}
         />
@@ -140,7 +136,7 @@ export const VendorList: React.FC = () => {
           <h1 className="text-2xl font-bold text-secondary-900">Vendors</h1>
           <p className="text-secondary-500">Manage your vendor database</p>
         </div>
-        {isSuperAdmin && (
+        {canUpdateVendor && (
           <Button
             onClick={() => navigate('/vendors/new')}
             leftIcon={<Plus size={20} />}

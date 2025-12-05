@@ -8,7 +8,7 @@ import { ScoreSubmissionModal } from './ScoreSubmissionModal';
 import { SelectWinnerModal } from './SelectWinnerModal';
 
 export const SubmissionList: React.FC = () => {
-  const { hasRole } = useAuth();
+  const { hasPermission } = useAuth();
   const [vendorSubmissions, setVendorSubmissions] = useState<EventSubmission[]>([]);
   const [groupedData, setGroupedData] = useState<GroupedSubmissionsResponse | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,21 +20,29 @@ export const SubmissionList: React.FC = () => {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
 
-  const isVendor = hasRole(['vendor']);
-  const canManage = hasRole(['admin', 'superadmin', 'client']);
-  const isClient = hasRole(['client']);
+  const canSubmit = hasPermission('event', 'submit_pitch');
+  const canViewSubmissions = hasPermission('event', 'view_submissions') || hasPermission('vendor', 'view_submissions');
+  const canScore = hasPermission('event', 'score');
+  const canSelectWinner = hasPermission('event', 'select_winner');
+  const hasSubmissionAccess = canSubmit || canViewSubmissions;
+  const isVendorView = canSubmit && !canViewSubmissions;
 
   useEffect(() => {
-    if (isVendor) {
+    if (!hasSubmissionAccess) {
+      setIsLoading(false);
+      return;
+    }
+
+    if (canSubmit && !canViewSubmissions) {
       fetchVendorSubmissions();
-    } else if (canManage) {
+    } else if (canViewSubmissions) {
       fetchGroupedSubmissions();
     }
-  }, [currentPage]);
+  }, [currentPage, canSubmit, canViewSubmissions, hasSubmissionAccess]);
 
   const handleSearch = () => {
     setAppliedSearch(searchTerm);
-    if (canManage) {
+    if (canViewSubmissions) {
       setCurrentPage(1);
       fetchGroupedSubmissions();
     }
@@ -51,12 +59,12 @@ export const SubmissionList: React.FC = () => {
     setAppliedSearch('');
     setCurrentPage(1);
     
-    if (isVendor) {
+    if (canSubmit && !canViewSubmissions) {
       const response = await eventsApi.getMySubmissions();
       if (response.status && response.data) {
         setVendorSubmissions(response.data);
       }
-    } else if (canManage) {
+    } else if (canViewSubmissions) {
       const response = await eventsApi.getGroupedSubmissions({
         page: 1,
         limit: 10,
@@ -150,8 +158,17 @@ export const SubmissionList: React.FC = () => {
     );
   }
 
+  if (!hasSubmissionAccess) {
+    return (
+      <Card className="text-center py-12">
+        <h3 className="text-lg font-medium text-secondary-900 mb-2">Access Restricted</h3>
+        <p className="text-secondary-600">You do not have permission to view submissions.</p>
+      </Card>
+    );
+  }
+
   // Vendor view - show their submissions
-  if (isVendor) {
+  if (canSubmit && !canViewSubmissions) {
     // Filter submissions based on applied search
     const filteredSubmissions = vendorSubmissions.filter(submission => 
       submission.event?.title?.toLowerCase().includes(appliedSearch.toLowerCase())
@@ -184,7 +201,7 @@ export const SubmissionList: React.FC = () => {
           )}
         </div>
 
-        {filteredSubmissions.length === 0 ? (
+      {filteredSubmissions.length === 0 ? (
           <Card>
             <div className="text-center py-12">
               <FileText className="mx-auto h-12 w-12 text-gray-400" />
@@ -300,7 +317,7 @@ export const SubmissionList: React.FC = () => {
     );
   }
 
-  // Admin/Client view - show grouped submissions
+  // Review view - show grouped submissions
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -360,7 +377,7 @@ export const SubmissionList: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    {isClient && !group.event.winner_vendor_id && (
+                    {canSelectWinner && !group.event.winner_vendor_id && (
                       <Button
                         variant="primary"
                         size="sm"
@@ -411,14 +428,16 @@ export const SubmissionList: React.FC = () => {
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setScoreModalData({ submissionId: submission.id, currentScore: submission.score || undefined })}
-                                  leftIcon={<Award className="w-4 h-4" />}
-                                >
-                                  Score
-                                </Button>
+                                {canScore && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setScoreModalData({ submissionId: submission.id, currentScore: submission.score || undefined })}
+                                    leftIcon={<Award className="w-4 h-4" />}
+                                  >
+                                    Score
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -562,7 +581,7 @@ export const SubmissionList: React.FC = () => {
           onClose={() => setScoreModalData(null)}
           onSuccess={() => {
             setScoreModalData(null);
-            if (isVendor) {
+            if (isVendorView) {
               fetchVendorSubmissions();
             } else {
               fetchGroupedSubmissions();

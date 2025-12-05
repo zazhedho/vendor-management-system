@@ -20,7 +20,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   hasRole: (roles: string[]) => boolean;
-  hasPermission: (permission: string) => boolean;
+  hasPermission: (resourceOrPermissionName: string, action?: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

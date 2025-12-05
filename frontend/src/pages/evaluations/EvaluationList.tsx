@@ -8,19 +8,26 @@ import { useAuth } from '../../context/AuthContext';
 
 export const EvaluationList: React.FC = () => {
   const navigate = useNavigate();
-  const { hasRole } = useAuth();
+  const { hasPermission } = useAuth();
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  const isVendor = hasRole(['vendor']);
-  const isClient = hasRole(['client']);
+  const canViewAll = hasPermission('evaluation', 'view');
+  const canCreate = hasPermission('evaluation', 'create');
+  const canUpdate = hasPermission('evaluation', 'update');
+  const canDelete = hasPermission('evaluation', 'delete');
+  const canUploadPhoto = hasPermission('evaluation', 'upload_photo');
+  const canReviewPhoto = hasPermission('evaluation', 'review_photo');
+  const canManageEvaluations = canCreate || canUpdate || canDelete || canReviewPhoto;
+  const isVendorView = canUploadPhoto && !canManageEvaluations;
+  const canListAll = canViewAll || canManageEvaluations;
 
   useEffect(() => {
     fetchEvaluations();
-  }, [currentPage]);
+  }, [currentPage, isVendorView, canListAll]);
 
   const handleSearch = () => {
     setCurrentPage(1);
@@ -39,12 +46,13 @@ export const EvaluationList: React.FC = () => {
     
     setIsLoading(true);
     try {
-      if (isVendor) {
+      if (isVendorView) {
         const response = await evaluationsApi.getMyEvaluations();
         if (response.status) {
           setEvaluations(response.data || []);
+          setTotalPages(1);
         }
-      } else {
+      } else if (canListAll) {
         const response = await evaluationsApi.getAll({
           page: 1,
           limit: 10,
@@ -65,13 +73,13 @@ export const EvaluationList: React.FC = () => {
   const fetchEvaluations = async () => {
     setIsLoading(true);
     try {
-      // Vendor uses different API endpoint
-      if (isVendor) {
+      if (isVendorView) {
         const response = await evaluationsApi.getMyEvaluations();
         if (response.status) {
           setEvaluations(response.data || []);
+          setTotalPages(1);
         }
-      } else {
+      } else if (canListAll) {
         const response = await evaluationsApi.getAll({
           page: currentPage,
           limit: 10,
@@ -116,7 +124,7 @@ export const EvaluationList: React.FC = () => {
           {evaluation.vendor?.profile?.vendor_name || evaluation.vendor_id?.slice(0, 8)}
         </span>
       ),
-      hidden: isVendor
+      hidden: isVendorView
     },
     {
       header: 'Photos',
@@ -153,7 +161,7 @@ export const EvaluationList: React.FC = () => {
               label: 'Upload Photos',
               icon: <Upload size={14} />,
               onClick: () => navigate(`/evaluations/${evaluation.id}/upload`),
-              hidden: !isVendor || (evaluation.photos?.length || 0) >= 5,
+              hidden: !canUploadPhoto || (evaluation.photos?.length || 0) >= 5,
             },
           ]}
         />
@@ -162,7 +170,7 @@ export const EvaluationList: React.FC = () => {
   ].filter(col => !col.hidden);
 
   // Vendor view
-  if (isVendor) {
+  if (isVendorView) {
     return (
       <div className="space-y-6">
         <div>
@@ -225,15 +233,15 @@ export const EvaluationList: React.FC = () => {
                 </div>
 
                 <div className="flex gap-2">
-                  <Button 
-                    variant="secondary" 
-                    size="sm" 
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     className="flex-1"
                     onClick={() => navigate(`/evaluations/${evaluation.id}`)}
                   >
                     View Details
                   </Button>
-                  {(evaluation.photos?.length || 0) < 5 && (
+                  {(evaluation.photos?.length || 0) < 5 && canUploadPhoto && (
                     <Button 
                       variant="primary" 
                       size="sm" 
@@ -253,7 +261,7 @@ export const EvaluationList: React.FC = () => {
     );
   }
 
-  // Admin/Client view
+  // Management view
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -261,7 +269,7 @@ export const EvaluationList: React.FC = () => {
           <h1 className="text-2xl font-bold text-secondary-900">Evaluations</h1>
           <p className="text-secondary-500">Vendor performance evaluations and ratings</p>
         </div>
-        {isClient && (
+        {canCreate && (
           <Button leftIcon={<Plus size={20} />} onClick={() => navigate('/evaluations/new')}>
             New Evaluation
           </Button>

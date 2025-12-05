@@ -9,15 +9,16 @@ import { Button, Input, Card, Stepper, Spinner, ConfirmModal } from '../../compo
 // Helper to format file type with proper capitalization
 const formatFileType = (type: string): string => {
   const upperCaseTypes: Record<string, string> = {
-    'ktp': 'KTP',
-    'npwp': 'NPWP',
-    'nib': 'NIB',
-    'siup': 'SIUP',
-    'akta': 'Akta',
-    'bank_book': 'Bank Book',
-    'sppkp': 'SPPKP',
-    'tdp': 'TDP',
-    'skdp': 'SKDP',
+    ktp: 'KTP',
+    npwp: 'NPWP',
+    nib: 'NIB',
+    siup: 'SIUP',
+    akta: 'Akta',
+    bank_book: 'Bank Book',
+    sppkp: 'SPPKP',
+    domisili: 'Izin Domisili',
+    skt: 'SKT',
+    rekening: 'Rekening',
   };
   return upperCaseTypes[type.toLowerCase()] || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 };
@@ -81,6 +82,9 @@ export const VendorForm: React.FC = () => {
   const [newFiles, setNewFiles] = useState<{ file: File; type: string }[]>([]);
   const [deleteFileId, setDeleteFileId] = useState<string | null>(null);
   const [isDeletingFile, setIsDeletingFile] = useState(false);
+
+  const companyDocs = ['ktp', 'domisili', 'siup', 'nib', 'skt', 'npwp', 'sppkp', 'akta', 'bank_book', 'rekening'];
+  const individualDocs = ['ktp', 'npwp', 'bank_book'];
 
   const steps = [
     { title: 'General Info', description: 'Basic vendor details' },
@@ -474,6 +478,17 @@ export const VendorForm: React.FC = () => {
         {currentStep === 3 && (
           <Card className="animate-fade-in">
             <h2 className="text-xl font-semibold mb-6">Document Uploads</h2>
+            <p className="text-sm text-secondary-600 mb-4">
+              {vendorData.vendor_type === 'individual'
+                ? 'Perorangan wajib unggah: KTP, NPWP, Buku Tabungan.'
+                : 'Perusahaan wajib unggah: KTP pemilik, Izin Domisili, SIUP/NIB, SKT, NPWP, SP-PKP, Akta Perusahaan, Rekening (halaman depan/buku tabungan).'}
+            </p>
+
+            {vendorData.vendor_type === '' && (
+              <div className="mb-6 p-4 border border-warning-200 rounded-lg bg-warning-50 text-sm text-warning-800">
+                Pilih Vendor Type terlebih dahulu agar daftar dokumen sesuai.
+              </div>
+            )}
 
             {/* Existing Files */}
             {profileFiles.length > 0 && (
@@ -535,10 +550,13 @@ export const VendorForm: React.FC = () => {
 
             {/* Upload Grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {['ktp', 'npwp', 'bank_book', 'nib', 'siup', 'akta'].map((type) => (
-                <label key={type} className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-secondary-300 rounded-xl cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-all group">
+              {(vendorData.vendor_type === 'individual' ? individualDocs : companyDocs).map((type) => (
+                <label
+                  key={type}
+                  className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-secondary-300 rounded-xl cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-all group"
+                >
                   <Upload className="w-6 h-6 text-secondary-400 group-hover:text-primary-500 mb-2" />
-                  <span className="text-sm font-medium text-secondary-600 group-hover:text-primary-600">
+                  <span className="text-sm font-medium text-secondary-600 group-hover:text-primary-600 text-center px-2">
                     {formatFileType(type)}
                   </span>
                   <input
@@ -546,6 +564,7 @@ export const VendorForm: React.FC = () => {
                     className="hidden"
                     accept=".jpg,.jpeg,.png,.pdf"
                     onChange={(e) => handleFileAdd(e, type)}
+                    disabled={!vendorData.vendor_type}
                   />
                 </label>
               ))}

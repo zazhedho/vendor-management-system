@@ -10,10 +10,9 @@ import { toast } from 'react-toastify';
 export const PaymentDetail: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { hasPermission, hasRole } = useAuth();
-  const isVendor = hasRole(['vendor']);
-  const canUpdate = hasPermission('update_payment');
-  const canDelete = hasPermission('delete_payment');
+  const { hasPermission } = useAuth();
+  const canUpdate = hasPermission('payment', 'update');
+  const canDelete = hasPermission('payment', 'delete');
   const [payment, setPayment] = useState<Payment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -41,10 +40,9 @@ export const PaymentDetail: React.FC = () => {
   const fetchPayment = async (paymentId: string) => {
     setIsLoading(true);
     try {
-      // Vendor uses different endpoint
-      const response = isVendor 
-        ? await paymentsApi.getMyPaymentById(paymentId)
-        : await paymentsApi.getById(paymentId);
+      const response = canUpdate || canDelete
+        ? await paymentsApi.getById(paymentId)
+        : await paymentsApi.getMyPaymentById(paymentId);
       if (response.status && response.data) {
         setPayment(response.data);
       }

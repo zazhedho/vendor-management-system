@@ -116,7 +116,7 @@ func (s *RoleService) Update(id string, req dto.RoleUpdate) (domainrole.Role, er
 		return domainrole.Role{}, err
 	}
 
-	if role.IsSystem && role.Name == utils.RoleSuperAdmin || role.Name == utils.RoleAdmin {
+	if role.IsSystem && role.Name != utils.RoleAdmin {
 		return domainrole.Role{}, errors.New("cannot update system roles")
 	}
 

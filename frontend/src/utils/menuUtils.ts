@@ -1,5 +1,7 @@
 import { Menu, MenuItem } from '../types';
 
+type FallbackMenu = MenuItem & { resource?: string; action?: string };
+
 export const buildMenuHierarchy = (flatMenus: Menu[]): MenuItem[] => {
   const menuMap: Record<string, MenuItem> = {};
   const rootMenus: MenuItem[] = [];
@@ -49,23 +51,22 @@ export const buildMenuHierarchy = (flatMenus: Menu[]): MenuItem[] => {
   return sortMenus(rootMenus);
 };
 
-export const getFallbackMenus = (role?: string): MenuItem[] => {
-  const baseMenus: MenuItem[] = [
-    { path: '/dashboard', label: 'Dashboard', icon: 'LayoutDashboard', name: 'dashboard', children: [] },
-    { path: '/events', label: 'Events', icon: 'Calendar', name: 'events', children: [] },
-    { path: '/vendors', label: 'Vendors', icon: 'ShoppingBag', name: 'vendors', children: [] },
-    { path: '/payments', label: 'Payments', icon: 'CreditCard', name: 'payments', children: [] },
-    { path: '/evaluations', label: 'Evaluations', icon: 'Star', name: 'evaluations', children: [] },
+export const getFallbackMenus = (
+  canAccess: (resource?: string, action?: string, name?: string) => boolean
+): MenuItem[] => {
+  const baseMenus: FallbackMenu[] = [
+    { path: '/dashboard', label: 'Dashboard', icon: 'LayoutDashboard', name: 'dashboard', children: [], resource: 'dashboard', action: 'view' },
+    { path: '/events', label: 'Events', icon: 'Calendar', name: 'events', children: [], resource: 'event', action: 'view' },
+    { path: '/vendors', label: 'Vendors', icon: 'ShoppingBag', name: 'vendors', children: [], resource: 'vendor', action: 'view' },
+    { path: '/payments', label: 'Payments', icon: 'CreditCard', name: 'payments', children: [], resource: 'payment', action: 'view' },
+    { path: '/evaluations', label: 'Evaluations', icon: 'Star', name: 'evaluations', children: [], resource: 'evaluation', action: 'view' },
+    { path: '/submissions', label: 'Submissions', icon: 'Inbox', name: 'submissions', children: [], resource: 'event', action: 'view_submissions' },
+    { path: '/users', label: 'Users', icon: 'Users', name: 'users', children: [], resource: 'users', action: 'view' },
+    { path: '/roles', label: 'Roles', icon: 'Shield', name: 'roles', children: [], resource: 'roles', action: 'view' },
+    { path: '/menus', label: 'Menus', icon: 'List', name: 'menus', children: [], resource: 'roles', action: 'assign_menus' },
   ];
 
-  if (role === 'admin' || role === 'superadmin') {
-    return [
-      ...baseMenus,
-      { path: '/users', label: 'Users', icon: 'Users', name: 'users', children: [] },
-      { path: '/roles', label: 'Roles', icon: 'Shield', name: 'roles', children: [] },
-      { path: '/menus', label: 'Menus', icon: 'List', name: 'menus', children: [] },
-    ];
-  }
-
-  return baseMenus;
+  return baseMenus
+    .filter((menu) => canAccess(menu.resource, menu.action, menu.name))
+    .map(({ resource, action, ...menu }) => menu);
 };

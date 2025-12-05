@@ -28,15 +28,18 @@ import { toast } from 'react-toastify';
 // Helper to format file type with proper capitalization
 const formatFileType = (type: string): string => {
   const upperCaseTypes: Record<string, string> = {
-    'ktp': 'KTP',
-    'npwp': 'NPWP',
-    'nib': 'NIB',
-    'siup': 'SIUP',
-    'akta': 'Akta',
-    'bank_book': 'Bank Book',
-    'sppkp': 'SPPKP',
-    'tdp': 'TDP',
-    'skdp': 'SKDP',
+    ktp: 'KTP',
+    npwp: 'NPWP',
+    nib: 'NIB',
+    siup: 'SIUP',
+    akta: 'Akta',
+    bank_book: 'Bank Book',
+    sppkp: 'SPPKP',
+    tdp: 'TDP',
+    skdp: 'SKDP',
+    domisili: 'Izin Domisili',
+    skt: 'SKT',
+    rekening: 'Rekening',
   };
   return upperCaseTypes[type.toLowerCase()] || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 };
@@ -50,10 +53,13 @@ export const VendorProfile: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
 
-  // Determine view mode based on role and URL
+  // Determine view mode based on permissions and ownership
   const isVendorRole = useMemo(() => user?.role === 'vendor', [user?.role]);
+  const canViewVendors = useMemo(() => hasPermission('vendor', 'view'), [hasPermission]);
+  const canUpdateStatus = useMemo(() => hasPermission('vendor', 'update_status'), [hasPermission]);
+  const canDeleteVendor = useMemo(() => hasPermission('vendor', 'delete'), [hasPermission]);
   const isEditMode = location.pathname.endsWith('/edit');
   const isNewMode = location.pathname.endsWith('/new');
 
@@ -61,18 +67,21 @@ export const VendorProfile: React.FC = () => {
   // For vendor role: always show their own profile form
   // For admin role: show list on /vendor/profile, detail/edit on other routes
   const showListView = useMemo(() => {
+    if (!canViewVendors) return false;
     if (isVendorRole) return false;
-    // Admin sees list only on exact /vendor/profile path
     return location.pathname === '/vendor/profile';
-  }, [isVendorRole, location.pathname]);
+  }, [canViewVendors, isVendorRole, location.pathname]);
 
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [profile, setProfile] = useState<VendorProfileType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   // isEditing based on URL for proper routing
-  const isEditing = isEditMode || isNewMode;
+  const isOwner = useMemo(() => !!vendor?.user_id && vendor.user_id === user?.id, [vendor?.user_id, user?.id]);
+  const canEditProfile = isOwner;
+  const isEditing = (isEditMode || isNewMode) && canEditProfile;
 
   // For admin list view
   const [vendorList, setVendorList] = useState<VendorWithProfile[]>([]);
@@ -88,7 +97,7 @@ export const VendorProfile: React.FC = () => {
   const [selectedCityCode, setSelectedCityCode] = useState('');
 
   const [formData, setFormData] = useState({
-    vendor_type: '',
+    vendor_type: 'company',
     vendor_name: '',
     email: '',
     telephone: '',
@@ -130,8 +139,6 @@ export const VendorProfile: React.FC = () => {
 
   // File upload states
   const [uploadingFile, setUploadingFile] = useState(false);
-  const [selectedFileType, setSelectedFileType] = useState<string>('ktp');
-  const [customFileType, setCustomFileType] = useState('');
 
   // Delete file modal
   const [deleteFileId, setDeleteFileId] = useState<string | null>(null);
@@ -140,6 +147,20 @@ export const VendorProfile: React.FC = () => {
   // Delete vendor modal
   const [deleteVendorId, setDeleteVendorId] = useState<string | null>(null);
   const [isDeletingVendor, setIsDeletingVendor] = useState(false);
+
+  const companyDocs = ['ktp', 'domisili', 'siup', 'nib', 'skt', 'npwp', 'sppkp', 'akta', 'bank_book', 'rekening'];
+  const individualDocs = ['ktp', 'npwp', 'bank_book'];
+
+  useEffect(() => {
+    if (!canEditProfile && (isEditMode || isNewMode)) {
+      // Prevent non-owner from accessing edit/create screens
+      if (id) {
+        navigate(`/vendor/profile/${id}/detail`, { replace: true });
+      } else {
+        navigate('/vendor/profile', { replace: true });
+      }
+    }
+  }, [canEditProfile, isEditMode, isNewMode, id]);
 
   useEffect(() => {
     if (!user) return;
@@ -150,7 +171,7 @@ export const VendorProfile: React.FC = () => {
         await fetchVendorsList();
       } else {
         // Vendor viewing own profile OR admin viewing/editing specific vendor
-        await fetchVendorProfile();
+        await fetchVendorProfile(id);
         await fetchProvinces();
       }
     };
@@ -273,11 +294,16 @@ export const VendorProfile: React.FC = () => {
     }
   };
 
-  const fetchVendorProfile = async () => {
+  const fetchVendorProfile = async (vendorId?: string) => {
     setIsLoading(true);
     try {
-      const response = await vendorsApi.getMyVendorProfile();
-      console.log('Vendor profile response:', response);
+      let response;
+      if (isVendorRole || !vendorId) {
+        response = await vendorsApi.getMyVendorProfile();
+      } else {
+        response = await vendorsApi.getById(vendorId);
+      }
+
       if (response.status && response.data) {
         const data = response.data;
         // Handle both direct response and nested data structure
@@ -384,7 +410,7 @@ export const VendorProfile: React.FC = () => {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (fileType: string) => async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0] || !profile?.id) return;
 
     const file = e.target.files[0];
@@ -402,21 +428,12 @@ export const VendorProfile: React.FC = () => {
       return;
     }
 
-    // Determine file type
-    const fileType = selectedFileType === 'other'
-      ? (customFileType.trim() || 'other')
-      : selectedFileType;
-
     setUploadingFile(true);
     try {
       const response = await vendorsApi.uploadProfileFile(profile.id, file, fileType);
       if (response.status) {
         toast.success('File uploaded successfully');
         await fetchVendorProfile();
-        // Reset custom type after successful upload
-        if (selectedFileType === 'other') {
-          setCustomFileType('');
-        }
       } else {
         toast.error('Failed to upload file');
       }
@@ -449,6 +466,25 @@ export const VendorProfile: React.FC = () => {
     } finally {
       setIsDeletingFile(false);
       setDeleteFileId(null);
+    }
+  };
+
+  const handleUpdateStatus = async (newStatus: string) => {
+    if (!vendor || !canUpdateStatus) return;
+    setIsUpdatingStatus(true);
+    try {
+      const response = await vendorsApi.updateStatus(vendor.id, newStatus);
+      if (response.status && response.data) {
+        setVendor({ ...vendor, status: response.data.status || newStatus });
+      } else {
+        setVendor({ ...vendor, status: newStatus });
+      }
+      toast.success(`Vendor status updated to ${newStatus}`);
+    } catch (error: any) {
+      console.error('Failed to update vendor status:', error);
+      toast.error(error?.response?.data?.message || 'Failed to update status');
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -820,6 +856,8 @@ export const VendorProfile: React.FC = () => {
     );
   }
 
+  const vendorStatuses = ['pending', 'verified', 'active', 'suspended', 'rejected'];
+
   // Admin/Superadmin/Client view - show vendors list
   if (showListView) {
     const getStatusVariant = (status: string): 'success' | 'info' | 'danger' | 'warning' => {
@@ -928,7 +966,7 @@ export const VendorProfile: React.FC = () => {
                         >
                           <Badge variant={getStatusVariant(item?.vendor?.status || '')}>{item?.vendor?.status || 'pending'}</Badge>
                         </td>
-                        {user?.role === 'superadmin' && (
+                        {canDeleteVendor && (
                           <td className="py-2.5 px-4 text-right">
                             <ActionMenu
                               items={[
@@ -1012,9 +1050,6 @@ export const VendorProfile: React.FC = () => {
               <Button type="submit" isLoading={isSaving} leftIcon={<Save size={16} />}>
                 Save Profile
               </Button>
-              <Button type="button" variant="secondary" onClick={() => navigate('/vendor/profile')}>
-                Cancel
-              </Button>
             </div>
           </form>
         </Card>
@@ -1038,11 +1073,8 @@ export const VendorProfile: React.FC = () => {
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-secondary-900">Vendor Profile</h1>
-        {!isEditing && (
+        {!isEditing && canEditProfile && (
           <Button onClick={() => navigate(getEditUrl())}>Edit Profile</Button>
-        )}
-        {isEditing && (
-          <Button variant="secondary" onClick={() => navigate(getBackUrl())}>Cancel</Button>
         )}
       </div>
 
@@ -1163,63 +1195,40 @@ export const VendorProfile: React.FC = () => {
                 </div>
               )}
 
-              {/* Upload Section */}
-              <div className="flex flex-col sm:flex-row gap-3 mb-4">
-                {/* File Type Dropdown */}
-                <div className="flex-1">
-                  <select
-                    value={selectedFileType}
-                    onChange={(e) => setSelectedFileType(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  >
-                    <option value="ktp">KTP</option>
-                    <option value="npwp">NPWP</option>
-                    <option value="bank_book">Bank Book</option>
-                    <option value="nib">NIB</option>
-                    <option value="siup">SIUP</option>
-                    <option value="akta">Akta</option>
-                    <option value="sppkp">SPPKP</option>
-                    <option value="tdp">TDP</option>
-                    <option value="skdp">SKDP</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-
-                {/* Custom Type Input (shown when "other" is selected) */}
-                {selectedFileType === 'other' && (
-                  <div className="flex-1">
-                    <Input
-                      type="text"
-                      value={customFileType}
-                      onChange={(e) => setCustomFileType(e.target.value)}
-                      placeholder="Enter custom document type..."
-                    />
+              <div className="mb-4">
+                <p className="text-sm text-secondary-600">
+                  {formData.vendor_type === 'individual'
+                    ? 'Perorangan wajib unggah: KTP, NPWP, Buku Tabungan.'
+                    : 'Perusahaan wajib unggah: KTP pemilik, Izin Domisili, SIUP/NIB, SKT, NPWP, SP-PKP, Akta Perusahaan, Rekening (halaman depan/buku tabungan).'}
+                </p>
+                {formData.vendor_type === '' && (
+                  <div className="mt-2 p-3 border border-warning-200 rounded-lg bg-warning-50 text-sm text-warning-800">
+                    Pilih Vendor Type terlebih dahulu agar daftar dokumen sesuai.
                   </div>
                 )}
-
-                {/* Upload Button */}
-                <label className={`cursor-pointer inline-flex items-center justify-center gap-2 px-4 py-2.5 font-medium rounded-lg transition-colors ${uploadingFile
-                  ? 'bg-secondary-300 text-secondary-500 cursor-not-allowed'
-                  : 'bg-primary-600 hover:bg-primary-700 text-white'
-                  }`}>
-                  {uploadingFile ? (
-                    <Spinner size="sm" />
-                  ) : (
-                    <>
-                      <Upload size={16} />
-                      Select File
-                    </>
-                  )}
-                  <input
-                    type="file"
-                    accept=".jpg,.jpeg,.png,.pdf"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                    disabled={uploadingFile}
-                  />
-                </label>
               </div>
-              <p className="text-xs text-secondary-500">
+
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {(formData.vendor_type === 'individual' ? individualDocs : companyDocs).map((type) => (
+                  <label
+                    key={type}
+                    className={`flex flex-col items-center justify-center h-32 border-2 border-dashed border-secondary-300 rounded-xl cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-all group ${!formData.vendor_type ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  >
+                    <Upload className="w-6 h-6 text-secondary-400 group-hover:text-primary-500 mb-2" />
+                    <span className="text-sm font-medium text-secondary-600 group-hover:text-primary-600 text-center px-2">
+                      {formatFileType(type)}
+                    </span>
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.pdf"
+                      onChange={handleFileUpload(type)}
+                      className="hidden"
+                      disabled={uploadingFile || !formData.vendor_type}
+                    />
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-secondary-500 mt-2">
                 Accepted formats: JPG, PNG, PDF (Max 5MB per file)
               </p>
             </Card>
@@ -1460,10 +1469,40 @@ export const VendorProfile: React.FC = () => {
                       {vendor.status}
                     </Badge>
                   </div>
+                  {canUpdateStatus && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-secondary-500">Update Status</p>
+                      <select
+                        value={vendor.status}
+                        onChange={(e) => handleUpdateStatus(e.target.value)}
+                        disabled={isUpdatingStatus}
+                        className="w-full px-3 py-2 text-sm rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none capitalize disabled:opacity-50"
+                      >
+                        {vendorStatuses.map((status) => (
+                          <option key={status} value={status} className="capitalize">{status}</option>
+                        ))}
+                      </select>
+                      {isUpdatingStatus && (
+                        <p className="text-xs text-secondary-500 flex items-center gap-1">
+                          <Spinner size="sm" /> Updating...
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <div>
                     <p className="text-xs text-secondary-500">Vendor Type</p>
                     <p className="text-sm text-secondary-900 capitalize">{vendor.vendor_type}</p>
                   </div>
+                  {canDeleteVendor && (
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setDeleteVendorId(vendor.id)}
+                    >
+                      Delete Vendor
+                    </Button>
+                  )}
                   {vendor.verified_at && (
                     <div>
                       <p className="text-xs text-secondary-500">Verified At</p>

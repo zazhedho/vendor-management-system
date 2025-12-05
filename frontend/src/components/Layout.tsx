@@ -10,7 +10,7 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { user, userMenus } = useAuth();
+  const { user, userMenus, hasPermission } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebarCollapsed');
@@ -31,12 +31,24 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       setMenuItems(hierarchicalMenus);
       menuLoadedRef.current = true;
     } else if (user) {
-      // Use fallback menus based on role
-      const fallbackMenus = getFallbackMenus(user.role);
+      // Use fallback menus based on permissions
+      const fallbackMenus = getFallbackMenus((resource, action, name) => {
+        if (!resource || !action) return false;
+
+        if (name === 'submissions') {
+          return (
+            hasPermission('event', 'view_submissions') ||
+            hasPermission('vendor', 'view_submissions') ||
+            hasPermission('event', 'submit_pitch')
+          );
+        }
+
+        return hasPermission(resource, action);
+      });
       setMenuItems(fallbackMenus);
       menuLoadedRef.current = true;
     }
-  }, [userMenus, user]);
+  }, [userMenus, user, hasPermission]);
 
   const toggleSidebarCollapse = () => {
     const newState = !isSidebarCollapsed;

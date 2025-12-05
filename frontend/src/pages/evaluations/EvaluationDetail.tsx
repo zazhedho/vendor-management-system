@@ -10,7 +10,7 @@ import { toast } from 'react-toastify';
 export const EvaluationDetail: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { hasRole } = useAuth();
+  const { hasPermission } = useAuth();
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [deletePhotoId, setDeletePhotoId] = useState<string | null>(null);
@@ -18,6 +18,8 @@ export const EvaluationDetail: React.FC = () => {
   const [reviewingPhoto, setReviewingPhoto] = useState<EvaluationPhoto | null>(null);
   const [reviewForm, setReviewForm] = useState({ review: '', rating: 3 });
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const canReviewPhoto = hasPermission('evaluation', 'review_photo');
+  const canDeletePhoto = hasPermission('evaluation', 'delete');
 
   useEffect(() => {
     if (id) fetchEvaluation(id);
@@ -122,9 +124,6 @@ export const EvaluationDetail: React.FC = () => {
     );
   }
 
-  const isClient = hasRole(['client']);
-  const isAdmin = hasRole(['admin']);
-
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
@@ -203,7 +202,7 @@ export const EvaluationDetail: React.FC = () => {
               <Image size={20} />
               Evaluation Photos ({evaluation.photos.length})
             </h3>
-            {isClient && (
+            {canReviewPhoto && (
               <p className="text-sm text-secondary-600 mt-1">
                 Click "Review & Rate" to rate each photo
               </p>
@@ -246,7 +245,7 @@ export const EvaluationDetail: React.FC = () => {
                     Uploaded: {formatDate(photo.created_at)}
                   </div>
                   <div className="flex gap-2">
-                    {isClient && (
+                    {canReviewPhoto && (
                       <Button
                         variant={photo.rating ? 'secondary' : 'primary'}
                         size="sm"
@@ -257,13 +256,13 @@ export const EvaluationDetail: React.FC = () => {
                         {photo.rating ? 'Edit Review' : 'Review & Rate'}
                       </Button>
                     )}
-                    {isAdmin && (
+                    {canDeletePhoto && (
                       <Button
                         variant="danger"
                         size="sm"
                         leftIcon={<Trash2 size={14} />}
                         onClick={() => handleDeletePhotoClick(photo.id)}
-                        className={isClient ? '' : 'flex-1'}
+                        className={canReviewPhoto ? '' : 'flex-1'}
                       >
                         Delete
                       </Button>
