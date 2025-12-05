@@ -70,7 +70,7 @@ type UploadVendorProfileFileRequest struct {
 }
 
 type UpdateVendorStatusRequest struct {
-	Status string `json:"status" binding:"required,oneof=pending verified rejected active suspended"`
+	Status string `json:"status" binding:"required,oneof=pending verify rejected active suspended"`
 }
 
 type UpdateVendorProfileFileStatusRequest struct {

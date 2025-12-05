@@ -3,9 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { paymentsApi } from '../../api/payments';
 import { vendorsApi } from '../../api/vendors';
 import { toast } from 'react-toastify';
-import { Save, X, Upload, FileText, Trash2, Download } from 'lucide-react';
+import { Save, X, Upload, FileText, Trash2, Download, Search, Loader2 } from 'lucide-react';
 import { Button, Input, Card, Spinner, ConfirmModal } from '../../components/ui';
-import { PaymentFile } from '../../types';
+import { PaymentFile, Vendor, VendorProfile } from '../../types';
 
 export const PaymentForm: React.FC = () => {
   const navigate = useNavigate();
@@ -20,7 +20,8 @@ export const PaymentForm: React.FC = () => {
     payment_date: '',
     description: '',
   });
-  const [vendors, setVendors] = useState<any[]>([]);
+  type VendorListItem = { vendor: Vendor; profile?: VendorProfile | null };
+  const [vendors, setVendors] = useState<VendorListItem[]>([]);
   const [files, setFiles] = useState<{ file: File; file_type: string; caption: string }[]>([]);
   const [existingFiles, setExistingFiles] = useState<PaymentFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -29,26 +30,56 @@ export const PaymentForm: React.FC = () => {
   const [isDeletingFile, setIsDeletingFile] = useState(false);
   const [selectedFileType, setSelectedFileType] = useState('proof');
   const [customFileType, setCustomFileType] = useState('');
+  const [isFetchingVendors, setIsFetchingVendors] = useState(false);
+  const [vendorSearch, setVendorSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [vendorPage, setVendorPage] = useState(1);
+  const [vendorTotalPages, setVendorTotalPages] = useState(1);
+  const [isInitialVendorLoad, setIsInitialVendorLoad] = useState(true);
+  const PAGE_SIZE = 10;
 
   useEffect(() => {
-    fetchVendors();
+    fetchVendors(1, false, '');
     if (isEditMode && id) {
       fetchPayment(id);
     }
   }, [id, isEditMode]);
 
-  const fetchVendors = async () => {
-    setIsLoadingData(true);
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setDebouncedSearch(vendorSearch);
+      fetchVendors(1, false, vendorSearch);
+    }, 350);
+    return () => clearTimeout(handle);
+  }, [vendorSearch]);
+
+  const fetchVendors = async (page = 1, append = false, search = debouncedSearch) => {
+    setIsFetchingVendors(true);
+    if (!append && isInitialVendorLoad) setIsLoadingData(true);
     try {
-      const response = await vendorsApi.getAll({ limit: 100 });
+      const response = await vendorsApi.getAll({
+        page,
+        limit: PAGE_SIZE,
+        search: search || undefined,
+        'filters[status]': 'active',
+      });
       if (response.status && response.data) {
-        setVendors(response.data);
+        const data = (response.data || []).map((item: any) => {
+          const vendor = item.vendor || item;
+          const profile = item.profile || item.vendor?.profile || null;
+          return { vendor, profile } as VendorListItem;
+        });
+        setVendors((prev) => append ? [...prev, ...data] : data);
+        setVendorTotalPages(response.total_pages || 1);
+        setVendorPage(page);
       }
     } catch (error) {
       console.error('Failed to fetch vendors:', error);
       toast.error('Failed to load vendors');
     } finally {
+      setIsFetchingVendors(false);
       setIsLoadingData(false);
+      if (isInitialVendorLoad) setIsInitialVendorLoad(false);
     }
   };
 
@@ -202,7 +233,9 @@ export const PaymentForm: React.FC = () => {
     }
   };
 
-  if (isLoadingData) {
+  const showInitialLoading = isInitialVendorLoad && isLoadingData;
+
+  if (showInitialLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Spinner size="lg" />
@@ -237,24 +270,98 @@ export const PaymentForm: React.FC = () => {
             </div>
 
             {/* Vendor Selection */}
-            <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-secondary-700">
                 Vendor <span className="text-danger-500">*</span>
               </label>
-              <select
-                name="vendor_id"
-                value={formData.vendor_id}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                required
-              >
-                <option value="">Select Vendor</option>
-                {vendors.map((vendor: any) => (
-                  <option key={vendor.vendor?.id} value={vendor.vendor?.id}>
-                    {vendor.profile?.vendor_name || vendor.vendor?.id}
-                  </option>
-                ))}
-              </select>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <Input
+                      value={vendorSearch}
+                      onChange={(e) => setVendorSearch(e.target.value)}
+                      placeholder="Search vendors by name or email..."
+                      leftIcon={<Search size={16} className="text-secondary-400" />}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      setVendorSearch('');
+                      setDebouncedSearch('');
+                      fetchVendors(1, false, '');
+                    }}
+                    disabled={isFetchingVendors}
+                  >
+                    Reset
+                  </Button>
+                </div>
+
+                {isLoadingData && vendors.length === 0 ? (
+                  <div className="flex justify-center py-6">
+                    <Spinner size="md" />
+                  </div>
+                ) : vendors.length === 0 ? (
+                  <Card className="py-6 text-center">
+                    <p className="text-sm text-secondary-600">No vendors found. Try another search.</p>
+                  </Card>
+                ) : (
+                  <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                    {vendors.map((item) => (
+                      <div
+                        key={item.vendor.id}
+                        onClick={() => setFormData({ ...formData, vendor_id: item.vendor.id })}
+                        className={`p-3 border rounded-lg cursor-pointer transition ${
+                          formData.vendor_id === item.vendor.id
+                            ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-400'
+                            : 'border-secondary-200 hover:border-primary-300 hover:bg-secondary-50'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-secondary-900 truncate">
+                              {item.profile?.vendor_name || item.vendor.id}
+                            </p>
+                            <p className="text-xs text-secondary-500 truncate">
+                              {item.profile?.email || 'No email'}
+                            </p>
+                            <div className="flex flex-wrap gap-2 mt-1 text-xs text-secondary-600">
+                              {item.profile?.city_name && <span>{item.profile.city_name}</span>}
+                              {item.profile?.province_name && <span>• {item.profile.province_name}</span>}
+                              <span className="capitalize px-2 py-0.5 bg-secondary-100 rounded-full text-secondary-700">
+                                {item.vendor.status}
+                              </span>
+                            </div>
+                          </div>
+                          <div
+                            className={`w-4 h-4 rounded-full border-2 mt-1 flex items-center justify-center ${
+                              formData.vendor_id === item.vendor.id ? 'border-primary-500 bg-primary-500' : 'border-secondary-300'
+                            }`}
+                          >
+                            {formData.vendor_id === item.vendor.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {isFetchingVendors && (
+                      <div className="flex justify-center py-2 text-secondary-500">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      </div>
+                    )}
+                    {vendorPage < vendorTotalPages && !isFetchingVendors && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="w-full"
+                        onClick={() => fetchVendors(vendorPage + 1, true)}
+                      >
+                        Load More
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Amount */}
@@ -484,3 +591,5 @@ export const PaymentForm: React.FC = () => {
     </div>
   );
 };
+
+export default PaymentForm;

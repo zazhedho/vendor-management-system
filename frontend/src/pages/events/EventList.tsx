@@ -160,7 +160,6 @@ export const EventList: React.FC = () => {
           >
             <option value="draft">Draft</option>
             <option value="open">Open</option>
-            <option value="pending">Pending</option>
             <option value="closed">Closed</option>
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>

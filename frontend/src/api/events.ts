@@ -2,7 +2,7 @@ import { apiClient } from './client';
 import { ApiResponse, PaginatedResponse, Event, EventSubmission, EventFile, EventSubmissionFile, GroupedSubmissionsResponse } from '../types';
 
 export const eventsApi = {
-  getAll: async (params?: { page?: number; limit?: number; search?: string }) => {
+  getAll: async (params?: { page?: number; limit?: number; search?: string; [key: string]: any }) => {
     const response = await apiClient.get<PaginatedResponse<Event>>('/events', { params });
     return response.data;
   },
@@ -87,8 +87,15 @@ export const eventsApi = {
     return response.data;
   },
 
-  getMySubmissions: async () => {
-    const response = await apiClient.get<ApiResponse<EventSubmission[]>>('/vendor/event/submissions');
+  getMySubmissions: async (params?: { 
+    page?: number; 
+    limit?: number; 
+    search?: string; 
+    order_by?: string; 
+    order_direction?: string;
+    [key: string]: any;
+  }) => {
+    const response = await apiClient.get<PaginatedResponse<EventSubmission>>('/vendor/event/submissions', { params });
     return response.data;
   },
 

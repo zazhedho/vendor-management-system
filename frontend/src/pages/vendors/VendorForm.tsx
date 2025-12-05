@@ -38,7 +38,7 @@ export const VendorForm: React.FC = () => {
     status: 'pending',
   });
 
-  const [profileData, setProfileData] = useState<Partial<VendorProfile>>({
+  const [profileData, setProfileData] = useState<Partial<VendorProfile> & { vendor_type?: string }>({
     vendor_name: '',
     email: '',
     phone: '',
@@ -113,7 +113,7 @@ export const VendorForm: React.FC = () => {
 
         const profileResponse = await vendorsApi.getProfile(vendorId);
         if (profileResponse.status && profileResponse.data) {
-          setProfileData(profileResponse.data);
+          setProfileData({ ...profileResponse.data, vendor_type: vendor.vendor_type });
           if (profileResponse.data.files) {
             setProfileFiles(profileResponse.data.files);
           }
@@ -128,7 +128,11 @@ export const VendorForm: React.FC = () => {
   };
 
   const handleVendorChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setVendorData({ ...vendorData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setVendorData({ ...vendorData, [name]: value });
+    if (name === 'vendor_type') {
+      setProfileData({ ...profileData, vendor_type: value });
+    }
   };
 
   const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -435,13 +439,15 @@ export const VendorForm: React.FC = () => {
                   onChange={handleProfileChange}
                   placeholder="Full name as on NPWP"
                 />
-                <Input
-                  label="NIB Number"
-                  name="nib_number"
-                  value={profileData.nib_number}
-                  onChange={handleProfileChange}
-                  placeholder="Business identification number"
-                />
+                {vendorData.vendor_type === 'company' && (
+                  <Input
+                    label="NIB Number"
+                    name="nib_number"
+                    value={profileData.nib_number}
+                    onChange={handleProfileChange}
+                    placeholder="Business identification number"
+                  />
+                )}
               </div>
 
               <div className="border-t border-secondary-100 pt-6">

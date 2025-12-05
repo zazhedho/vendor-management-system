@@ -27,7 +27,7 @@ type ServiceEventInterface interface {
 	GetSubmissionsByEventID(eventId string) ([]domainevents.EventSubmission, error)
 	GetAllSubmissions(params filter.BaseParams) ([]map[string]interface{}, int64, error)
 	GetGroupedSubmissions(params filter.BaseParams, submissionPage int, submissionLimit int) (*domainevents.GroupedSubmissionsResponse, error)
-	GetMySubmissions(vendorId string) ([]domainevents.EventSubmission, error)
+	GetMySubmissions(vendorId string, params filter.BaseParams) ([]domainevents.EventSubmission, int64, error)
 	ScoreSubmission(submissionId string, req dto.ScoreSubmissionRequest) (domainevents.EventSubmission, error)
 	ShortlistSubmission(submissionId string, isShortlisted bool) (domainevents.EventSubmission, error)
 	SelectWinner(eventId, submissionId string) (domainevents.Event, error)

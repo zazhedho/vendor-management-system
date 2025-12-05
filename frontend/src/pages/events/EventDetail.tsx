@@ -252,7 +252,10 @@ export const EventDetail: React.FC = () => {
         <div className="relative z-10">
           <div className="flex items-start justify-between">
             <div>
-              <Badge variant={getStatusVariant(event.status)} className="bg-white/20 text-white border-none backdrop-blur-sm mb-4">
+              <Badge
+                variant={getStatusVariant(event.status)}
+                className="bg-white/90 text-secondary-900 border border-white/60 capitalize font-semibold mb-4"
+              >
                 {event.status}
               </Badge>
               <h1 className="text-3xl font-bold mb-2">{event.title}</h1>

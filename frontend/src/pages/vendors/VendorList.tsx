@@ -72,10 +72,11 @@ export const VendorList: React.FC = () => {
   const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
       case 'active': return 'success';
-      case 'verified': return 'info';
+      case 'verify': return 'info';
       case 'suspended': return 'danger';
       case 'rejected': return 'danger';
-      default: return 'warning';
+      case 'pending': return 'warning';
+      default: return 'secondary';
     }
   };
 
@@ -91,7 +92,7 @@ export const VendorList: React.FC = () => {
     {
       header: 'Status',
       accessor: (vendor: Vendor) => (
-        <Badge variant={getStatusVariant(vendor.status)} className="capitalize">
+        <Badge variant={getStatusVariant(vendor.status)} className="capitalize font-semibold px-3 py-1">
           {vendor.status}
         </Badge>
       )

@@ -299,7 +299,7 @@ func (r *Routes) EventRoutes() {
 	vendorEvent := r.App.Group("/api/vendor/event").Use(mdw.AuthMiddleware())
 	{
 		vendorEvent.POST("/:id/submit", mdw.PermissionMiddleware("event", "submit_pitch"), h.SubmitPitch)
-		vendorEvent.GET("/submissions", mdw.PermissionMiddleware("vendor", "view_submissions"), h.GetMySubmissions)
+		vendorEvent.GET("/submissions", mdw.PermissionMiddleware("event", "view_my_submissions"), h.GetMySubmissions)
 		vendorEvent.GET("/:id/result", mdw.PermissionMiddleware("event", "view"), h.GetEventResult)
 	}
 }

@@ -149,6 +149,7 @@ INSERT INTO permissions (id, name, display_name, resource, action) VALUES
     (gen_random_uuid(), 'score_submission', 'Score Event Submission', 'event', 'score'),
     (gen_random_uuid(), 'select_winner', 'Select Event Winner', 'event', 'select_winner'),
     (gen_random_uuid(), 'submit_pitch', 'Submit Pitch Deck', 'event', 'submit_pitch'),
+    (gen_random_uuid(), 'view_my_submissions', 'View My Event Submissions', 'event', 'view_my_submissions'),
 
     -- Evaluation permissions
     (gen_random_uuid(), 'view_evaluations', 'View Evaluations', 'evaluation', 'view'),

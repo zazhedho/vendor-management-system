@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { paymentsApi } from '../../api/payments';
 import { Payment } from '../../types';
-import { ArrowLeft, FileText, Calendar, Download, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, FileText, Calendar, Download, Edit, Trash2, Loader2 } from 'lucide-react';
 import { Button, Card, Badge, Spinner, ConfirmModal } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
@@ -17,6 +17,7 @@ export const PaymentDetail: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   useEffect(() => {
     if (id) fetchPayment(id);
@@ -54,11 +55,31 @@ export const PaymentDetail: React.FC = () => {
     }
   };
 
+  const handleStatusChange = async (newStatus: string) => {
+    if (!id || !payment || !canUpdate) return;
+    setIsUpdatingStatus(true);
+    try {
+      const response = await paymentsApi.update(id, { status: newStatus });
+      if (response.status && response.data) {
+        setPayment(response.data);
+        toast.success('Payment status updated');
+      } else {
+        setPayment({ ...payment, status: newStatus });
+        toast.success('Payment status updated');
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || 'Failed to update status');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
       case 'paid': return 'success';
-      case 'pending': return 'warning';
+      case 'pending': return 'info';
       case 'failed': return 'danger';
+      case 'cancelled': return 'warning';
       default: return 'secondary';
     }
   };
@@ -122,9 +143,31 @@ export const PaymentDetail: React.FC = () => {
           <div>
             <p className="text-secondary-300 text-sm mb-1">Invoice Number</p>
             <h1 className="text-3xl font-bold mb-4">{payment.invoice_number}</h1>
-            <Badge variant={getStatusVariant(payment.status)} className="bg-white/20 text-white border-none backdrop-blur-sm">
-              {payment.status}
-            </Badge>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <Badge
+                variant={getStatusVariant(payment.status)}
+                className="border border-white/40 bg-white/90 text-secondary-900 capitalize"
+              >
+                {payment.status}
+              </Badge>
+              {canUpdate && (
+                <div className="flex items-center gap-2">
+                  <select
+                    value={payment.status}
+                    onChange={(e) => handleStatusChange(e.target.value)}
+                    disabled={isUpdatingStatus}
+                    className="px-3 py-1.5 text-sm rounded-lg bg-white/10 border border-white/30 text-white capitalize focus:outline-none focus:ring-2 focus:ring-white/40 disabled:opacity-60"
+                  >
+                    {['pending', 'paid', 'cancelled', 'failed'].map((status) => (
+                      <option key={status} value={status} className="text-secondary-900 capitalize">
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                  {isUpdatingStatus && <Loader2 className="w-4 h-4 animate-spin text-white" />}
+                </div>
+              )}
+            </div>
           </div>
           <div className="text-right">
             <p className="text-secondary-300 text-sm mb-1">Total Amount</p>

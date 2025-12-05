@@ -352,6 +352,9 @@ func (h *HandlerEvent) GetMySubmissions(ctx *gin.Context) {
 	logId := utils.GenerateLogId(ctx)
 	logPrefix := fmt.Sprintf("[%s][EventHandler][GetMySubmissions]", logId)
 
+	params, _ := filter.GetBaseParams(ctx, "updated_at", "desc", 10)
+	params.Filters = filter.WhitelistFilter(params.Filters, []string{"event_id", "is_shortlisted", "is_winner"})
+
 	vendor, err := h.VendorRepo.GetVendorByUserID(userId)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; GetVendorByUserID; ERROR: %s;", logPrefix, err))
@@ -361,7 +364,7 @@ func (h *HandlerEvent) GetMySubmissions(ctx *gin.Context) {
 		return
 	}
 
-	data, err := h.Service.GetMySubmissions(vendor.Id)
+	data, totalData, err := h.Service.GetMySubmissions(vendor.Id, params)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetMySubmissions; ERROR: %s;", logPrefix, err))
 		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
@@ -370,7 +373,7 @@ func (h *HandlerEvent) GetMySubmissions(ctx *gin.Context) {
 		return
 	}
 
-	res := response.Response(http.StatusOK, "success", logId, data)
+	res := response.PaginationResponse(http.StatusOK, int(totalData), params.Page, params.Limit, logId, data)
 	ctx.JSON(http.StatusOK, res)
 }
 

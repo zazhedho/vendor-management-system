@@ -110,13 +110,13 @@ func (s *RoleService) GetAll(params filter.BaseParams, currentUserRole string) (
 	return roles, total, nil
 }
 
-func (s *RoleService) Update(id string, req dto.RoleUpdate) (domainrole.Role, error) {
+func (s *RoleService) Update(id, currentUserRole string, req dto.RoleUpdate) (domainrole.Role, error) {
 	role, err := s.RoleRepo.GetByID(id)
 	if err != nil {
 		return domainrole.Role{}, err
 	}
 
-	if role.IsSystem && role.Name != utils.RoleAdmin {
+	if role.IsSystem && currentUserRole != utils.RoleSuperAdmin {
 		return domainrole.Role{}, errors.New("cannot update system roles")
 	}
 

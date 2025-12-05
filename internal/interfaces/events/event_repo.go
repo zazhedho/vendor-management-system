@@ -25,7 +25,7 @@ type RepoEventInterface interface {
 	GetSubmissionsByEventID(eventId string) ([]domainevents.EventSubmission, error)
 	GetAllSubmissions(params filter.BaseParams) ([]domainevents.EventSubmission, int64, error)
 	GetGroupedSubmissions(params filter.BaseParams, submissionPage int, submissionLimit int) (*domainevents.GroupedSubmissionsResponse, error)
-	GetSubmissionsByVendorID(vendorId string) ([]domainevents.EventSubmission, error)
+	GetSubmissionsByVendorID(vendorId string, params filter.BaseParams) ([]domainevents.EventSubmission, int64, error)
 	UpdateSubmission(m domainevents.EventSubmission) error
 	DeleteSubmission(id string) error
 

@@ -11,7 +11,7 @@ type ServiceRoleInterface interface {
 	GetByID(id string) (domainrole.Role, error)
 	GetByIDWithDetails(id string) (dto.RoleWithDetails, error)
 	GetAll(params filter.BaseParams, currentUserRole string) ([]domainrole.Role, int64, error)
-	Update(id string, req dto.RoleUpdate) (domainrole.Role, error)
+	Update(id, currentUserRole string, req dto.RoleUpdate) (domainrole.Role, error)
 	Delete(id string) error
 	AssignPermissions(roleId string, req dto.AssignPermissions, currentUserRole string) error
 	AssignMenus(roleId string, req dto.AssignMenus, currentUserRole string) error

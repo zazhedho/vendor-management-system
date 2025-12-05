@@ -17,7 +17,7 @@ interface DashboardStats {
 }
 
 export const Dashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({});
   const [recentEvents, setRecentEvents] = useState<any[]>([]);
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
@@ -30,16 +30,87 @@ export const Dashboard: React.FC = () => {
   const fetchDashboardData = async () => {
     if (!user) return;
 
+    const canViewDashboard = hasPermission('dashboard', 'view');
+    if (!canViewDashboard) {
+      setLoading(false);
+      return;
+    }
+
+    const canViewEvents = hasPermission('event', 'view');
+    const canViewVendors = hasPermission('vendor', 'view');
+    const canViewPayments = hasPermission('payment', 'view');
+    const canManagePayments = hasPermission('payment', 'create') || hasPermission('payment', 'update') || hasPermission('payment', 'delete');
+    const canViewMySubmissions = hasPermission('event', 'view_my_submissions') || hasPermission('event', 'submit_pitch');
+
     try {
       setLoading(true);
 
-      if (user.role === 'admin' || user.role === 'superadmin') {
-        await fetchAdminData();
-      } else if (user.role === 'client' || user.role === 'manager') {
-        await fetchClientData();
-      } else if (user.role === 'vendor') {
-        await fetchVendorData();
+      const eventsPromise = canViewEvents ? eventsApi.getAll({ limit: 5 }) : Promise.resolve(null);
+      const vendorsPromise = canViewVendors ? vendorsApi.getAll({ limit: 100 }) : Promise.resolve(null);
+      const paymentsPromise = canViewPayments
+        ? (canManagePayments ? paymentsApi.getAll({ limit: 100 }) : paymentsApi.getMyPayments().catch(() => null))
+        : Promise.resolve(null);
+      const submissionsPromise = canViewMySubmissions
+        ? eventsApi.getMySubmissions({ limit: 50, order_by: 'updated_at', order_direction: 'desc' }).catch(() => null)
+        : Promise.resolve(null);
+
+      const [eventsRes, vendorsRes, paymentsRes, submissionsRes] = await Promise.all([
+        eventsPromise,
+        vendorsPromise,
+        paymentsPromise,
+        submissionsPromise,
+      ]);
+
+      const newStats: DashboardStats = {};
+
+      let activitiesBuffer: any[] = [];
+
+      if (eventsRes && eventsRes.data) {
+        const events = eventsRes.data || [];
+        newStats.totalEvents = eventsRes.total_data || events.length;
+        setRecentEvents(Array.isArray(events) ? events.slice(0, 5) : []);
+        activitiesBuffer = Array.isArray(events)
+          ? events.slice(0, 4).map((event: any, index: number) => ({
+              id: `activity-${index}`,
+              description: `Event "${event.title || event.name}" status updated`,
+              timestamp: event.updated_at || event.created_at || new Date().toISOString(),
+            }))
+          : [];
+      } else {
+        setRecentEvents([]);
       }
+
+      if (vendorsRes && vendorsRes.data) {
+        const vendors = vendorsRes.data || [];
+        newStats.totalVendors = vendorsRes.total_data || vendors.length;
+      }
+
+      if (paymentsRes && paymentsRes.data) {
+        const payments = paymentsRes.data || [];
+        newStats.totalPayments = Array.isArray(payments) ? payments.length : 0;
+        newStats.pendingPayments = Array.isArray(payments)
+          ? payments.filter((p: any) => p.status === 'pending').length
+          : 0;
+      }
+
+      if (submissionsRes && submissionsRes.data) {
+        const submissions = submissionsRes.data || [];
+        newStats.mySubmissions = Array.isArray(submissions) ? submissions.length : 0;
+        newStats.wonEvents = Array.isArray(submissions)
+          ? submissions.filter((s: any) => s.status === 'won' || s.is_winner).length
+          : 0;
+        if (Array.isArray(submissions)) {
+          activitiesBuffer = submissions.slice(0, 4).map((submission: any, index: number) => ({
+            id: `activity-${index}`,
+            description: `Submitted pitch for event`,
+            timestamp: submission.created_at || new Date().toISOString(),
+          }));
+        }
+      }
+
+      setRecentActivities(activitiesBuffer);
+
+      setStats(newStats);
     } catch (error: any) {
       console.error('Failed to fetch dashboard data:', error);
       toast.error('Failed to load dashboard data');
@@ -48,175 +119,64 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const fetchAdminData = async () => {
-    try {
-      const [eventsRes, vendorsRes, paymentsRes] = await Promise.all([
-        eventsApi.getAll({ limit: 5 }),
-        vendorsApi.getAll({ limit: 100 }),
-        paymentsApi.getAll({ limit: 100 })
-      ]);
-
-      const totalEvents = eventsRes.total_data || eventsRes.data?.length || 0;
-      const totalVendors = vendorsRes.total_data || vendorsRes.data?.length || 0;
-      const allPayments = paymentsRes.data || [];
-      const pendingPayments = Array.isArray(allPayments)
-        ? allPayments.filter((p: any) => p.status === 'pending').length
-        : 0;
-
-      setStats({
-        totalEvents,
-        totalVendors,
-        totalPayments: Array.isArray(allPayments) ? allPayments.length : 0,
-        pendingPayments,
-      });
-
-      const events = eventsRes.data || [];
-      setRecentEvents(Array.isArray(events) ? events.slice(0, 5) : []);
-
-      const activities = Array.isArray(events) ? events.slice(0, 4).map((event: any, index: number) => ({
-        id: `activity-${index}`,
-        description: `Event "${event.title || event.name}" was created`,
-        timestamp: event.created_at || new Date().toISOString(),
-      })) : [];
-      setRecentActivities(activities);
-    } catch (error) {
-      console.error('Error fetching admin data:', error);
-    }
-  };
-
-  const fetchClientData = async () => {
-    try {
-      const eventsRes = await eventsApi.getAll({ limit: 5 });
-      const events = eventsRes.data || [];
-
-      setStats({
-        totalEvents: Array.isArray(events) ? events.length : 0,
-        pendingPayments: 0,
-      });
-
-      setRecentEvents(Array.isArray(events) ? events.slice(0, 5) : []);
-
-      const activities = Array.isArray(events) ? events.slice(0, 4).map((event: any, index: number) => ({
-        id: `activity-${index}`,
-        description: `Event "${event.title || event.name}" status updated`,
-        timestamp: event.updated_at || event.created_at || new Date().toISOString(),
-      })) : [];
-      setRecentActivities(activities);
-    } catch (error) {
-      console.error('Error fetching client data:', error);
-    }
-  };
-
-  const fetchVendorData = async () => {
-    try {
-      const [submissionsRes, paymentsRes, eventsRes] = await Promise.all([
-        eventsApi.getMySubmissions().catch(() => ({ data: [] })),
-        paymentsApi.getMyPayments().catch(() => ({ data: [] })),
-        eventsApi.getAll({ limit: 5 }).catch(() => ({ data: [] } as any))
-      ]);
-
-      const submissions = submissionsRes.data || [];
-      const payments = paymentsRes.data || [];
-      const events = eventsRes.data || [];
-
-      const wonSubmissions = Array.isArray(submissions)
-        ? submissions.filter((s: any) => s.status === 'won' || s.is_winner).length
-        : 0;
-
-      setStats({
-        mySubmissions: Array.isArray(submissions) ? submissions.length : 0,
-        wonEvents: wonSubmissions,
-        totalPayments: Array.isArray(payments) ? payments.length : 0,
-        pendingPayments: Array.isArray(payments)
-          ? payments.filter((p: any) => p.status === 'pending').length
-          : 0,
-      });
-
-      setRecentEvents(Array.isArray(events) ? events.slice(0, 5) : []);
-
-      const activities = Array.isArray(submissions) ? submissions.slice(0, 4).map((submission: any, index: number) => ({
-        id: `activity-${index}`,
-        description: `Submitted pitch for event`,
-        timestamp: submission.created_at || new Date().toISOString(),
-      })) : [];
-      setRecentActivities(activities);
-    } catch (error) {
-      console.error('Error fetching vendor data:', error);
-    }
-  };
-
   const getStatsCards = () => {
-    if (user?.role === 'admin' || user?.role === 'superadmin') {
-      return [
-        {
-          title: 'Total Events',
-          value: stats.totalEvents?.toString() || '0',
-          icon: Calendar,
-          variant: 'primary',
-        },
-        {
-          title: 'Total Vendors',
-          value: stats.totalVendors?.toString() || '0',
-          icon: Users,
-          variant: 'success',
-        },
-        {
-          title: 'Total Payments',
-          value: stats.totalPayments?.toString() || '0',
-          icon: CreditCard,
-          variant: 'info',
-        },
-        {
-          title: 'Pending Payments',
-          value: stats.pendingPayments?.toString() || '0',
-          icon: TrendingUp,
-          variant: 'warning',
-        },
-      ];
-    } else if (user?.role === 'client' || user?.role === 'manager') {
-      return [
-        {
-          title: 'My Events',
-          value: stats.totalEvents?.toString() || '0',
-          icon: Calendar,
-          variant: 'primary',
-        },
-        {
-          title: 'Pending Payments',
-          value: stats.pendingPayments?.toString() || '0',
-          icon: CreditCard,
-          variant: 'warning',
-        },
-      ];
-    } else if (user?.role === 'vendor') {
-      return [
-        {
-          title: 'My Submissions',
-          value: stats.mySubmissions?.toString() || '0',
-          icon: FileText,
-          variant: 'primary',
-        },
-        {
-          title: 'Won Events',
-          value: stats.wonEvents?.toString() || '0',
-          icon: CheckCircle,
-          variant: 'success',
-        },
-        {
-          title: 'Total Payments',
-          value: stats.totalPayments?.toString() || '0',
-          icon: CreditCard,
-          variant: 'info',
-        },
-        {
-          title: 'Pending Payments',
-          value: stats.pendingPayments?.toString() || '0',
-          icon: TrendingUp,
-          variant: 'warning',
-        },
-      ];
+    const cards = [];
+
+    if (stats.totalEvents !== undefined) {
+      cards.push({
+        title: 'Total Events',
+        value: stats.totalEvents.toString(),
+        icon: Calendar,
+        variant: 'primary' as const,
+      });
     }
-    return [];
+
+    if (stats.totalVendors !== undefined) {
+      cards.push({
+        title: 'Total Vendors',
+        value: stats.totalVendors.toString(),
+        icon: Users,
+        variant: 'success' as const,
+      });
+    }
+
+    if (stats.mySubmissions !== undefined) {
+      cards.push({
+        title: 'My Submissions',
+        value: stats.mySubmissions.toString(),
+        icon: FileText,
+        variant: 'primary' as const,
+      });
+    }
+
+    if (stats.wonEvents !== undefined) {
+      cards.push({
+        title: 'Won Events',
+        value: stats.wonEvents.toString(),
+        icon: CheckCircle,
+        variant: 'success' as const,
+      });
+    }
+
+    if (stats.totalPayments !== undefined) {
+      cards.push({
+        title: 'Total Payments',
+        value: stats.totalPayments.toString(),
+        icon: CreditCard,
+        variant: 'info' as const,
+      });
+    }
+
+    if (stats.pendingPayments !== undefined) {
+      cards.push({
+        title: 'Pending Payments',
+        value: stats.pendingPayments.toString(),
+        icon: TrendingUp,
+        variant: 'warning' as const,
+      });
+    }
+
+    return cards;
   };
 
   const getStatusVariant = (status: string) => {
@@ -309,7 +269,7 @@ export const Dashboard: React.FC = () => {
         <Card>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-bold text-secondary-900">
-              {user?.role === 'vendor' ? 'Available Events' : 'Recent Events'}
+              {hasPermission('event', 'view_submissions') || !hasPermission('event', 'view_my_submissions') ? 'Recent Events' : 'Available Events'}
             </h2>
             <Activity size={20} className="text-secondary-400" />
           </div>

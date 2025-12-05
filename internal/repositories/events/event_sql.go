@@ -2,6 +2,7 @@ package repositoryevents
 
 import (
 	"fmt"
+	"strings"
 
 	domainevents "vendor-management-system/internal/domain/events"
 	interfaceevents "vendor-management-system/internal/interfaces/events"
@@ -177,11 +178,52 @@ func (r *repo) GetAllSubmissions(params filter.BaseParams) (ret []domainevents.E
 	return ret, totalData, nil
 }
 
-func (r *repo) GetSubmissionsByVendorID(vendorId string) (ret []domainevents.EventSubmission, err error) {
-	if err = r.DB.Preload("Event").Preload("File").Where("vendor_id = ?", vendorId).Find(&ret).Error; err != nil {
-		return nil, err
+func (r *repo) GetSubmissionsByVendorID(vendorId string, params filter.BaseParams) (ret []domainevents.EventSubmission, totalData int64, err error) {
+	query := r.DB.Model(&domainevents.EventSubmission{}).
+		Joins("LEFT JOIN events ON events.id = event_submissions.event_id").
+		Where("event_submissions.vendor_id = ?", vendorId).
+		Where("events.deleted_at IS NULL")
+
+	if params.Search != "" {
+		searchPattern := "%" + strings.ToLower(params.Search) + "%"
+		query = query.Where("LOWER(events.title) LIKE ?", searchPattern)
 	}
-	return ret, nil
+
+	for key, value := range params.Filters {
+		switch key {
+		case "event_id":
+			query = query.Where("event_submissions.event_id = ?", value)
+		case "is_shortlisted", "is_winner":
+			query = query.Where(fmt.Sprintf("event_submissions.%s = ?", key), value)
+		}
+	}
+
+	if err = query.Count(&totalData).Error; err != nil {
+		return nil, 0, err
+	}
+
+	orderBy := "event_submissions.updated_at"
+	if params.OrderBy != "" {
+		switch params.OrderBy {
+		case "created_at", "updated_at", "score":
+			orderBy = fmt.Sprintf("event_submissions.%s", params.OrderBy)
+		case "event_title":
+			orderBy = "events.title"
+		}
+	}
+
+	orderDirection := params.OrderDirection
+	if orderDirection == "" {
+		orderDirection = "desc"
+	}
+
+	if err = query.Preload("Event").Preload("File").
+		Order(fmt.Sprintf("%s %s", orderBy, orderDirection)).
+		Offset(params.Offset).Limit(params.Limit).
+		Find(&ret).Error; err != nil {
+		return nil, 0, err
+	}
+	return ret, totalData, nil
 }
 
 func (r *repo) GetGroupedSubmissions(params filter.BaseParams, submissionPage int, submissionLimit int) (*domainevents.GroupedSubmissionsResponse, error) {

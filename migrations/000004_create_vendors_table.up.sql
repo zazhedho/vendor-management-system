@@ -8,7 +8,7 @@ BEGIN
     ) THEN
 CREATE TYPE vendor_status AS ENUM (
             'pending',
-            'verified',
+            'verify',
             'rejected',
             'active',
             'suspended'
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS vendors (
 -- Column comment
 -- ================================
 COMMENT ON COLUMN vendors.status
-IS 'Workflow state: pending, verified, rejected, active, suspended';
+IS 'Workflow state: pending, verify, rejected, active, suspended';
 
 
 -- ================================

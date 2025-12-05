@@ -104,6 +104,8 @@ func (h *RoleHandler) GetAll(ctx *gin.Context) {
 func (h *RoleHandler) Update(ctx *gin.Context) {
 	id := ctx.Param("id")
 	var req dto.RoleUpdate
+	authData := utils.GetAuthData(ctx)
+	currentUserRole := utils.InterfaceString(authData["role"])
 	logId := utils.GenerateLogId(ctx)
 	logPrefix := fmt.Sprintf("[%s][RoleHandler][Update]", logId)
 
@@ -117,7 +119,7 @@ func (h *RoleHandler) Update(ctx *gin.Context) {
 
 	logger.WriteLog(logger.LogLevelDebug, fmt.Sprintf("%s; Request: %+v;", logPrefix, utils.JsonEncode(req)))
 
-	data, err := h.Service.Update(id, req)
+	data, err := h.Service.Update(id, currentUserRole, req)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.Update; Error: %+v", logPrefix, err))
 		res := response.Response(http.StatusInternalServerError, err.Error(), logId, nil)

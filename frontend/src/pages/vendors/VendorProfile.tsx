@@ -20,7 +20,8 @@ import {
   Plus,
   Eye,
   Trash2,
-  X
+  X,
+  ArrowLeft
 } from 'lucide-react';
 import { Button, Card, Badge, Spinner, Input, ConfirmModal, ActionMenu } from '../../components/ui';
 import { toast } from 'react-toastify';
@@ -510,10 +511,11 @@ export const VendorProfile: React.FC = () => {
   const getStatusVariant = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'active': return 'success';
-      case 'verified': return 'info';
+      case 'verify': return 'info';
       case 'suspended': return 'danger';
       case 'rejected': return 'danger';
-      default: return 'warning';
+      case 'pending': return 'warning';
+      default: return 'secondary';
     }
   };
 
@@ -743,13 +745,15 @@ export const VendorProfile: React.FC = () => {
             onChange={(e) => setFormData({ ...formData, tax_status: e.target.value })}
             placeholder="e.g., PKP, Non-PKP"
           />
-          <Input
-            label="NIB Number"
-            value={formData.nib_number}
-            onChange={(e) => setFormData({ ...formData, nib_number: e.target.value })}
-            placeholder="e.g. 1234567890123"
-            leftIcon={<FileText size={18} />}
-          />
+          {formData.vendor_type === 'company' && (
+            <Input
+              label="NIB Number"
+              value={formData.nib_number}
+              onChange={(e) => setFormData({ ...formData, nib_number: e.target.value })}
+              placeholder="e.g. 1234567890123"
+              leftIcon={<FileText size={18} />}
+            />
+          )}
         </div>
       </Card>
 
@@ -856,7 +860,7 @@ export const VendorProfile: React.FC = () => {
     );
   }
 
-  const vendorStatuses = ['pending', 'verified', 'active', 'suspended', 'rejected'];
+  const vendorStatuses = ['pending', 'verify', 'active', 'suspended', 'rejected'];
 
   // Admin/Superadmin/Client view - show vendors list
   if (showListView) {
@@ -1057,11 +1061,7 @@ export const VendorProfile: React.FC = () => {
     );
   }
 
-  // Helper to get back URL based on role
-  const getBackUrl = () => {
-    if (isVendorRole) return '/vendor/profile';
-    return '/vendor/profile';
-  };
+  const handleBack = () => navigate('/vendor/profile');
 
   // Helper to get edit URL based on role
   const getEditUrl = () => {
@@ -1071,8 +1071,15 @@ export const VendorProfile: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-secondary-900">Vendor Profile</h1>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          {id && (
+            <Button variant="ghost" size="sm" onClick={handleBack} leftIcon={<ArrowLeft size={16} />}>
+              Back
+            </Button>
+          )}
+          <h1 className="text-2xl font-bold text-secondary-900">Vendor Profile</h1>
+        </div>
         {!isEditing && canEditProfile && (
           <Button onClick={() => navigate(getEditUrl())}>Edit Profile</Button>
         )}
@@ -1093,7 +1100,7 @@ export const VendorProfile: React.FC = () => {
                 <>
                   <Badge
                     variant={getStatusVariant(vendor.status)}
-                    className="bg-white/20 text-white border-none backdrop-blur-sm"
+                    className="bg-white/90 text-secondary-900 border border-white/60 font-semibold capitalize"
                   >
                     {vendor.status}
                   </Badge>
@@ -1113,7 +1120,7 @@ export const VendorProfile: React.FC = () => {
               <p className="text-secondary-500 text-sm mt-1">Update vendor information and documents</p>
             </div>
             <div className="flex gap-3">
-              <Button type="button" variant="secondary" onClick={() => navigate(getBackUrl())}>
+              <Button type="button" variant="secondary" onClick={() => navigate('/vendor/profile')}>
                 Cancel
               </Button>
               <Button type="submit" isLoading={isSaving} leftIcon={<Save size={16} />} onClick={handleSubmit}>
@@ -1321,12 +1328,12 @@ export const VendorProfile: React.FC = () => {
                       Legal Information
                     </h3>
                   </div>
-                  <div className="divide-y divide-secondary-100">
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">KTP Number</span>
-                      <span className="text-secondary-900 font-mono text-sm">{profile.ktp_number || '-'}</span>
-                    </div>
-                    <div className="flex py-2.5 px-4">
+              <div className="divide-y divide-secondary-100">
+                <div className="flex py-2.5 px-4">
+                  <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">KTP Number</span>
+                  <span className="text-secondary-900 font-mono text-sm">{profile.ktp_number || '-'}</span>
+                </div>
+                <div className="flex py-2.5 px-4">
                       <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">KTP Name</span>
                       <span className="text-secondary-900 text-sm">{profile.ktp_name || '-'}</span>
                     </div>
@@ -1342,16 +1349,18 @@ export const VendorProfile: React.FC = () => {
                       <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">NPWP Address</span>
                       <span className="text-secondary-900 text-sm">{profile.npwp_address || '-'}</span>
                     </div>
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Tax Status</span>
-                      <span className="text-secondary-900 text-sm">{profile.tax_status || '-'}</span>
-                    </div>
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">NIB Number</span>
-                      <span className="text-secondary-900 font-mono text-sm">{profile.nib_number || '-'}</span>
-                    </div>
+                <div className="flex py-2.5 px-4">
+                  <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Tax Status</span>
+                  <span className="text-secondary-900 text-sm">{profile.tax_status || '-'}</span>
+                </div>
+                {vendor?.vendor_type === 'company' && (
+                  <div className="flex py-2.5 px-4">
+                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">NIB Number</span>
+                    <span className="text-secondary-900 font-mono text-sm">{profile.nib_number || '-'}</span>
                   </div>
-                </Card>
+                )}
+              </div>
+            </Card>
 
                 {/* Bank Account */}
                 <Card className="overflow-hidden">
@@ -1465,7 +1474,10 @@ export const VendorProfile: React.FC = () => {
                 <div className="space-y-4">
                   <div>
                     <p className="text-xs text-secondary-500">Status</p>
-                    <Badge variant={getStatusVariant(vendor.status)} className="mt-1">
+                    <Badge
+                      variant={getStatusVariant(vendor.status)}
+                      className="mt-1 capitalize font-semibold px-3 py-1"
+                    >
                       {vendor.status}
                     </Badge>
                   </div>

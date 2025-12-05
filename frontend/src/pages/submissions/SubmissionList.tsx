@@ -6,6 +6,7 @@ import { Button, Card, Badge, Spinner } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { ScoreSubmissionModal } from './ScoreSubmissionModal';
 import { SelectWinnerModal } from './SelectWinnerModal';
+import { toast } from 'react-toastify';
 
 export const SubmissionList: React.FC = () => {
   const { hasPermission } = useAuth();
@@ -14,6 +15,9 @@ export const SubmissionList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [vendorPage, setVendorPage] = useState(1);
+  const [vendorTotalPages, setVendorTotalPages] = useState(1);
+  const [vendorTotalData, setVendorTotalData] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [scoreModalData, setScoreModalData] = useState<{ submissionId: string; currentScore?: number } | null>(null);
   const [winnerModalData, setWinnerModalData] = useState<{ eventId: string; eventTitle: string; submissions: EventSubmission[] } | null>(null);
@@ -21,11 +25,15 @@ export const SubmissionList: React.FC = () => {
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
 
   const canSubmit = hasPermission('event', 'submit_pitch');
-  const canViewSubmissions = hasPermission('event', 'view_submissions') || hasPermission('vendor', 'view_submissions');
+  const canViewEventSubmissions = hasPermission('event', 'view_submissions');
+  const canViewMySubmissions = hasPermission('event', 'view_my_submissions') || canSubmit;
+  const canViewVendorSubmissions = hasPermission('vendor', 'view_submissions');
+  const canViewSubmissions = canViewEventSubmissions || canViewVendorSubmissions || canViewMySubmissions;
   const canScore = hasPermission('event', 'score');
   const canSelectWinner = hasPermission('event', 'select_winner');
   const hasSubmissionAccess = canSubmit || canViewSubmissions;
-  const isVendorView = canSubmit && !canViewSubmissions;
+  const isVendorView = canViewMySubmissions && !canViewEventSubmissions;
+  const vendorPageSize = 10;
 
   useEffect(() => {
     if (!hasSubmissionAccess) {
@@ -33,16 +41,19 @@ export const SubmissionList: React.FC = () => {
       return;
     }
 
-    if (canSubmit && !canViewSubmissions) {
-      fetchVendorSubmissions();
-    } else if (canViewSubmissions) {
+    if (isVendorView) {
+      fetchVendorSubmissions(vendorPage, appliedSearch);
+    } else if (canViewEventSubmissions) {
       fetchGroupedSubmissions();
     }
-  }, [currentPage, canSubmit, canViewSubmissions, hasSubmissionAccess]);
+  }, [currentPage, vendorPage, appliedSearch, hasSubmissionAccess, isVendorView, canViewEventSubmissions]);
 
   const handleSearch = () => {
     setAppliedSearch(searchTerm);
-    if (canViewSubmissions) {
+    if (isVendorView) {
+      setVendorPage(1);
+    }
+    if (canViewEventSubmissions) {
       setCurrentPage(1);
       fetchGroupedSubmissions();
     }
@@ -58,13 +69,11 @@ export const SubmissionList: React.FC = () => {
     setSearchTerm('');
     setAppliedSearch('');
     setCurrentPage(1);
+    setVendorPage(1);
     
-    if (canSubmit && !canViewSubmissions) {
-      const response = await eventsApi.getMySubmissions();
-      if (response.status && response.data) {
-        setVendorSubmissions(response.data);
-      }
-    } else if (canViewSubmissions) {
+    if (isVendorView) {
+      return;
+    } else if (canViewEventSubmissions) {
       const response = await eventsApi.getGroupedSubmissions({
         page: 1,
         limit: 10,
@@ -103,12 +112,35 @@ export const SubmissionList: React.FC = () => {
     await fetchGroupedSubmissions(newPage);
   };
 
-  const fetchVendorSubmissions = async () => {
+  const toggleShortlist = async (submissionId: string, current: boolean) => {
+    try {
+      await eventsApi.shortlistSubmission(submissionId, !current);
+      toast.success(!current ? 'Submission shortlisted' : 'Shortlist removed');
+      fetchGroupedSubmissions();
+    } catch (error: any) {
+      console.error('Failed to update shortlist:', error);
+      toast.error(error?.response?.data?.error || 'Failed to update shortlist');
+    }
+  };
+
+  const fetchVendorSubmissions = async (page: number = vendorPage, searchValue: string = appliedSearch) => {
     setIsLoading(true);
     try {
-      const response = await eventsApi.getMySubmissions();
+      const response = await eventsApi.getMySubmissions({
+        page,
+        limit: vendorPageSize,
+        search: searchValue,
+        order_by: 'updated_at',
+        order_direction: 'desc'
+      });
       if (response.status && response.data) {
         setVendorSubmissions(response.data);
+        setVendorTotalPages(response.total_pages || 1);
+        setVendorTotalData(response.total_data || response.data.length);
+      } else {
+        setVendorSubmissions([]);
+        setVendorTotalPages(1);
+        setVendorTotalData(0);
       }
     } catch (error) {
       console.error('Failed to fetch submissions:', error);
@@ -167,13 +199,8 @@ export const SubmissionList: React.FC = () => {
     );
   }
 
-  // Vendor view - show their submissions
-  if (canSubmit && !canViewSubmissions) {
-    // Filter submissions based on applied search
-    const filteredSubmissions = vendorSubmissions.filter(submission => 
-      submission.event?.title?.toLowerCase().includes(appliedSearch.toLowerCase())
-    );
-
+  // Vendor/self view - show their submissions
+  if (isVendorView) {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -201,7 +228,7 @@ export const SubmissionList: React.FC = () => {
           )}
         </div>
 
-      {filteredSubmissions.length === 0 ? (
+      {vendorSubmissions.length === 0 ? (
           <Card>
             <div className="text-center py-12">
               <FileText className="mx-auto h-12 w-12 text-gray-400" />
@@ -212,106 +239,124 @@ export const SubmissionList: React.FC = () => {
             </div>
           </Card>
         ) : (
-          <div className="bg-white shadow-sm rounded-lg overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredSubmissions.map((submission) => (
-                  <React.Fragment key={submission.id}>
-                    <tr className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-gray-900">{submission.event?.title}</div>
-                        <div className="text-sm text-gray-500">{submission.event?.category}</div>
-                      </td>
-                      <td className="px-6 py-4">{getStatusBadge(submission)}</td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {submission.score !== null && submission.score !== undefined ? submission.score.toFixed(1) : '-'}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        {new Date(submission.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleRow(submission.id)}
-                          leftIcon={expandedRows.has(submission.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        >
-                          {expandedRows.has(submission.id) ? 'Hide' : 'Show'} Details
-                        </Button>
-                      </td>
-                    </tr>
-                    {expandedRows.has(submission.id) && (
-                      <tr>
-                        <td colSpan={5} className="px-6 py-6 bg-gradient-to-br from-gray-50 to-gray-100">
-                          <div className="grid grid-cols-1 gap-4">
-                            <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-                              <div className="flex items-start gap-2 mb-2">
-                                <FileText className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                                <h4 className="text-sm font-semibold text-gray-900">Proposal Details</h4>
-                              </div>
-                              <p className="text-sm text-gray-700 leading-relaxed pl-7">{submission.proposal_details}</p>
-                            </div>
-                            
-                            {submission.additional_materials && (
-                              <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-                                <div className="flex items-start gap-2 mb-2">
-                                  <FileText className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                                  <h4 className="text-sm font-semibold text-gray-900">Additional Materials</h4>
-                                </div>
-                                <p className="text-sm text-gray-700 leading-relaxed pl-7">{submission.additional_materials}</p>
-                              </div>
-                            )}
-                            
-                            {submission.comments && (
-                              <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-                                <div className="flex items-start gap-2 mb-2">
-                                  <Award className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
-                                  <h4 className="text-sm font-semibold text-gray-900">Evaluator Comments</h4>
-                                </div>
-                                <p className="text-sm text-gray-700 leading-relaxed pl-7">{submission.comments}</p>
-                              </div>
-                            )}
-                            
-                            {submission.files && submission.files.length > 0 && (
-                              <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-                                <div className="flex items-start gap-2 mb-3">
-                                  <FileText className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
-                                  <h4 className="text-sm font-semibold text-gray-900">Attachments ({submission.files.length})</h4>
-                                </div>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 pl-7">
-                                  {submission.files.map((file) => (
-                                    <a
-                                      key={file.id}
-                                      href={file.file_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-blue-50 hover:border-blue-300 transition-colors"
-                                    >
-                                      <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                                      <span className="truncate">{file.caption || file.file_type}</span>
-                                    </a>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
+          <>
+            <div className="bg-white shadow-sm rounded-lg overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {vendorSubmissions.map((submission) => (
+                    <React.Fragment key={submission.id}>
+                      <tr className="hover:bg-gray-50">
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-medium text-gray-900">{submission.event?.title}</div>
+                          <div className="text-sm text-gray-500">{submission.event?.category}</div>
+                        </td>
+                        <td className="px-6 py-4">{getStatusBadge(submission)}</td>
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {submission.score !== null && submission.score !== undefined ? submission.score.toFixed(1) : '-'}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          {new Date(submission.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleRow(submission.id)}
+                            leftIcon={expandedRows.has(submission.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          >
+                            {expandedRows.has(submission.id) ? 'Hide' : 'Show'} Details
+                          </Button>
                         </td>
                       </tr>
-                    )}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      {expandedRows.has(submission.id) && (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-6 bg-gradient-to-br from-gray-50 to-gray-100">
+                            <div className="grid grid-cols-1 gap-4">
+                              <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                                <div className="flex items-start gap-2 mb-2">
+                                  <FileText className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                                  <h4 className="text-sm font-semibold text-gray-900">Proposal Details</h4>
+                                </div>
+                                <p className="text-sm text-gray-700 leading-relaxed pl-7">{submission.proposal_details}</p>
+                              </div>
+                              
+                              {submission.additional_materials && (
+                                <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                                  <div className="flex items-start gap-2 mb-2">
+                                    <FileText className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                                    <h4 className="text-sm font-semibold text-gray-900">Additional Materials</h4>
+                                  </div>
+                                  <p className="text-sm text-gray-700 leading-relaxed pl-7">{submission.additional_materials}</p>
+                                </div>
+                              )}
+                              
+                              {submission.comments && (
+                                <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                                  <div className="flex items-start gap-2 mb-2">
+                                    <Award className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
+                                    <h4 className="text-sm font-semibold text-gray-900">Evaluator Comments</h4>
+                                  </div>
+                                  <p className="text-sm text-gray-700 leading-relaxed pl-7">{submission.comments}</p>
+                                </div>
+                              )}
+                              
+                              {submission.files && submission.files.length > 0 && (
+                                <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                                  <div className="flex items-start gap-2 mb-3">
+                                    <FileText className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                                    <h4 className="text-sm font-semibold text-gray-900">Attachments ({submission.files.length})</h4>
+                                  </div>
+                                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 pl-7">
+                                    {submission.files.map((file) => (
+                                      <a
+                                        key={file.id}
+                                        href={file.file_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                                      >
+                                        <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                        <span className="truncate">{file.caption || file.file_type}</span>
+                                      </a>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {vendorTotalPages > 1 && (
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mt-4">
+                <p className="text-sm text-gray-600">
+                  Showing {(vendorPage - 1) * vendorPageSize + 1} - {Math.min(vendorPage * vendorPageSize, vendorTotalData)} of {vendorTotalData}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button variant="secondary" disabled={vendorPage === 1} onClick={() => setVendorPage(Math.max(1, vendorPage - 1))} leftIcon={<ChevronLeft className="w-4 h-4" />}>
+                    Previous
+                  </Button>
+                  <span className="text-sm text-gray-700">Page {vendorPage} of {vendorTotalPages}</span>
+                  <Button variant="secondary" disabled={vendorPage >= vendorTotalPages} onClick={() => setVendorPage(Math.min(vendorTotalPages, vendorPage + 1))} rightIcon={<ChevronRight className="w-4 h-4" />}>
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     );
@@ -400,7 +445,7 @@ export const SubmissionList: React.FC = () => {
               </div>
 
               {expandedEvents.has(group.event.id) && (
-                <div>
+                <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
@@ -436,6 +481,15 @@ export const SubmissionList: React.FC = () => {
                                     leftIcon={<Award className="w-4 h-4" />}
                                   >
                                     Score
+                                  </Button>
+                                )}
+                                {canScore && (
+                                  <Button
+                                    variant={submission.is_shortlisted ? 'secondary' : 'ghost'}
+                                    size="sm"
+                                    onClick={() => toggleShortlist(submission.id, submission.is_shortlisted || false)}
+                                  >
+                                    {submission.is_shortlisted ? 'Unshortlist' : 'Shortlist'}
                                   </Button>
                                 )}
                                 <Button

@@ -294,8 +294,8 @@ func (s *ServiceEvent) GetGroupedSubmissions(params filter.BaseParams, submissio
 	return s.EventRepo.GetGroupedSubmissions(params, submissionPage, submissionLimit)
 }
 
-func (s *ServiceEvent) GetMySubmissions(vendorId string) ([]domainevents.EventSubmission, error) {
-	return s.EventRepo.GetSubmissionsByVendorID(vendorId)
+func (s *ServiceEvent) GetMySubmissions(vendorId string, params filter.BaseParams) ([]domainevents.EventSubmission, int64, error) {
+	return s.EventRepo.GetSubmissionsByVendorID(vendorId, params)
 }
 
 func (s *ServiceEvent) ScoreSubmission(submissionId string, req dto.ScoreSubmissionRequest) (domainevents.EventSubmission, error) {
