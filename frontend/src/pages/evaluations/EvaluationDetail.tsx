@@ -149,7 +149,12 @@ export const EvaluationDetail: React.FC = () => {
           {/* Vendor */}
           <div>
             <label className="block text-sm font-medium text-secondary-700 mb-1">Vendor</label>
-            <p className="text-secondary-900">{evaluation.vendor?.profile?.vendor_name || evaluation.vendor_id}</p>
+            <div className="flex flex-col">
+              <p className="text-secondary-900">{evaluation.vendor?.profile?.vendor_name || evaluation.vendor_id}</p>
+              {evaluation.vendor?.vendor_code && (
+                <span className="text-xs text-secondary-500 font-mono">Code: {evaluation.vendor.vendor_code}</span>
+              )}
+            </div>
           </div>
 
           {/* Evaluator */}

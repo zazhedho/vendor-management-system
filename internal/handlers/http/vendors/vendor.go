@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 	"vendor-management-system/internal/dto"
 	interfacevendors "vendor-management-system/internal/interfaces/vendors"
 	"vendor-management-system/pkg/filter"
@@ -156,7 +157,14 @@ func (h *HandlerVendor) UpdateVendorStatus(ctx *gin.Context) {
 	}
 	logger.WriteLog(logger.LogLevelDebug, fmt.Sprintf("%s; Request: %+v;", logPrefix, utils.JsonEncode(req)))
 
-	data, err := h.Service.UpdateVendorStatus(id, req.Status)
+	if req.Status == utils.VendorActive && strings.TrimSpace(req.VendorCode) == "" {
+		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
+		res.Error = "vendor_code is required when activating vendor"
+		ctx.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	data, err := h.Service.UpdateVendorStatus(id, req.Status, req.VendorCode)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.UpdateVendorStatus; ERROR: %s;", logPrefix, err))
 		if errors.Is(err, gorm.ErrRecordNotFound) {

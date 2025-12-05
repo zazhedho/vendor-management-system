@@ -262,6 +262,11 @@ export const EvaluationForm: React.FC = () => {
                                   <Trophy className="w-4 h-4 text-warning-500" />
                                   <span className="text-sm">
                                     Winner: {event.winner_vendor.profile?.vendor_name || 'Vendor'}
+                                    {event.winner_vendor.vendor_code && (
+                                      <span className="ml-1 text-xs font-mono text-secondary-500">
+                                        ({event.winner_vendor.vendor_code})
+                                      </span>
+                                    )}
                                   </span>
                                 </div>
                               )}

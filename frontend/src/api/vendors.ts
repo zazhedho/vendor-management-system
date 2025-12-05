@@ -110,8 +110,10 @@ export const vendorsApi = {
   },
 
   // Admin: Update vendor status
-  updateStatus: async (id: string, status: string) => {
-    const response = await apiClient.put<ApiResponse<Vendor>>(`/vendors/${id}/status`, { status });
+  updateStatus: async (id: string, status: string, vendor_code?: string) => {
+    const payload: any = { status };
+    if (vendor_code) payload.vendor_code = vendor_code;
+    const response = await apiClient.put<ApiResponse<Vendor>>(`/vendors/${id}/status`, payload);
     return response.data;
   },
 

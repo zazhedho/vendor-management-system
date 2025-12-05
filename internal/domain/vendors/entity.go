@@ -15,6 +15,7 @@ type Vendor struct {
 	UserId     string `json:"user_id" gorm:"column:user_id"`
 	VendorType string `json:"vendor_type" gorm:"column:vendor_type;default:company"`
 	Status     string `json:"status" gorm:"column:status"` // pending, verified, rejected, active, suspended
+	VendorCode string `json:"vendor_code,omitempty" gorm:"column:vendor_code"`
 
 	Profile *VendorProfile `json:"profile,omitempty" gorm:"foreignKey:VendorId;references:Id"`
 

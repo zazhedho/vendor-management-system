@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS vendors (
 
     vendor_type VARCHAR(50) NOT NULL DEFAULT 'company',
     status vendor_status NOT NULL DEFAULT 'pending',
+    vendor_code VARCHAR(100) NULL,
 
     verified_at TIMESTAMP NULL,
     verified_by VARCHAR(36) NULL,
@@ -65,6 +66,10 @@ CREATE INDEX IF NOT EXISTS idx_vendors_user_id
 
 CREATE INDEX IF NOT EXISTS idx_vendors_status
     ON vendors(status);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_vendors_vendor_code
+    ON vendors(vendor_code)
+    WHERE vendor_code IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_vendors_deleted_at
     ON vendors(deleted_at);

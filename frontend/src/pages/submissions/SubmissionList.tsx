@@ -462,6 +462,9 @@ export const SubmissionList: React.FC = () => {
                           <tr className="hover:bg-gray-50">
                             <td className="px-6 py-4">
                               <div className="text-sm font-medium text-gray-900">{submission.vendor?.profile?.vendor_name}</div>
+                              {submission.vendor?.vendor_code && (
+                                <div className="text-xs text-gray-500 font-mono">{submission.vendor.vendor_code}</div>
+                              )}
                               <div className="text-sm text-gray-500">{submission.vendor?.profile?.business_field}</div>
                             </td>
                             <td className="px-6 py-4">{getStatusBadge(submission)}</td>

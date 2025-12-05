@@ -51,6 +51,7 @@ export interface Vendor {
   user_id: string;
   vendor_type: string;
   vendor_name?: string;
+  vendor_code?: string;
   status: string; // pending, verified, rejected, active, suspended
   verified_at?: string;
   verified_by?: string;
@@ -197,6 +198,7 @@ export interface EventSubmission {
     id: string;
     vendor_type: string;
     status: string;
+    vendor_code?: string;
     profile?: VendorProfile;
   };
   files?: EventSubmissionFile[];

@@ -15,7 +15,7 @@ type ServiceVendorInterface interface {
 	GetVendorDetailByVendorID(vendorId string) (map[string]interface{}, error)
 	CreateOrUpdateVendorProfile(userId string, req dto.VendorProfileRequest) (map[string]interface{}, error)
 	GetAllVendors(params filter.BaseParams) ([]map[string]interface{}, int64, error)
-	UpdateVendorStatus(vendorId string, status string) (domainvendors.Vendor, error)
+	UpdateVendorStatus(vendorId string, status string, vendorCode string) (domainvendors.Vendor, error)
 	DeleteVendor(vendorId string) error
 
 	// Vendor profile file operations

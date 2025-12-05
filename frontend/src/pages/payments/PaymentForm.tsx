@@ -318,16 +318,19 @@ export const PaymentForm: React.FC = () => {
                             : 'border-secondary-200 hover:border-primary-300 hover:bg-secondary-50'
                         }`}
                       >
-                        <div className="flex justify-between items-start gap-3">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-secondary-900 truncate">
-                              {item.profile?.vendor_name || item.vendor.id}
-                            </p>
-                            <p className="text-xs text-secondary-500 truncate">
-                              {item.profile?.email || 'No email'}
-                            </p>
-                            <div className="flex flex-wrap gap-2 mt-1 text-xs text-secondary-600">
-                              {item.profile?.city_name && <span>{item.profile.city_name}</span>}
+                          <div className="flex justify-between items-start gap-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-secondary-900 truncate">
+                                {item.profile?.vendor_name || item.vendor.id}
+                              </p>
+                              {item.vendor.vendor_code && (
+                                <p className="text-[11px] text-secondary-500 font-mono">{item.vendor.vendor_code}</p>
+                              )}
+                              <p className="text-xs text-secondary-500 truncate">
+                                {item.profile?.email || 'No email'}
+                              </p>
+                              <div className="flex flex-wrap gap-2 mt-1 text-xs text-secondary-600">
+                                {item.profile?.city_name && <span>{item.profile.city_name}</span>}
                               {item.profile?.province_name && <span>• {item.profile.province_name}</span>}
                               <span className="capitalize px-2 py-0.5 bg-secondary-100 rounded-full text-secondary-700">
                                 {item.vendor.status}

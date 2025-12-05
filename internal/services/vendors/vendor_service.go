@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"mime/multipart"
+	"strings"
 	"time"
 	domainvendors "vendor-management-system/internal/domain/vendors"
 	"vendor-management-system/internal/dto"
@@ -235,13 +236,20 @@ func (s *ServiceVendor) GetAllVendors(params filter.BaseParams) ([]map[string]in
 	return result, total, nil
 }
 
-func (s *ServiceVendor) UpdateVendorStatus(vendorId string, status string) (domainvendors.Vendor, error) {
+func (s *ServiceVendor) UpdateVendorStatus(vendorId string, status string, vendorCode string) (domainvendors.Vendor, error) {
 	vendor, err := s.VendorRepo.GetVendorByID(vendorId)
 	if err != nil {
 		return domainvendors.Vendor{}, err
 	}
 
+	if status == utils.VendorActive && strings.TrimSpace(vendorCode) == "" {
+		return domainvendors.Vendor{}, errors.New("vendor_code is required when activating vendor")
+	}
+
 	vendor.Status = status
+	if status == utils.VendorActive && vendorCode != "" {
+		vendor.VendorCode = vendorCode
+	}
 	now := time.Now()
 	vendor.UpdatedAt = now
 

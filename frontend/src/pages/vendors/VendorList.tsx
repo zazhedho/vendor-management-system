@@ -86,6 +86,14 @@ export const VendorList: React.FC = () => {
       accessor: (vendor: Vendor) => <span className="font-mono text-xs">{vendor.id.slice(0, 8)}...</span>
     },
     {
+      header: 'Vendor Code',
+      accessor: (vendor: Vendor) => vendor.vendor_code ? (
+        <span className="font-semibold text-secondary-900">{vendor.vendor_code}</span>
+      ) : (
+        <span className="text-secondary-500">-</span>
+      )
+    },
+    {
       header: 'Type',
       accessor: (vendor: Vendor) => vendor.vendor_type
     },

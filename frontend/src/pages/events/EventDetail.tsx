@@ -290,6 +290,9 @@ export const EventDetail: React.FC = () => {
                 {event.winner_vendor?.profile?.email && (
                   <span className="text-yellow-700 ml-2">({event.winner_vendor.profile.email})</span>
                 )}
+                {event.winner_vendor?.vendor_code && (
+                  <span className="text-yellow-700 ml-2 font-mono">[{event.winner_vendor.vendor_code}]</span>
+                )}
               </p>
             </div>
           </div>

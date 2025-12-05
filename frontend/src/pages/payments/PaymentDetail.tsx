@@ -230,8 +230,10 @@ export const PaymentDetail: React.FC = () => {
                 </p>
               </div>
               <div className="pt-4 border-t border-secondary-100">
-                <p className="text-xs text-secondary-500 mb-1">Vendor ID</p>
-                <p className="text-xs font-mono text-secondary-600 break-all">{payment.vendor_id}</p>
+                <p className="text-xs text-secondary-500 mb-1">Vendor Code</p>
+                <p className="text-xs font-mono text-secondary-600 break-all">
+                  {payment.vendor?.vendor_code || payment.vendor_id}
+                </p>
               </div>
               <div className="pt-4 border-t border-secondary-100">
                 <p className="text-xs text-secondary-500 mb-1">Payment Date</p>

@@ -149,6 +149,11 @@ export const VendorProfile: React.FC = () => {
   const [deleteVendorId, setDeleteVendorId] = useState<string | null>(null);
   const [isDeletingVendor, setIsDeletingVendor] = useState(false);
 
+  // Vendor code modal
+  const [showVendorCodeModal, setShowVendorCodeModal] = useState(false);
+  const [vendorCodeInput, setVendorCodeInput] = useState('');
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
+
   const companyDocs = ['ktp', 'domisili', 'siup', 'nib', 'skt', 'npwp', 'sppkp', 'akta', 'bank_book', 'rekening'];
   const individualDocs = ['ktp', 'npwp', 'bank_book'];
 
@@ -472,11 +477,20 @@ export const VendorProfile: React.FC = () => {
 
   const handleUpdateStatus = async (newStatus: string) => {
     if (!vendor || !canUpdateStatus) return;
+    setPendingStatus(null);
+
+    if (newStatus === 'active') {
+      setPendingStatus(newStatus);
+      setVendorCodeInput(vendor.vendor_code || '');
+      setShowVendorCodeModal(true);
+      return;
+    }
+
     setIsUpdatingStatus(true);
     try {
       const response = await vendorsApi.updateStatus(vendor.id, newStatus);
       if (response.status && response.data) {
-        setVendor({ ...vendor, status: response.data.status || newStatus });
+        setVendor({ ...vendor, status: response.data.status || newStatus, vendor_code: response.data.vendor_code || vendor.vendor_code });
       } else {
         setVendor({ ...vendor, status: newStatus });
       }
@@ -506,6 +520,36 @@ export const VendorProfile: React.FC = () => {
       setIsDeletingVendor(false);
       setDeleteVendorId(null);
     }
+  };
+
+  const handleVendorCodeConfirm = async () => {
+    if (!vendor || !pendingStatus) return;
+    if (!vendorCodeInput.trim()) {
+      toast.error('Vendor Code wajib diisi untuk mengaktifkan vendor');
+      return;
+    }
+    setIsUpdatingStatus(true);
+    try {
+      const response = await vendorsApi.updateStatus(vendor.id, pendingStatus, vendorCodeInput.trim());
+      if (response.status && response.data) {
+        setVendor({ ...vendor, status: response.data.status || pendingStatus, vendor_code: response.data.vendor_code || vendorCodeInput.trim() });
+      } else {
+        setVendor({ ...vendor, status: pendingStatus, vendor_code: vendorCodeInput.trim() });
+      }
+      toast.success(`Vendor status updated to ${pendingStatus}`);
+    } catch (error: any) {
+      console.error('Failed to update vendor status:', error);
+      toast.error(error?.response?.data?.message || 'Failed to update status');
+    } finally {
+      setIsUpdatingStatus(false);
+      setShowVendorCodeModal(false);
+      setPendingStatus(null);
+    }
+  };
+
+  const handleVendorCodeCancel = () => {
+    setShowVendorCodeModal(false);
+    setPendingStatus(null);
   };
 
   const getStatusVariant = (status: string) => {
@@ -1481,6 +1525,12 @@ export const VendorProfile: React.FC = () => {
                       {vendor.status}
                     </Badge>
                   </div>
+                  {vendor.vendor_code && (
+                    <div>
+                      <p className="text-xs text-secondary-500">Vendor Code</p>
+                      <p className="text-sm font-semibold text-secondary-900">{vendor.vendor_code}</p>
+                    </div>
+                  )}
                   {canUpdateStatus && (
                     <div className="space-y-2">
                       <p className="text-xs text-secondary-500">Update Status</p>
@@ -1546,6 +1596,46 @@ export const VendorProfile: React.FC = () => {
         onConfirm={handleDeleteFileConfirm}
         onCancel={() => setDeleteFileId(null)}
       />
+
+      {showVendorCodeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50" onClick={handleVendorCodeCancel} />
+          <div className="relative bg-white rounded-lg shadow-xl max-w-sm w-full">
+            <div className="p-5 space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-secondary-900">Set Vendor Code</h3>
+                  <p className="text-sm text-secondary-600 mt-1">
+                    Vendor Code wajib diisi sebelum mengaktifkan vendor.
+                  </p>
+                </div>
+                <button
+                  className="text-secondary-400 hover:text-secondary-600"
+                  onClick={handleVendorCodeCancel}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-secondary-700">Vendor Code</label>
+                <Input
+                  value={vendorCodeInput}
+                  onChange={(e) => setVendorCodeInput(e.target.value)}
+                  placeholder="Masukkan Vendor Code"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="secondary" onClick={handleVendorCodeCancel} disabled={isUpdatingStatus}>
+                  Batal
+                </Button>
+                <Button variant="primary" onClick={handleVendorCodeConfirm} isLoading={isUpdatingStatus}>
+                  Simpan & Aktifkan
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmModal
         show={!!deleteVendorId}

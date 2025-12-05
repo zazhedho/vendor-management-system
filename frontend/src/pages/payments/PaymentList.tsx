@@ -142,9 +142,14 @@ export const PaymentList: React.FC = () => {
     {
       header: 'Vendor',
       accessor: (payment: Payment) => (
-        <span className="font-semibold text-secondary-900">
-          {payment.vendor?.profile?.vendor_name || '-'}
-        </span>
+        <div className="flex flex-col">
+          <span className="font-semibold text-secondary-900">
+            {payment.vendor?.profile?.vendor_name || '-'}
+          </span>
+          {payment.vendor?.vendor_code && (
+            <span className="text-xs text-secondary-500 font-mono">{payment.vendor.vendor_code}</span>
+          )}
+        </div>
       )
     },
     {
