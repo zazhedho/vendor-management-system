@@ -89,7 +89,7 @@ func (r *Routes) UserRoutes() {
 	}
 
 	h := userHandler.NewUserHandler(uc, loginLimiter)
-	mdw := middlewares.NewMiddleware(blacklistRepo)
+	mdw := middlewares.NewMiddleware(blacklistRepo, pRepo)
 
 	// Setup register rate limiter
 	registerLimit := utils.GetEnv("REGISTER_RATE_LIMIT", 5).(int)
@@ -115,48 +115,50 @@ func (r *Routes) UserRoutes() {
 		{
 			userPriv.POST("/logout", h.Logout)
 			userPriv.GET("", h.GetUserByAuth)
-			userPriv.GET("/:id", mdw.RoleMiddleware(utils.RoleAdmin), h.GetUserById)
+			userPriv.GET("/:id", mdw.PermissionMiddleware("users", "view"), h.GetUserById)
 			userPriv.PUT("", h.Update)
-			userPriv.PUT("/:id", mdw.RoleMiddleware(utils.RoleAdmin), h.UpdateUserById)
+			userPriv.PUT("/:id", mdw.PermissionMiddleware("users", "update"), h.UpdateUserById)
 			userPriv.PUT("/change/password", h.ChangePassword)
 			userPriv.DELETE("", h.Delete)
-			userPriv.DELETE("/:id", mdw.RoleMiddleware(utils.RoleAdmin), h.DeleteUserById)
+			userPriv.DELETE("/:id", mdw.PermissionMiddleware("users", "delete"), h.DeleteUserById)
 
 			// Admin create user endpoint (with role selection)
-			userPriv.POST("", mdw.RoleMiddleware(utils.RoleSuperAdmin, utils.RoleAdmin), h.AdminCreateUser)
+			userPriv.POST("", mdw.PermissionMiddleware("users", "create"), h.AdminCreateUser)
 		}
 	}
 
-	r.App.GET("/api/users", mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleSuperAdmin, utils.RoleAdmin), h.GetAllUsers)
+	r.App.GET("/api/users", mdw.AuthMiddleware(), mdw.PermissionMiddleware("users", "view"), h.GetAllUsers)
 }
 
 func (r *Routes) RoleRoutes() {
+	blacklistRepo := authRepo.NewBlacklistRepo(r.DB)
 	repoRole := roleRepo.NewRoleRepo(r.DB)
 	repoPermission := permissionRepo.NewPermissionRepo(r.DB)
 	repoMenu := menuRepo.NewMenuRepo(r.DB)
 	svc := roleSvc.NewRoleService(repoRole, repoPermission, repoMenu)
 	h := roleHandler.NewRoleHandler(svc)
-	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB))
+	mdw := middlewares.NewMiddleware(blacklistRepo, repoPermission)
 
-	r.App.GET("/api/roles", mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin), h.GetAll)
+	r.App.GET("/api/roles", mdw.AuthMiddleware(), mdw.PermissionMiddleware("roles", "view"), h.GetAll)
 
-	role := r.App.Group("/api/role").Use(mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin))
+	role := r.App.Group("/api/role").Use(mdw.AuthMiddleware())
 	{
-		role.POST("", h.Create)
-		role.GET("/:id", h.GetByID)
-		role.PUT("/:id", h.Update)
-		role.DELETE("/:id", h.Delete)
+		role.POST("", mdw.PermissionMiddleware("roles", "create"), h.Create)
+		role.GET("/:id", mdw.PermissionMiddleware("roles", "view"), h.GetByID)
+		role.PUT("/:id", mdw.PermissionMiddleware("roles", "update"), h.Update)
+		role.DELETE("/:id", mdw.PermissionMiddleware("roles", "delete"), h.Delete)
 
-		role.POST("/:id/permissions", h.AssignPermissions)
-		role.POST("/:id/menus", h.AssignMenus)
+		role.POST("/:id/permissions", mdw.PermissionMiddleware("roles", "assign_permissions"), h.AssignPermissions)
+		role.POST("/:id/menus", mdw.PermissionMiddleware("roles", "assign_menus"), h.AssignMenus)
 	}
 }
 
 func (r *Routes) PermissionRoutes() {
+	blacklistRepo := authRepo.NewBlacklistRepo(r.DB)
 	repo := permissionRepo.NewPermissionRepo(r.DB)
 	svc := permissionSvc.NewPermissionService(repo)
 	h := permissionHandler.NewPermissionHandler(svc)
-	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB))
+	mdw := middlewares.NewMiddleware(blacklistRepo, repo)
 
 	r.App.GET("/api/permissions", mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin), h.GetAll)
 	r.App.GET("/api/permissions/me", mdw.AuthMiddleware(), h.GetUserPermissions)
@@ -171,10 +173,11 @@ func (r *Routes) PermissionRoutes() {
 }
 
 func (r *Routes) MenuRoutes() {
+	pRepo := permissionRepo.NewPermissionRepo(r.DB)
 	repo := menuRepo.NewMenuRepo(r.DB)
 	svc := menuSvc.NewMenuService(repo)
 	h := menuHandler.NewMenuHandler(svc)
-	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB))
+	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB), pRepo)
 
 	r.App.GET("/api/menus/active", mdw.AuthMiddleware(), h.GetActiveMenus)
 	r.App.GET("/api/menus/me", mdw.AuthMiddleware(), h.GetUserMenus)
@@ -199,7 +202,8 @@ func (r *Routes) SessionRoutes() {
 	repo := sessionRepo.NewSessionRepository(redisClient)
 	svc := sessionSvc.NewSessionService(repo)
 	h := sessionHandler.NewSessionHandler(svc)
-	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB))
+	pRepo := permissionRepo.NewPermissionRepo(r.DB)
+	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB), pRepo)
 
 	sessionGroup := r.App.Group("/api/user").Use(mdw.AuthMiddleware())
 	{
@@ -234,23 +238,24 @@ func (r *Routes) VendorRoutes() {
 	repo := vendorRepo.NewVendorRepo(r.DB)
 	svc := vendorSvc.NewVendorService(repo, storageProvider)
 	h := vendorHandler.NewVendorHandler(svc)
-	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB))
+	pRepo := permissionRepo.NewPermissionRepo(r.DB)
+	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB), pRepo)
 
 	vendor := r.App.Group("/api/vendor").Use(mdw.AuthMiddleware())
 	{
-		vendor.GET("/profile", mdw.RoleMiddleware(utils.RoleVendor), h.GetVendorProfile)
-		vendor.POST("/profile", mdw.RoleMiddleware(utils.RoleVendor, utils.RoleSuperAdmin), h.CreateOrUpdateVendorProfile)
-		vendor.POST("/profile/:profileId/files", mdw.RoleMiddleware(utils.RoleVendor), h.UploadVendorProfileFile)
-		vendor.DELETE("/profile/:profileId/files/:fileId", mdw.RoleMiddleware(utils.RoleVendor), h.DeleteVendorProfileFile)
+		vendor.GET("/profile", mdw.PermissionMiddleware("vendor", "view"), h.GetVendorProfile)
+		vendor.POST("/profile", mdw.PermissionMiddleware("vendor", "update"), h.CreateOrUpdateVendorProfile)
+		vendor.POST("/profile/:profileId/files", mdw.PermissionMiddleware("vendor", "update"), h.UploadVendorProfileFile)
+		vendor.DELETE("/profile/:profileId/files/:fileId", mdw.PermissionMiddleware("vendor", "update"), h.DeleteVendorProfileFile)
 	}
 
-	vendorAdmin := r.App.Group("/api/vendors").Use(mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin, utils.RoleClient))
+	vendorAdmin := r.App.Group("/api/vendors").Use(mdw.AuthMiddleware())
 	{
-		vendorAdmin.GET("", h.GetAllVendors)
-		vendorAdmin.GET("/:id", h.GetVendorDetail)
-		vendorAdmin.PUT("/:id/status", h.UpdateVendorStatus)
-		vendorAdmin.PUT("/files/:fileId/status", h.UpdateVendorProfileFileStatus)
-		vendorAdmin.DELETE("/:id", mdw.RoleMiddleware(utils.RoleAdmin, utils.RoleSuperAdmin), h.DeleteVendor)
+		vendorAdmin.GET("", mdw.PermissionMiddleware("vendor", "view"), h.GetAllVendors)
+		vendorAdmin.GET("/:id", mdw.PermissionMiddleware("vendor", "view"), h.GetVendorDetail)
+		vendorAdmin.PUT("/:id/status", mdw.PermissionMiddleware("vendor", "update"), h.UpdateVendorStatus)
+		vendorAdmin.PUT("/files/:fileId/status", mdw.PermissionMiddleware("vendor", "update"), h.UpdateVendorProfileFileStatus)
+		vendorAdmin.DELETE("/:id", mdw.PermissionMiddleware("vendor", "update"), h.DeleteVendor)
 	}
 }
 
@@ -266,35 +271,36 @@ func (r *Routes) EventRoutes() {
 	eRepo := eventRepo.NewEventRepo(r.DB)
 	svc := eventSvc.NewEventService(eRepo, vRepo, storageProvider)
 	h := eventHandler.NewEventHandler(svc, vRepo)
-	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB))
+	pRepo := permissionRepo.NewPermissionRepo(r.DB)
+	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB), pRepo)
 
 	// Public event list (for vendors to see open events)
-	r.App.GET("/api/events", mdw.AuthMiddleware(), h.GetAllEvents)
-	r.App.GET("/api/event/:id", mdw.AuthMiddleware(), h.GetEventByID)
+	r.App.GET("/api/events", mdw.AuthMiddleware(), mdw.PermissionMiddleware("event", "view"), h.GetAllEvents)
+	r.App.GET("/api/event/:id", mdw.AuthMiddleware(), mdw.PermissionMiddleware("event", "view"), h.GetEventByID)
 
 	// Client/Admin event management
-	eventAdmin := r.App.Group("/api/event").Use(mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin, utils.RoleClient))
+	eventAdmin := r.App.Group("/api/event").Use(mdw.AuthMiddleware())
 	{
-		eventAdmin.POST("", h.CreateEvent)
-		eventAdmin.PUT("/:id", h.UpdateEvent)
-		eventAdmin.DELETE("/:id", mdw.RoleMiddleware(utils.RoleAdmin), h.DeleteEvent)
-		eventAdmin.POST("/:id/files", h.UploadEventFile)
-		eventAdmin.DELETE("/:id/files/:fileId", h.DeleteEventFile)
-		eventAdmin.GET("/submissions", h.GetAllSubmissions)
-		eventAdmin.GET("/submissions/grouped", h.GetGroupedSubmissions)
-		eventAdmin.GET("/:id/submissions", h.GetSubmissionsByEventID)
-		eventAdmin.PUT("/submission/:id/score", h.ScoreSubmission)
-		eventAdmin.PUT("/submission/:id/shortlist", h.ShortlistSubmission)
-		eventAdmin.POST("/:id/winner", h.SelectWinner)
-		eventAdmin.GET("/:id/result", h.GetEventResultForAdmin)
+		eventAdmin.POST("", mdw.PermissionMiddleware("event", "create"), h.CreateEvent)
+		eventAdmin.PUT("/:id", mdw.PermissionMiddleware("event", "update"), h.UpdateEvent)
+		eventAdmin.DELETE("/:id", mdw.PermissionMiddleware("event", "delete"), h.DeleteEvent)
+		eventAdmin.POST("/:id/files", mdw.PermissionMiddleware("event", "update"), h.UploadEventFile)
+		eventAdmin.DELETE("/:id/files/:fileId", mdw.PermissionMiddleware("event", "update"), h.DeleteEventFile)
+		eventAdmin.GET("/submissions", mdw.PermissionMiddleware("event", "view_submissions"), h.GetAllSubmissions)
+		eventAdmin.GET("/submissions/grouped", mdw.PermissionMiddleware("event", "view_submissions"), h.GetGroupedSubmissions)
+		eventAdmin.GET("/:id/submissions", mdw.PermissionMiddleware("event", "view_submissions"), h.GetSubmissionsByEventID)
+		eventAdmin.PUT("/submission/:id/score", mdw.PermissionMiddleware("event", "score"), h.ScoreSubmission)
+		eventAdmin.PUT("/submission/:id/shortlist", mdw.PermissionMiddleware("event", "score"), h.ShortlistSubmission)
+		eventAdmin.POST("/:id/winner", mdw.PermissionMiddleware("event", "select_winner"), h.SelectWinner)
+		eventAdmin.GET("/:id/result", mdw.PermissionMiddleware("event", "view_submissions"), h.GetEventResultForAdmin)
 	}
 
 	// Vendor submission routes
-	vendorEvent := r.App.Group("/api/vendor/event").Use(mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleVendor))
+	vendorEvent := r.App.Group("/api/vendor/event").Use(mdw.AuthMiddleware())
 	{
-		vendorEvent.POST("/:id/submit", h.SubmitPitch)
-		vendorEvent.GET("/submissions", h.GetMySubmissions)
-		vendorEvent.GET("/:id/result", h.GetEventResult)
+		vendorEvent.POST("/:id/submit", mdw.PermissionMiddleware("event", "submit_pitch"), h.SubmitPitch)
+		vendorEvent.GET("/submissions", mdw.PermissionMiddleware("vendor", "view_submissions"), h.GetMySubmissions)
+		vendorEvent.GET("/:id/result", mdw.PermissionMiddleware("event", "view"), h.GetEventResult)
 	}
 }
 
@@ -310,25 +316,26 @@ func (r *Routes) PaymentRoutes() {
 	pRepo := paymentRepo.NewPaymentRepo(r.DB)
 	svc := paymentSvc.NewPaymentService(pRepo, vRepo, storageProvider)
 	h := paymentHandler.NewPaymentHandler(svc, vRepo)
-	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB))
+	permRepo := permissionRepo.NewPermissionRepo(r.DB)
+	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB), permRepo)
 
 	// Vendor can only view their payments
-	r.App.GET("/api/vendor/payments", mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleVendor), h.GetMyPayments)
-	r.App.GET("/api/vendor/payment/:id", mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleVendor), h.GetMyPaymentByID)
+	r.App.GET("/api/vendor/payments", mdw.AuthMiddleware(), mdw.PermissionMiddleware("payment", "view"), h.GetMyPayments)
+	r.App.GET("/api/vendor/payment/:id", mdw.AuthMiddleware(), mdw.PermissionMiddleware("payment", "view"), h.GetMyPaymentByID)
 
 	// Admin payment management
-	paymentAdmin := r.App.Group("/api/payment").Use(mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin))
+	paymentAdmin := r.App.Group("/api/payment").Use(mdw.AuthMiddleware())
 	{
-		paymentAdmin.POST("", h.CreatePayment)
-		paymentAdmin.GET("/:id", h.GetPaymentByID)
-		paymentAdmin.PUT("/:id", h.UpdatePayment)
-		paymentAdmin.PUT("/:id/status", h.UpdatePaymentStatus)
-		paymentAdmin.DELETE("/:id", h.DeletePayment)
-		paymentAdmin.POST("/:id/files", h.UploadPaymentFile)
-		paymentAdmin.DELETE("/:id/files/:file_id", h.DeletePaymentFile)
+		paymentAdmin.POST("", mdw.PermissionMiddleware("payment", "create"), h.CreatePayment)
+		paymentAdmin.GET("/:id", mdw.PermissionMiddleware("payment", "view"), h.GetPaymentByID)
+		paymentAdmin.PUT("/:id", mdw.PermissionMiddleware("payment", "update"), h.UpdatePayment)
+		paymentAdmin.PUT("/:id/status", mdw.PermissionMiddleware("payment", "update"), h.UpdatePaymentStatus)
+		paymentAdmin.DELETE("/:id", mdw.PermissionMiddleware("payment", "delete"), h.DeletePayment)
+		paymentAdmin.POST("/:id/files", mdw.PermissionMiddleware("payment", "update"), h.UploadPaymentFile)
+		paymentAdmin.DELETE("/:id/files/:file_id", mdw.PermissionMiddleware("payment", "update"), h.DeletePaymentFile)
 	}
 
-	r.App.GET("/api/payments", mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin), h.GetAllPayments)
+	r.App.GET("/api/payments", mdw.AuthMiddleware(), mdw.PermissionMiddleware("payment", "view"), h.GetAllPayments)
 }
 
 func (r *Routes) EvaluationRoutes() {
@@ -344,31 +351,32 @@ func (r *Routes) EvaluationRoutes() {
 	evRepo := evaluationRepo.NewEvaluationRepo(r.DB)
 	svc := evaluationSvc.NewEvaluationService(evRepo, eRepo, vRepo, storageProvider)
 	h := evaluationHandler.NewEvaluationHandler(svc, vRepo)
-	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB))
+	pRepo := permissionRepo.NewPermissionRepo(r.DB)
+	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB), pRepo)
 
 	// View evaluations (shared access)
-	r.App.GET("/api/evaluations", mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin, utils.RoleClient, utils.RoleVendor), h.GetAllEvaluations)
-	r.App.GET("/api/evaluation/:id", mdw.AuthMiddleware(), h.GetEvaluationByID)
-	r.App.GET("/api/event/:id/evaluations", mdw.AuthMiddleware(), h.GetEvaluationsByEventID)
+	r.App.GET("/api/evaluations", mdw.AuthMiddleware(), mdw.PermissionMiddleware("evaluation", "view"), h.GetAllEvaluations)
+	r.App.GET("/api/evaluation/:id", mdw.AuthMiddleware(), mdw.PermissionMiddleware("evaluation", "view"), h.GetEvaluationByID)
+	r.App.GET("/api/event/:id/evaluations", mdw.AuthMiddleware(), mdw.PermissionMiddleware("evaluation", "view"), h.GetEvaluationsByEventID)
 
 	// Vendor can view their own evaluations
-	r.App.GET("/api/vendor/evaluations", mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleVendor), h.GetMyEvaluations)
+	r.App.GET("/api/vendor/evaluations", mdw.AuthMiddleware(), mdw.PermissionMiddleware("evaluation", "view"), h.GetMyEvaluations)
 
 	// Vendor can upload photos for their evaluations
-	r.App.POST("/api/evaluation/:id/photo", mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleVendor), h.UploadPhoto)
+	r.App.POST("/api/evaluation/:id/photo", mdw.AuthMiddleware(), mdw.PermissionMiddleware("evaluation", "upload_photo"), h.UploadPhoto)
 
 	// Client creates evaluation for winner vendor
-	evalClient := r.App.Group("/api/evaluation").Use(mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleClient))
+	evalClient := r.App.Group("/api/evaluation").Use(mdw.AuthMiddleware())
 	{
-		evalClient.POST("", h.CreateEvaluation)
-		evalClient.PUT("/:id", h.UpdateEvaluation)
-		evalClient.PUT("/photo/:id/review", h.ReviewPhoto)
+		evalClient.POST("", mdw.PermissionMiddleware("evaluation", "create"), h.CreateEvaluation)
+		evalClient.PUT("/:id", mdw.PermissionMiddleware("evaluation", "update"), h.UpdateEvaluation)
+		evalClient.PUT("/photo/:id/review", mdw.PermissionMiddleware("evaluation", "review_photo"), h.ReviewPhoto)
 	}
 
 	// Admin can delete evaluation and photos
-	evalAdmin := r.App.Group("/api/evaluation").Use(mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin))
+	evalAdmin := r.App.Group("/api/evaluation").Use(mdw.AuthMiddleware())
 	{
-		evalAdmin.DELETE("/:id", h.DeleteEvaluation)
-		evalAdmin.DELETE("/photo/:id", h.DeletePhoto)
+		evalAdmin.DELETE("/:id", mdw.PermissionMiddleware("evaluation", "delete"), h.DeleteEvaluation)
+		evalAdmin.DELETE("/photo/:id", mdw.PermissionMiddleware("evaluation", "delete"), h.DeletePhoto)
 	}
 }

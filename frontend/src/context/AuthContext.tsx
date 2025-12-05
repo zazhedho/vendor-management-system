@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, Menu } from '../types';
+import { User, Menu, Permission } from '../types';
 import { authApi } from '../api/auth';
 import { menusApi } from '../api/menus';
 import { permissionsApi } from '../api/permissions';
@@ -8,6 +8,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   userMenus: Menu[];
+  permissions: Permission[];
   login: (email: string, password: string) => Promise<{ success: boolean; user?: User; error?: string }>;
   register: (userData: any) => Promise<{ success: boolean; data?: any; error?: string }>;
   logout: () => Promise<void>;
@@ -28,18 +29,43 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [userMenus, setUserMenus] = useState<Menu[]>([]);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
     const storedMenus = localStorage.getItem('userMenus');
+    const storedPermissions = localStorage.getItem('permissions');
 
     if (storedToken && storedUser) {
       setToken(storedToken);
       setUser(JSON.parse(storedUser));
       if (storedMenus) {
         setUserMenus(JSON.parse(storedMenus));
+      }
+      if (storedPermissions) {
+        setPermissions(JSON.parse(storedPermissions));
+      } else {
+        const parsedUser = JSON.parse(storedUser);
+        if (Array.isArray(parsedUser?.permissions)) {
+          // Backward compatibility: convert permission names into permission objects
+          const mappedPermissions = parsedUser.permissions.map((name: string) => {
+            const [maybeAction, ...resourceParts] = name.split('_');
+            const resource = resourceParts.join('_');
+            return {
+              id: name,
+              name,
+              display_name: name,
+              description: '',
+              resource: resource || '',
+              action: maybeAction || '',
+              created_at: '',
+              updated_at: '',
+            } as Permission;
+          });
+          setPermissions(mappedPermissions);
+        }
       }
     }
     setIsLoading(false);
@@ -70,12 +96,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             try {
               const permissionsResponse = await permissionsApi.getMyPermissions();
               if (permissionsResponse.status && permissionsResponse.data) {
-                const permissionNames = permissionsResponse.data.map(p => p.name);
-                setUser(prev => prev ? { ...prev, permissions: permissionNames } : null);
+                setPermissions(permissionsResponse.data);
+                localStorage.setItem('permissions', JSON.stringify(permissionsResponse.data));
 
-                // Update local storage as well to persist permissions
-                const updatedUser = { ...profileResponse.data, permissions: permissionNames };
-                localStorage.setItem('user', JSON.stringify(updatedUser));
+                // Maintain user data without mutating it for permissions (kept separate)
+                localStorage.setItem('user', JSON.stringify(profileResponse.data));
               }
             } catch (error) {
               console.error('Failed to fetch user permissions:', error);
@@ -110,9 +135,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(null);
       setToken(null);
       setUserMenus([]);
+      setPermissions([]);
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       localStorage.removeItem('userMenus');
+      localStorage.removeItem('permissions');
     }
   };
 
@@ -121,9 +148,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return roles.includes(user.role);
   };
 
-  const hasPermission = (permission: string) => {
+  const hasPermission = (resourceOrPermissionName: string, action?: string) => {
     if (!user) return false;
-    return user.permissions?.includes(permission) || false;
+    if (user.role === 'superadmin') return true;
+
+    if (action) {
+      return permissions.some(p => p.resource === resourceOrPermissionName && p.action === action);
+    }
+
+    return permissions.some(p => p.name === resourceOrPermissionName);
   };
 
   const register = async (userData: any) => {
@@ -229,6 +262,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user,
         token,
         userMenus,
+        permissions,
         login,
         register,
         logout,
