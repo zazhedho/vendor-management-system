@@ -26,6 +26,8 @@ export const SelectWinnerModal: React.FC<SelectWinnerModalProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [visibleCount, setVisibleCount] = useState(20);
+  const [searchWarning, setSearchWarning] = useState('');
+  const MIN_SEARCH_LENGTH = 3;
 
   useEffect(() => {
     const handle = setTimeout(() => setDebouncedSearch(searchTerm), 250);
@@ -42,10 +44,22 @@ export const SelectWinnerModal: React.FC<SelectWinnerModalProps> = ({
       toast.error('Please select a submission');
       return;
     }
+    const selected = shortlistedSubmissions.find((s) => s.id === selectedSubmissionId);
+    if (!selected || (!selected.is_shortlisted && !selected.is_winner)) {
+      toast.error('Only shortlisted submissions can be selected as winner');
+      return;
+    }
     setShowConfirm(true);
   };
 
   const handleConfirm = async () => {
+    const selected = shortlistedSubmissions.find((s) => s.id === selectedSubmissionId);
+    if (!selected || (!selected.is_shortlisted && !selected.is_winner)) {
+      toast.error('Selected submission is no longer eligible');
+      setShowConfirm(false);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const response = await eventsApi.selectWinner(eventId, selectedSubmissionId);
@@ -85,7 +99,17 @@ export const SelectWinnerModal: React.FC<SelectWinnerModalProps> = ({
   }, [shortlistedSubmissions]);
 
   const filteredSubmissions = useMemo(() => {
-    if (!debouncedSearch) return sortedSubmissions;
+    if (!debouncedSearch) {
+      setSearchWarning('');
+      return sortedSubmissions;
+    }
+
+    if (debouncedSearch.length < MIN_SEARCH_LENGTH) {
+      setSearchWarning(`Ketik minimal ${MIN_SEARCH_LENGTH} karakter untuk mencari`);
+      return sortedSubmissions;
+    }
+
+    setSearchWarning('');
     const term = debouncedSearch.toLowerCase();
     return sortedSubmissions.filter((s) => {
       const name = s.vendor?.profile?.vendor_name?.toLowerCase() || '';
@@ -135,6 +159,9 @@ export const SelectWinnerModal: React.FC<SelectWinnerModalProps> = ({
                 placeholder="Search vendor by name, email, or ID..."
                 leftIcon={<Search size={16} className="text-secondary-400" />}
               />
+              {searchWarning && (
+                <p className="text-xs text-warning-600 mt-1">{searchWarning}</p>
+              )}
             </div>
 
             <div className="max-h-[50vh] overflow-y-auto p-3 space-y-2">
@@ -164,8 +191,12 @@ export const SelectWinnerModal: React.FC<SelectWinnerModalProps> = ({
                         <Badge variant="success" className="text-xs px-1.5 py-0.5">Winner</Badge>
                       )}
                     </div>
-                    <p className="text-xs text-secondary-500 truncate">
-                      {submission.vendor?.profile?.email || '-'}
+                    <p className="text-xs text-secondary-500 truncate flex items-center gap-1">
+                      {submission.vendor?.vendor_code && (
+                        <span className="font-mono">{submission.vendor.vendor_code}</span>
+                      )}
+                      {submission.vendor?.vendor_code && submission.vendor?.profile?.email && <span className="text-secondary-400">|</span>}
+                      <span>{submission.vendor?.profile?.email || '-'}</span>
                     </p>
                   </div>
                   <div className="text-right shrink-0">
