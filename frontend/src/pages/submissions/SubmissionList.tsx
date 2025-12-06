@@ -590,7 +590,7 @@ export const SubmissionList: React.FC = () => {
                           size="sm"
                           onClick={() => handleSubmissionPageChange(group.submission_page + 1)}
                           disabled={group.submission_page === group.total_submission_pages}
-                          leftIcon={<ChevronRight className="w-4 h-4" />}
+                          rightIcon={<ChevronRight className="w-4 h-4" />}
                         >
                           Next
                         </Button>
@@ -604,7 +604,7 @@ export const SubmissionList: React.FC = () => {
 
           {/* Event pagination */}
           {groupedData.total_pages > 1 && (
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div className="text-sm text-gray-700">
                 Page {groupedData.current_page} of {groupedData.total_pages} ({groupedData.total_events} events)
               </div>

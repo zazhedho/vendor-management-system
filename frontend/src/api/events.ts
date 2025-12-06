@@ -99,8 +99,8 @@ export const eventsApi = {
     return response.data;
   },
 
-  getSubmissions: async (eventId: string) => {
-    const response = await apiClient.get<ApiResponse<EventSubmission[]>>(`/event/${eventId}/submissions`);
+  getSubmissions: async (eventId: string, params?: { page?: number; limit?: number; search?: string; [key: string]: any }) => {
+    const response = await apiClient.get<PaginatedResponse<EventSubmission>>(`/event/${eventId}/submissions`, { params });
     return response.data;
   },
 

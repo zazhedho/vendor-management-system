@@ -25,6 +25,7 @@ type ServiceEventInterface interface {
 	SubmitPitch(eventId, vendorId string, req dto.SubmitPitchRequest) (domainevents.EventSubmission, error)
 	SubmitPitchWithFile(ctx context.Context, eventId, vendorId string, req dto.SubmitPitchRequest, fileHeader *multipart.FileHeader, fileType, caption string) (domainevents.EventSubmission, error)
 	GetSubmissionsByEventID(eventId string) ([]domainevents.EventSubmission, error)
+	GetSubmissionsByEventIDPaginated(eventId string, params filter.BaseParams) ([]domainevents.EventSubmission, int64, error)
 	GetAllSubmissions(params filter.BaseParams) ([]map[string]interface{}, int64, error)
 	GetGroupedSubmissions(params filter.BaseParams, submissionPage int, submissionLimit int) (*domainevents.GroupedSubmissionsResponse, error)
 	GetMySubmissions(vendorId string, params filter.BaseParams) ([]domainevents.EventSubmission, int64, error)

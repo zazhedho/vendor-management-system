@@ -25,8 +25,11 @@ export const SelectWinnerModal: React.FC<SelectWinnerModalProps> = ({
   const [showConfirm, setShowConfirm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [visibleCount, setVisibleCount] = useState(20);
   const [searchWarning, setSearchWarning] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [submissionList, setSubmissionList] = useState<EventSubmission[]>(submissions || []);
   const MIN_SEARCH_LENGTH = 3;
 
   useEffect(() => {
@@ -35,8 +38,12 @@ export const SelectWinnerModal: React.FC<SelectWinnerModalProps> = ({
   }, [searchTerm]);
 
   useEffect(() => {
-    setVisibleCount(20);
-  }, [debouncedSearch, submissions]);
+    setSubmissionList(submissions || []);
+  }, [submissions]);
+
+  useEffect(() => {
+    fetchSubmissions(1, debouncedSearch);
+  }, [debouncedSearch, eventId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,10 +86,40 @@ export const SelectWinnerModal: React.FC<SelectWinnerModalProps> = ({
     }
   };
 
-  const selectedVendorName = submissions.find(s => s.id === selectedSubmissionId)?.vendor?.profile?.vendor_name || 'this vendor';
+  const selectedVendorName = submissionList.find(s => s.id === selectedSubmissionId)?.vendor?.profile?.vendor_name || 'this vendor';
+
+  const fetchSubmissions = async (targetPage: number = 1, search: string = '', append = false) => {
+    // Enforce server-side search length
+    if (search && search.length > 0 && search.length < MIN_SEARCH_LENGTH) {
+      setSearchWarning(`Ketik minimal ${MIN_SEARCH_LENGTH} karakter untuk mencari`);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const params: any = {
+        page: targetPage,
+        limit: 10,
+        search: search || undefined,
+        'filters[is_shortlisted]': true,
+      };
+      const response = await eventsApi.getSubmissions(eventId, params);
+      if (response.status && response.data) {
+        const newData = response.data;
+        setSubmissionList((prev) => append ? [...prev, ...newData] : newData);
+        setPage(response.current_page || targetPage);
+        setTotalPages(response.total_pages || 1);
+        setSearchWarning('');
+      }
+    } catch (error) {
+      console.error('Failed to fetch submissions:', error);
+      toast.error('Gagal memuat submissions');
+    } finally {
+      setIsLoading(false);
+    }
+  };
   const shortlistedSubmissions = useMemo(
-    () => submissions.filter((s) => s.is_shortlisted || s.is_winner),
-    [submissions]
+    () => submissionList.filter((s) => s.is_shortlisted || s.is_winner),
+    [submissionList]
   );
 
   const sortedSubmissions = useMemo(() => {
@@ -118,8 +155,6 @@ export const SelectWinnerModal: React.FC<SelectWinnerModalProps> = ({
       return name.includes(term) || email.includes(term) || id.includes(term);
     });
   }, [debouncedSearch, sortedSubmissions]);
-
-  const visibleSubmissions = filteredSubmissions.slice(0, visibleCount);
 
   useEffect(() => {
     if (!shortlistedSubmissions.find((s) => s.id === selectedSubmissionId)) {
@@ -165,7 +200,7 @@ export const SelectWinnerModal: React.FC<SelectWinnerModalProps> = ({
             </div>
 
             <div className="max-h-[50vh] overflow-y-auto p-3 space-y-2">
-              {visibleSubmissions.map((submission) => (
+              {filteredSubmissions.map((submission) => (
                 <label
                   key={submission.id}
                   className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
@@ -209,13 +244,14 @@ export const SelectWinnerModal: React.FC<SelectWinnerModalProps> = ({
                   </div>
                 </label>
               ))}
-              {visibleCount < filteredSubmissions.length && (
+              {page < totalPages && (
                 <div className="pt-2">
                   <Button
                     type="button"
                     variant="secondary"
                     className="w-full"
-                    onClick={() => setVisibleCount((c) => c + 20)}
+                    onClick={() => fetchSubmissions(page + 1, debouncedSearch, true)}
+                    isLoading={isLoading}
                   >
                     Load More
                   </Button>

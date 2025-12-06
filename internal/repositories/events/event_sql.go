@@ -135,6 +135,42 @@ func (r *repo) GetSubmissionsByEventID(eventId string) (ret []domainevents.Event
 	return ret, nil
 }
 
+func (r *repo) GetSubmissionsByEventIDPaginated(eventId string, params filter.BaseParams) (ret []domainevents.EventSubmission, totalData int64, err error) {
+	query := r.DB.Model(&domainevents.EventSubmission{}).
+		Where("event_id = ?", eventId)
+
+	if params.Search != "" {
+		searchPattern := "%" + params.Search + "%"
+		query = query.Joins("LEFT JOIN vendor_profiles ON vendor_profiles.vendor_id = event_submissions.vendor_id").
+			Where("LOWER(vendor_profiles.vendor_name) LIKE LOWER(?)", searchPattern)
+	}
+
+	for key, value := range params.Filters {
+		switch key {
+		case "is_shortlisted", "is_winner":
+			query = query.Where(fmt.Sprintf("event_submissions.%s = ?", key), value)
+		}
+	}
+
+	if err = query.Count(&totalData).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if params.OrderBy != "" && params.OrderDirection != "" {
+		query = query.Order(fmt.Sprintf("event_submissions.%s %s", params.OrderBy, params.OrderDirection))
+	} else {
+		query = query.Order("event_submissions.created_at DESC")
+	}
+
+	if err = query.Preload("Event").Preload("Vendor").Preload("Vendor.Profile").Preload("File").
+		Offset(params.Offset).Limit(params.Limit).
+		Find(&ret).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return ret, totalData, nil
+}
+
 func (r *repo) GetAllSubmissions(params filter.BaseParams) (ret []domainevents.EventSubmission, totalData int64, err error) {
 	query := r.DB.Model(&domainevents.EventSubmission{}).
 		Joins("LEFT JOIN events ON event_submissions.event_id = events.id AND events.deleted_at IS NULL")

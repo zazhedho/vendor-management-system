@@ -261,6 +261,10 @@ func (s *ServiceEvent) GetSubmissionsByEventID(eventId string) ([]domainevents.E
 	return s.EventRepo.GetSubmissionsByEventID(eventId)
 }
 
+func (s *ServiceEvent) GetSubmissionsByEventIDPaginated(eventId string, params filter.BaseParams) ([]domainevents.EventSubmission, int64, error) {
+	return s.EventRepo.GetSubmissionsByEventIDPaginated(eventId, params)
+}
+
 func (s *ServiceEvent) GetAllSubmissions(params filter.BaseParams) ([]map[string]interface{}, int64, error) {
 	submissions, total, err := s.EventRepo.GetAllSubmissions(params)
 	if err != nil {
