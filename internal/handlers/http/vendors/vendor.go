@@ -137,6 +137,36 @@ func (h *HandlerVendor) GetVendorDetail(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, res)
 }
 
+func (h *HandlerVendor) ExportVendorProfile(ctx *gin.Context) {
+	logId := utils.GenerateLogId(ctx)
+	logPrefix := fmt.Sprintf("[%s][VendorHandler][ExportVendorProfile]", logId)
+
+	id, err := utils.ValidateUUID(ctx, logId)
+	if err != nil {
+		return
+	}
+
+	fileBytes, filename, err := h.Service.GenerateVendorProfileXLSX(id)
+	if err != nil {
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GenerateVendorProfileXLSX; ERROR: %s;", logPrefix, err))
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			res := response.Response(http.StatusNotFound, messages.MsgNotFound, logId, nil)
+			res.Error = response.Errors{Code: http.StatusNotFound, Message: "vendor not found"}
+			ctx.JSON(http.StatusNotFound, res)
+			return
+		}
+
+		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
+		res.Error = err.Error()
+		ctx.JSON(http.StatusInternalServerError, res)
+		return
+	}
+
+	ctx.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+	ctx.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileBytes)
+}
+
 func (h *HandlerVendor) UpdateVendorStatus(ctx *gin.Context) {
 	var req dto.UpdateVendorStatusRequest
 	logId := utils.GenerateLogId(ctx)
@@ -164,7 +194,14 @@ func (h *HandlerVendor) UpdateVendorStatus(ctx *gin.Context) {
 		return
 	}
 
-	data, err := h.Service.UpdateVendorStatus(id, req.Status, req.VendorCode)
+	if req.Status == utils.VendorReject && strings.TrimSpace(req.RejectReason) == "" {
+		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
+		res.Error = "reject_reason is required when rejecting vendor"
+		ctx.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	data, err := h.Service.UpdateVendorStatus(id, req.Status, req.VendorCode, req.RejectReason)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.UpdateVendorStatus; ERROR: %s;", logPrefix, err))
 		if errors.Is(err, gorm.ErrRecordNotFound) {

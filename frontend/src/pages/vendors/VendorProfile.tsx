@@ -21,7 +21,8 @@ import {
   Eye,
   Trash2,
   X,
-  ArrowLeft
+  ArrowLeft,
+  Download
 } from 'lucide-react';
 import { Button, Card, Badge, Spinner, Input, ConfirmModal, ActionMenu } from '../../components/ui';
 import { toast } from 'react-toastify';
@@ -78,11 +79,15 @@ export const VendorProfile: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [showRejectReasonModal, setShowRejectReasonModal] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // isEditing based on URL for proper routing
   const isOwner = useMemo(() => !!vendor?.user_id && vendor.user_id === user?.id, [vendor?.user_id, user?.id]);
   const canEditProfile = isOwner;
   const isEditing = (isEditMode || isNewMode) && canEditProfile;
+  const canExport = useMemo(() => canViewVendors, [canViewVendors]);
+  const activeVendorId = useMemo(() => id || vendor?.id || '', [id, vendor?.id]);
 
   // For admin list view
   const [vendorList, setVendorList] = useState<VendorWithProfile[]>([]);
@@ -153,6 +158,7 @@ export const VendorProfile: React.FC = () => {
   const [showVendorCodeModal, setShowVendorCodeModal] = useState(false);
   const [vendorCodeInput, setVendorCodeInput] = useState('');
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
+  const [rejectReasonInput, setRejectReasonInput] = useState('');
 
   const companyDocs = ['ktp', 'domisili', 'siup', 'nib', 'skt', 'npwp', 'sppkp', 'akta', 'bank_book', 'rekening'];
   const individualDocs = ['ktp', 'npwp', 'bank_book'];
@@ -222,6 +228,55 @@ export const VendorProfile: React.FC = () => {
       console.error('Failed to fetch vendors:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const extractFilename = (contentDisposition?: string | null) => {
+    if (!contentDisposition) return '';
+    // Try RFC 5987 encoding first (filename*)
+    const starMatch = contentDisposition.match(/filename\*=(?:UTF-8'')?([^;]+)/i);
+    if (starMatch && starMatch[1]) {
+      try {
+        return decodeURIComponent(starMatch[1].trim().replace(/(^\"|\"$)/g, ''));
+      } catch {
+        return starMatch[1].trim().replace(/(^\"|\"$)/g, '');
+      }
+    }
+    const match = contentDisposition.match(/filename=\"?([^\";]+)\"?/i);
+    if (match && match[1]) return match[1].trim();
+    return '';
+  };
+
+  const ensureXlsxExtension = (name: string) => {
+    if (!name) return 'vendor_profile.xlsx';
+    return name.toLowerCase().endsWith('.xlsx') ? name : `${name}.xlsx`;
+  };
+
+  const handleExport = async () => {
+    if (!activeVendorId || !canExport) return;
+    setIsExporting(true);
+    try {
+      const response = await vendorsApi.exportProfile(activeVendorId);
+      const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+      const contentDisposition = response.headers?.['content-disposition'];
+      const parsedName = extractFilename(contentDisposition);
+      const filename = ensureXlsxExtension(parsedName || 'vendor_profile.xlsx');
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success('Berhasil mengekspor profil vendor');
+    } catch (error) {
+      console.error('Failed to export vendor profile:', error);
+      toast.error('Gagal mengekspor profil vendor');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -486,13 +541,25 @@ export const VendorProfile: React.FC = () => {
       return;
     }
 
+    if (newStatus === 'rejected') {
+      setPendingStatus(newStatus);
+      setRejectReasonInput(vendor.reject_reason || '');
+      setShowRejectReasonModal(true);
+      return;
+    }
+
     setIsUpdatingStatus(true);
     try {
       const response = await vendorsApi.updateStatus(vendor.id, newStatus);
       if (response.status && response.data) {
-        setVendor({ ...vendor, status: response.data.status || newStatus, vendor_code: response.data.vendor_code || vendor.vendor_code });
+        setVendor({
+          ...vendor,
+          status: response.data.status || newStatus,
+          vendor_code: response.data.vendor_code || vendor.vendor_code,
+          reject_reason: response.data.reject_reason,
+        });
       } else {
-        setVendor({ ...vendor, status: newStatus });
+        setVendor({ ...vendor, status: newStatus, reject_reason: undefined });
       }
       toast.success(`Vendor status updated to ${newStatus}`);
     } catch (error: any) {
@@ -545,6 +612,41 @@ export const VendorProfile: React.FC = () => {
       setShowVendorCodeModal(false);
       setPendingStatus(null);
     }
+  };
+
+  const handleRejectConfirm = async () => {
+    if (!vendor || !pendingStatus) return;
+    if (!rejectReasonInput.trim()) {
+      toast.error('Reject reason wajib diisi');
+      return;
+    }
+    setIsUpdatingStatus(true);
+    try {
+      const response = await vendorsApi.updateStatus(vendor.id, pendingStatus, undefined, rejectReasonInput.trim());
+      if (response.status && response.data) {
+        setVendor({
+          ...vendor,
+          status: response.data.status || pendingStatus,
+          reject_reason: response.data.reject_reason || rejectReasonInput.trim(),
+        });
+      } else {
+        setVendor({ ...vendor, status: pendingStatus, reject_reason: rejectReasonInput.trim() });
+      }
+      toast.success(`Vendor status updated to ${pendingStatus}`);
+    } catch (error: any) {
+      console.error('Failed to update vendor status:', error);
+      toast.error(error?.response?.data?.message || 'Failed to update status');
+    } finally {
+      setIsUpdatingStatus(false);
+      setShowRejectReasonModal(false);
+      setPendingStatus(null);
+    }
+  };
+
+  const handleRejectCancel = () => {
+    setShowRejectReasonModal(false);
+    setPendingStatus(null);
+    setRejectReasonInput('');
   };
 
   const handleVendorCodeCancel = () => {
@@ -1124,8 +1226,22 @@ export const VendorProfile: React.FC = () => {
           )}
           <h1 className="text-2xl font-bold text-secondary-900">Vendor Profile</h1>
         </div>
-        {!isEditing && canEditProfile && (
-          <Button onClick={() => navigate(getEditUrl())}>Edit Profile</Button>
+        {!isEditing && (
+          <div className="flex items-center gap-3">
+            {canExport && activeVendorId && (
+              <Button
+                variant="secondary"
+                onClick={handleExport}
+                isLoading={isExporting}
+                leftIcon={<Download size={16} />}
+              >
+                Export
+              </Button>
+            )}
+            {canEditProfile && (
+              <Button onClick={() => navigate(getEditUrl())}>Edit Profile</Button>
+            )}
+          </div>
         )}
       </div>
 
@@ -1525,6 +1641,12 @@ export const VendorProfile: React.FC = () => {
                       {vendor.status}
                     </Badge>
                   </div>
+                  {vendor.status === 'rejected' && vendor.reject_reason && (
+                    <div className="p-3 rounded-lg border border-danger-200 bg-danger-50">
+                      <p className="text-xs text-danger-700 font-semibold">Reject Reason</p>
+                      <p className="text-sm text-danger-800 mt-1 whitespace-pre-line">{vendor.reject_reason}</p>
+                    </div>
+                  )}
                   {vendor.vendor_code && (
                     <div>
                       <p className="text-xs text-secondary-500">Vendor Code</p>
@@ -1630,6 +1752,48 @@ export const VendorProfile: React.FC = () => {
                 </Button>
                 <Button variant="primary" onClick={handleVendorCodeConfirm} isLoading={isUpdatingStatus}>
                   Simpan & Aktifkan
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRejectReasonModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50" onClick={handleRejectCancel} />
+          <div className="relative bg-white rounded-lg shadow-xl max-w-sm w-full">
+            <div className="p-5 space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-secondary-900">Reject Vendor</h3>
+                  <p className="text-sm text-secondary-600 mt-1">
+                    Beri alasan penolakan sebelum mengubah status ke rejected.
+                  </p>
+                </div>
+                <button
+                  className="text-secondary-400 hover:text-secondary-600"
+                  onClick={handleRejectCancel}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-secondary-700">Reject Reason</label>
+                <textarea
+                  value={rejectReasonInput}
+                  onChange={(e) => setRejectReasonInput(e.target.value)}
+                  placeholder="Tulis alasan penolakan"
+                  className="w-full rounded-lg border border-secondary-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  rows={3}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="secondary" onClick={handleRejectCancel} disabled={isUpdatingStatus}>
+                  Batal
+                </Button>
+                <Button variant="primary" onClick={handleRejectConfirm} isLoading={isUpdatingStatus}>
+                  Simpan & Reject
                 </Button>
               </div>
             </div>

@@ -27,11 +27,11 @@ const (
 )
 
 const (
-	VendorPending  = "pending"
-	VendorVerified = "verified"
-	VendorActive   = "active"
-	VendorReject   = "rejected"
-	VendorSuspend  = "suspended"
+	VendorPending = "pending"
+	VendorVerify  = "verify"
+	VendorActive  = "active"
+	VendorReject  = "rejected"
+	VendorSuspend = "suspended"
 )
 
 const (

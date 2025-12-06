@@ -110,9 +110,10 @@ export const vendorsApi = {
   },
 
   // Admin: Update vendor status
-  updateStatus: async (id: string, status: string, vendor_code?: string) => {
+  updateStatus: async (id: string, status: string, vendor_code?: string, reject_reason?: string) => {
     const payload: any = { status };
     if (vendor_code) payload.vendor_code = vendor_code;
+    if (reject_reason) payload.reject_reason = reject_reason;
     const response = await apiClient.put<ApiResponse<Vendor>>(`/vendors/${id}/status`, payload);
     return response.data;
   },
@@ -124,5 +125,11 @@ export const vendorsApi = {
       reason 
     });
     return response.data;
+  },
+
+  exportProfile: async (id: string) => {
+    return apiClient.get<Blob>(`/vendors/${id}/export`, {
+      responseType: 'blob',
+    });
   },
 };

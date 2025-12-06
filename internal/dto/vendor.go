@@ -70,8 +70,9 @@ type UploadVendorProfileFileRequest struct {
 }
 
 type UpdateVendorStatusRequest struct {
-	Status     string `json:"status" binding:"required,oneof=pending verify rejected active suspended"`
-	VendorCode string `json:"vendor_code" binding:"omitempty,max=100"`
+	Status       string `json:"status" binding:"required,oneof=pending verify rejected active suspended"`
+	VendorCode   string `json:"vendor_code" binding:"omitempty,max=100"`
+	RejectReason string `json:"reject_reason" binding:"omitempty,min=3"`
 }
 
 type UpdateVendorProfileFileStatusRequest struct {

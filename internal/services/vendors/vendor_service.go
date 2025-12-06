@@ -1,6 +1,7 @@
 package servicevendors
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"vendor-management-system/pkg/storage"
 	"vendor-management-system/utils"
 
+	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
 )
 
@@ -80,6 +82,113 @@ func (s *ServiceVendor) GetVendorDetailByVendorID(vendorId string) (map[string]i
 	}
 
 	return result, nil
+}
+
+func (s *ServiceVendor) GetVendorAndProfileByVendorID(vendorId string) (domainvendors.Vendor, domainvendors.VendorProfile, error) {
+	vendor, err := s.VendorRepo.GetVendorByID(vendorId)
+	if err != nil {
+		return domainvendors.Vendor{}, domainvendors.VendorProfile{}, err
+	}
+
+	profile, err := s.VendorRepo.GetVendorProfileByVendorID(vendorId)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return domainvendors.Vendor{}, domainvendors.VendorProfile{}, err
+	}
+
+	return vendor, profile, nil
+}
+
+func (s *ServiceVendor) GenerateVendorProfileXLSX(vendorId string) ([]byte, string, error) {
+	vendor, profile, err := s.GetVendorAndProfileByVendorID(vendorId)
+	if err != nil {
+		return nil, "", err
+	}
+
+	file := excelize.NewFile()
+	defer file.Close()
+
+	const sheetName = "Vendor Profile"
+	file.SetSheetName(file.GetSheetName(0), sheetName)
+
+	row := 1
+	addRow := func(label, value string) {
+		file.SetCellValue(sheetName, fmt.Sprintf("A%d", row), label)
+		file.SetCellValue(sheetName, fmt.Sprintf("B%d", row), value)
+		row++
+	}
+
+	formatStringPtr := func(val *string) string {
+		if val == nil {
+			return ""
+		}
+		return *val
+	}
+
+	formatTime := func(t *time.Time) string {
+		if t == nil {
+			return ""
+		}
+		return t.Format("2006-01-02 15:04:05")
+	}
+
+	addRow("Vendor ID", vendor.Id)
+	addRow("Vendor Code", strings.TrimSpace(vendor.VendorCode))
+	addRow("Vendor Name", profile.VendorName)
+	addRow("Vendor Type", vendor.VendorType)
+	addRow("Status", vendor.Status)
+	addRow("Reject Reason", formatStringPtr(vendor.RejectReason))
+	addRow("Email", profile.Email)
+	addRow("Phone", profile.Phone)
+	addRow("Telephone", profile.Telephone)
+	addRow("Fax", profile.Fax)
+	addRow("Business Field", profile.BusinessField)
+
+	addRow("Address", profile.Address)
+	addRow("District", profile.DistrictName)
+	addRow("City", profile.CityName)
+	addRow("Province", profile.ProvinceName)
+	addRow("Postal Code", profile.PostalCode)
+
+	addRow("KTP Name", profile.KTPName)
+	addRow("KTP Number", profile.KTPNumber)
+	addRow("NPWP Name", profile.NpwpName)
+	addRow("NPWP Number", profile.NpwpNumber)
+	addRow("NPWP Address", profile.NpwpAddress)
+	addRow("Tax Status", profile.TaxStatus)
+	addRow("NIB Number", profile.NibNumber)
+
+	addRow("Bank Name", profile.BankName)
+	addRow("Bank Branch", profile.BankBranch)
+	addRow("Account Number", profile.AccountNumber)
+	addRow("Account Holder Name", profile.AccountHolderName)
+
+	addRow("Transaction Type", profile.TransactionType)
+	addRow("Purchasing Group", profile.PurchGroup)
+	addRow("Region/SO", profile.RegionOrSo)
+
+	addRow("Contact Person", profile.ContactPerson)
+	addRow("Contact Email", profile.ContactEmail)
+	addRow("Contact Phone", profile.ContactPhone)
+
+	addRow("Verified At", formatTime(vendor.VerifiedAt))
+	addRow("Verified By", utils.InterfaceString(vendor.VerifiedBy))
+	addRow("Updated At", vendor.UpdatedAt.Format("2006-01-02 15:04:05"))
+	addRow("Updated By", vendor.UpdatedBy)
+
+	if profile.Id == "" {
+		addRow("Profile", "No profile data found")
+	}
+
+	file.SetColWidth(sheetName, "A", "A", 25)
+	file.SetColWidth(sheetName, "B", "B", 50)
+
+	buf := bytes.Buffer{}
+	if err := file.Write(&buf); err != nil {
+		return nil, "", err
+	}
+
+	filename := utils.BuildVendorProfileFilename(vendor, profile)
+	return buf.Bytes(), filename, nil
 }
 
 func (s *ServiceVendor) CreateOrUpdateVendorProfile(userId string, req dto.VendorProfileRequest) (map[string]interface{}, error) {
@@ -205,6 +314,17 @@ func (s *ServiceVendor) CreateOrUpdateVendorProfile(userId string, req dto.Vendo
 		}
 	}
 
+	// When a rejected vendor updates their profile, move back to review state and clear reject reason
+	if vendor.Status == utils.VendorReject {
+		vendor.Status = utils.VendorVerify
+		vendor.RejectReason = nil
+		vendor.UpdatedAt = now
+		vendor.UpdatedBy = userId
+		if err := s.VendorRepo.UpdateVendor(vendor); err != nil {
+			return nil, err
+		}
+	}
+
 	return map[string]interface{}{
 		"vendor":  vendor,
 		"profile": profile,
@@ -236,7 +356,7 @@ func (s *ServiceVendor) GetAllVendors(params filter.BaseParams) ([]map[string]in
 	return result, total, nil
 }
 
-func (s *ServiceVendor) UpdateVendorStatus(vendorId string, status string, vendorCode string) (domainvendors.Vendor, error) {
+func (s *ServiceVendor) UpdateVendorStatus(vendorId string, status string, vendorCode string, rejectReason string) (domainvendors.Vendor, error) {
 	vendor, err := s.VendorRepo.GetVendorByID(vendorId)
 	if err != nil {
 		return domainvendors.Vendor{}, err
@@ -246,9 +366,19 @@ func (s *ServiceVendor) UpdateVendorStatus(vendorId string, status string, vendo
 		return domainvendors.Vendor{}, errors.New("vendor_code is required when activating vendor")
 	}
 
+	if status == utils.VendorReject && strings.TrimSpace(rejectReason) == "" {
+		return domainvendors.Vendor{}, errors.New("reject_reason is required when rejecting vendor")
+	}
+
 	vendor.Status = status
 	if status == utils.VendorActive && vendorCode != "" {
 		vendor.VendorCode = vendorCode
+	}
+
+	if status == utils.VendorReject {
+		vendor.RejectReason = &rejectReason
+	} else {
+		vendor.RejectReason = nil
 	}
 	now := time.Now()
 	vendor.UpdatedAt = now

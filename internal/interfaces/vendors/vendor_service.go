@@ -13,9 +13,11 @@ type ServiceVendorInterface interface {
 	GetVendorByUserID(userId string) (map[string]interface{}, error)
 	GetVendorProfileByVendorID(vendorId string) (domainvendors.VendorProfile, error)
 	GetVendorDetailByVendorID(vendorId string) (map[string]interface{}, error)
+	GetVendorAndProfileByVendorID(vendorId string) (domainvendors.Vendor, domainvendors.VendorProfile, error)
+	GenerateVendorProfileXLSX(vendorId string) ([]byte, string, error)
 	CreateOrUpdateVendorProfile(userId string, req dto.VendorProfileRequest) (map[string]interface{}, error)
 	GetAllVendors(params filter.BaseParams) ([]map[string]interface{}, int64, error)
-	UpdateVendorStatus(vendorId string, status string, vendorCode string) (domainvendors.Vendor, error)
+	UpdateVendorStatus(vendorId string, status string, vendorCode string, rejectReason string) (domainvendors.Vendor, error)
 	DeleteVendor(vendorId string) error
 
 	// Vendor profile file operations

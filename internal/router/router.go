@@ -253,6 +253,7 @@ func (r *Routes) VendorRoutes() {
 	{
 		vendorAdmin.GET("", mdw.PermissionMiddleware("vendor", "view"), h.GetAllVendors)
 		vendorAdmin.GET("/:id", mdw.PermissionMiddleware("vendor", "view"), h.GetVendorDetail)
+		vendorAdmin.GET("/:id/export", mdw.PermissionMiddleware("vendor", "view"), h.ExportVendorProfile)
 		vendorAdmin.PUT("/:id/status", mdw.PermissionMiddleware("vendor", "update_status"), h.UpdateVendorStatus)
 		vendorAdmin.PUT("/files/:fileId/status", mdw.PermissionMiddleware("vendor", "update_status"), h.UpdateVendorProfileFileStatus)
 		vendorAdmin.DELETE("/:id", mdw.PermissionMiddleware("vendor", "delete"), h.DeleteVendor)
