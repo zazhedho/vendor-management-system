@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { eventsApi } from '../api/events';
 import { vendorsApi } from '../api/vendors';
 import { paymentsApi } from '../api/payments';
+import { notificationsApi } from '../api/notifications';
 import { toast } from 'react-toastify';
 
 interface TopbarProps {
@@ -22,9 +23,9 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
     const [showSearchDropdown, setShowSearchDropdown] = useState(false);
     const searchRef = useRef<HTMLDivElement | null>(null);
     const debounceRef = useRef<number | null>(null);
-    // Notification polling is disabled for now
-    const [newEventCount] = useState(0);
-    const [latestOpenEvent] = useState<any>(null);
+    const [notifications, setNotifications] = useState<any[]>([]);
+    const [isLoadingNotif, setIsLoadingNotif] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
     const [showNotifDropdown, setShowNotifDropdown] = useState(false);
     const notifRef = useRef<HTMLDivElement | null>(null);
 
@@ -126,10 +127,70 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Notification polling disabled; stub functions to keep handlers intact
-    const markEventsSeen = () => {};
+    const fetchNotifications = async () => {
+        setIsLoadingNotif(true);
+        try {
+            const res = await notificationsApi.getAll({ page: 1, limit: 10, is_read: false });
+            if (res.status) {
+                setNotifications(res.data || []);
+                setUnreadCount(res.total_data || 0);
+            }
+        } catch (error) {
+            console.error('Failed to load notifications', error);
+        } finally {
+            setIsLoadingNotif(false);
+        }
+    };
 
-    useEffect(() => {}, [hasPermission, user?.id]);
+    const handleOpenNotif = () => {
+        const next = !showNotifDropdown;
+        setShowNotifDropdown(next);
+        if (next) {
+            fetchNotifications();
+        }
+    };
+
+    const markAllRead = async () => {
+        try {
+            await notificationsApi.markRead();
+            setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+            setUnreadCount(0);
+        } catch (error) {
+            console.error('Failed to mark notifications read', error);
+        }
+    };
+
+    const handleNotifClick = async (notif: any) => {
+        try {
+            if (!notif.is_read) {
+                await notificationsApi.markRead([notif.id]);
+                setNotifications((prev) => prev.map((n) => (n.id === notif.id ? { ...n, is_read: true } : n)));
+                setUnreadCount((c) => Math.max(0, c - 1));
+            }
+        } catch (error) {
+            console.error('Failed to mark notification as read', error);
+        }
+        setShowNotifDropdown(false);
+        if (notif.reference_type === 'event' && notif.reference_id) {
+            navigate(`/events/${notif.reference_id}`);
+        }
+    };
+
+    useEffect(() => {
+        if (!user?.id) {
+            setNotifications([]);
+            setUnreadCount(0);
+            return;
+        }
+        fetchNotifications();
+        const interval = window.setInterval(() => {
+            fetchNotifications();
+        }, 60000);
+
+        return () => {
+            window.clearInterval(interval);
+        };
+    }, [user?.id]);
 
     return (
         <header className="bg-white border-b border-secondary-200 h-16 sticky top-0 z-30 lg:static lg:z-auto">
@@ -184,13 +245,13 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
                     <div className="relative" ref={notifRef}>
                         <button
                             className="p-2 text-secondary-400 hover:text-primary-600 hover:bg-primary-50 rounded-full transition-colors relative"
-                            onClick={() => setShowNotifDropdown((prev) => !prev)}
+                            onClick={handleOpenNotif}
                             aria-label="Notifications"
                         >
                             <Bell size={20} />
-                            {newEventCount > 0 && (
+                            {unreadCount > 0 && (
                                 <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-danger-500 text-white text-[10px] font-semibold rounded-full flex items-center justify-center px-1">
-                                    {newEventCount}
+                                    {unreadCount > 9 ? '9+' : unreadCount}
                                 </span>
                             )}
                         </button>
@@ -200,39 +261,35 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
                                     <p className="text-sm font-semibold text-secondary-900">Notifikasi</p>
                                     <button
                                         className="text-xs text-primary-600 hover:underline"
-                                        onClick={() => {
-                                            markEventsSeen();
-                                            setShowNotifDropdown(false);
-                                        }}
+                                        onClick={markAllRead}
                                     >
                                         Tandai sudah dibaca
                                     </button>
                                 </div>
-                                {latestOpenEvent ? (
-                                    <button
-                                        className="w-full text-left px-4 py-3 hover:bg-secondary-50 transition flex items-start gap-3"
-                                        onClick={() => {
-                                            markEventsSeen();
-                                            setShowNotifDropdown(false);
-                                            if (latestOpenEvent.id) {
-                                                navigate(`/events/${latestOpenEvent.id}`);
-                                            }
-                                        }}
-                                    >
-                                        <div className="w-8 h-8 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center">
-                                            <Bell size={16} />
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-sm font-semibold text-secondary-900">
-                                                Event baru: {latestOpenEvent.title || (latestOpenEvent as any).name || 'Event'}
-                                            </p>
-                                            <p className="text-xs text-secondary-600">
-                                                Status: {latestOpenEvent.status || 'open'}
-                                            </p>
-                                        </div>
-                                    </button>
+                                {isLoadingNotif ? (
+                                    <div className="py-4 text-center text-sm text-secondary-500">Memuat...</div>
+                                ) : notifications.length === 0 ? (
+                                    <div className="py-6 text-center text-sm text-secondary-500">
+                                        Tidak ada notifikasi
+                                    </div>
                                 ) : (
-                                    <p className="text-sm text-secondary-500 px-4 py-3">Belum ada notifikasi.</p>
+                                    <div className="max-h-80 overflow-y-auto">
+                                        {notifications.map((notif) => (
+                                            <button
+                                                key={notif.id}
+                                                className={`w-full text-left px-4 py-3 hover:bg-secondary-50 transition flex items-start gap-3 ${notif.is_read ? 'opacity-70' : ''}`}
+                                                onClick={() => handleNotifClick(notif)}
+                                            >
+                                                <div className="w-8 h-8 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center mt-0.5">
+                                                    <Bell size={16} />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-semibold text-secondary-900 truncate">{notif.title}</p>
+                                                    <p className="text-xs text-secondary-500 line-clamp-2">{notif.message}</p>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
                                 )}
                             </div>
                         )}

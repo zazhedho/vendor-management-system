@@ -13,6 +13,7 @@ import (
 	eventHandler "vendor-management-system/internal/handlers/http/events"
 	locationHandler "vendor-management-system/internal/handlers/http/location"
 	menuHandler "vendor-management-system/internal/handlers/http/menu"
+	notificationHandler "vendor-management-system/internal/handlers/http/notification"
 	paymentHandler "vendor-management-system/internal/handlers/http/payments"
 	permissionHandler "vendor-management-system/internal/handlers/http/permission"
 	roleHandler "vendor-management-system/internal/handlers/http/role"
@@ -23,6 +24,7 @@ import (
 	evaluationRepo "vendor-management-system/internal/repositories/evaluations"
 	eventRepo "vendor-management-system/internal/repositories/events"
 	menuRepo "vendor-management-system/internal/repositories/menu"
+	notificationRepo "vendor-management-system/internal/repositories/notification"
 	paymentRepo "vendor-management-system/internal/repositories/payments"
 	permissionRepo "vendor-management-system/internal/repositories/permission"
 	roleRepo "vendor-management-system/internal/repositories/role"
@@ -33,6 +35,7 @@ import (
 	eventSvc "vendor-management-system/internal/services/events"
 	locationSvc "vendor-management-system/internal/services/location"
 	menuSvc "vendor-management-system/internal/services/menu"
+	notificationSvc "vendor-management-system/internal/services/notification"
 	paymentSvc "vendor-management-system/internal/services/payments"
 	permissionSvc "vendor-management-system/internal/services/permission"
 	roleSvc "vendor-management-system/internal/services/role"
@@ -215,6 +218,21 @@ func (r *Routes) SessionRoutes() {
 	logger.WriteLog(logger.LogLevelInfo, "Session management routes registered")
 }
 
+func (r *Routes) NotificationRoutes() {
+	repo := notificationRepo.NewNotificationRepo(r.DB)
+	svc := notificationSvc.NewNotificationService(repo)
+	h := notificationHandler.NewNotificationHandler(svc)
+
+	pRepo := permissionRepo.NewPermissionRepo(r.DB)
+	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB), pRepo)
+
+	group := r.App.Group("/api/notifications").Use(mdw.AuthMiddleware())
+	{
+		group.GET("", h.GetNotifications)
+		group.POST("/mark-read", h.MarkRead)
+	}
+}
+
 func (r *Routes) LocationRoutes() {
 	svc := locationSvc.NewLocationService()
 	h := locationHandler.NewLocationHandler(svc)
@@ -270,7 +288,9 @@ func (r *Routes) EventRoutes() {
 
 	vRepo := vendorRepo.NewVendorRepo(r.DB)
 	eRepo := eventRepo.NewEventRepo(r.DB)
-	svc := eventSvc.NewEventService(eRepo, vRepo, storageProvider)
+	nRepo := notificationRepo.NewNotificationRepo(r.DB)
+	nSvc := notificationSvc.NewNotificationService(nRepo)
+	svc := eventSvc.NewEventService(eRepo, vRepo, nSvc, storageProvider)
 	h := eventHandler.NewEventHandler(svc, vRepo)
 	pRepo := permissionRepo.NewPermissionRepo(r.DB)
 	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB), pRepo)

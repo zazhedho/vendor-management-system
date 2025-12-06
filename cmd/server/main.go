@@ -92,6 +92,7 @@ func main() {
 	routes.EventRoutes()
 	routes.PaymentRoutes()
 	routes.EvaluationRoutes()
+	routes.NotificationRoutes()
 
 	// Register session routes if Redis is available
 	if redisClient != nil {

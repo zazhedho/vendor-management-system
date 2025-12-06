@@ -79,6 +79,15 @@ export const EventForm: React.FC = () => {
         return;
       }
 
+      // Prevent duplicate type: check both existing files and new uploads
+      const hasExistingType = files.some((f) => f.file_type === fileType);
+      const hasPendingType = newFiles.some((f) => f.type === fileType);
+      if (hasExistingType || hasPendingType) {
+        toast.error(`File type ${fileType.toUpperCase()} already uploaded. Delete it first to replace.`);
+        e.target.value = '';
+        return;
+      }
+
       setNewFiles([...newFiles, { file, type: fileType, caption: '' }]);
       e.target.value = '';
     }
@@ -254,76 +263,85 @@ export const EventForm: React.FC = () => {
         <Card>
           <h2 className="text-lg font-semibold mb-4">Event Files</h2>
 
-          {/* Existing Files */}
-          {files.length > 0 && (
-            <div className="mb-6 space-y-3">
-              <p className="text-sm font-medium text-secondary-500 uppercase tracking-wider">Uploaded Files</p>
-              {files.map((file) => (
-                <div key={file.id} className="flex items-center justify-between p-3 bg-secondary-50 border border-secondary-200 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <FileText size={20} className="text-primary-600" />
-                    <div>
-                      <p className="text-sm font-medium text-secondary-900">{file.file_type.toUpperCase()}</p>
-                      <p className="text-xs text-secondary-500">{file.file_url.split('/').pop()}</p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteExistingFile(file.id)}
-                    className="text-danger-600 hover:bg-danger-50"
-                  >
-                    <Trash2 size={16} />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* New Files */}
-          {newFiles.length > 0 && (
-            <div className="mb-6 space-y-3">
-              <p className="text-sm font-medium text-secondary-500 uppercase tracking-wider">Ready to Upload</p>
-              {newFiles.map((file, idx) => (
-                <div key={idx} className="p-3 bg-success-50 border border-success-200 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <FileText size={20} className="text-success-600" />
-                      <span className="text-sm font-medium text-success-900">{file.type.toUpperCase()} - {file.file.name}</span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveNewFile(idx)}
-                      className="text-danger-600 hover:bg-danger-50"
-                    >
-                      <X size={16} />
-                    </Button>
-                  </div>
-                  <Input
-                    placeholder="Add caption (optional)"
-                    value={file.caption}
-                    onChange={(e) => handleCaptionChange(idx, e.target.value)}
-                    className="bg-white"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Upload Buttons */}
+          {/* File Slots (prevent duplicate type) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {['terms', 'image', 'document'].map((type) => (
-              <label key={type} className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-secondary-300 rounded-xl cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-all group">
-                <Upload className="w-5 h-5 text-secondary-400 group-hover:text-primary-500 mb-1" />
-                <span className="text-xs font-medium text-secondary-600 group-hover:text-primary-600 capitalize">{type}</span>
-                <input
-                  type="file"
-                  className="hidden"
-                  onChange={(e) => handleFileAdd(e, type)}
-                />
-              </label>
-            ))}
+            {['terms', 'image', 'document'].map((type) => {
+              const existing = files.find((f) => f.file_type === type);
+              const pending = newFiles.find((f) => f.type === type);
+
+              if (existing) {
+                return (
+                  <div key={type} className="flex flex-col p-3 border border-secondary-200 rounded-lg bg-secondary-50">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <FileText size={18} className="text-primary-600 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-secondary-900 capitalize truncate">{type}</p>
+                          <p className="text-xs text-secondary-500 truncate">{existing.file_url.split('/').pop()}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 sm:ml-auto">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteExistingFile(existing.id)}
+                          className="text-danger-600 hover:bg-danger-50"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </div>
+                    </div>
+                    {existing.caption && (
+                      <p className="text-xs text-secondary-600 mt-2 break-words">Caption: {existing.caption}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              if (pending) {
+                return (
+                  <div key={type} className="flex flex-col p-3 border border-success-200 rounded-lg bg-success-50">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <FileText size={18} className="text-success-700 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-success-900 capitalize truncate">{type}</p>
+                          <p className="text-xs text-success-700 truncate">{pending.file.name}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 sm:ml-auto">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveNewFile(newFiles.findIndex((f) => f.type === type))}
+                          className="text-danger-600 hover:bg-danger-50"
+                        >
+                          <X size={16} />
+                        </Button>
+                      </div>
+                    </div>
+                    <Input
+                      placeholder="Add caption (optional)"
+                      value={pending.caption}
+                      onChange={(e) => handleCaptionChange(newFiles.findIndex((f) => f.type === type), e.target.value)}
+                      className="bg-white mt-2"
+                    />
+                  </div>
+                );
+              }
+
+              return (
+                <label key={type} className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-secondary-300 rounded-xl cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-all group">
+                  <Upload className="w-5 h-5 text-secondary-400 group-hover:text-primary-500 mb-1" />
+                  <span className="text-xs font-medium text-secondary-600 group-hover:text-primary-600 capitalize">{type}</span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => handleFileAdd(e, type)}
+                  />
+                </label>
+              );
+            })}
           </div>
         </Card>
 

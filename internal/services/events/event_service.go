@@ -11,8 +11,10 @@ import (
 	domainevents "vendor-management-system/internal/domain/events"
 	"vendor-management-system/internal/dto"
 	interfaceevents "vendor-management-system/internal/interfaces/events"
+	interfacenotification "vendor-management-system/internal/interfaces/notification"
 	interfacevendors "vendor-management-system/internal/interfaces/vendors"
 	"vendor-management-system/pkg/filter"
+	"vendor-management-system/pkg/logger"
 	"vendor-management-system/utils"
 
 	"gorm.io/gorm"
@@ -21,13 +23,15 @@ import (
 type ServiceEvent struct {
 	EventRepo       interfaceevents.RepoEventInterface
 	VendorRepo      interfacevendors.RepoVendorInterface
+	NotificationSvc interfacenotification.ServiceNotificationInterface
 	StorageProvider storage.StorageProvider
 }
 
-func NewEventService(eventRepo interfaceevents.RepoEventInterface, vendorRepo interfacevendors.RepoVendorInterface, storageProvider storage.StorageProvider) *ServiceEvent {
+func NewEventService(eventRepo interfaceevents.RepoEventInterface, vendorRepo interfacevendors.RepoVendorInterface, notificationSvc interfacenotification.ServiceNotificationInterface, storageProvider storage.StorageProvider) *ServiceEvent {
 	return &ServiceEvent{
 		EventRepo:       eventRepo,
 		VendorRepo:      vendorRepo,
+		NotificationSvc: notificationSvc,
 		StorageProvider: storageProvider,
 	}
 }
@@ -128,6 +132,7 @@ func (s *ServiceEvent) UpdateEvent(id string, req dto.UpdateEventRequest) (domai
 	if err != nil {
 		return domainevents.Event{}, err
 	}
+	prevStatus := event.Status
 
 	if req.Title != "" {
 		event.Title = req.Title
@@ -160,6 +165,10 @@ func (s *ServiceEvent) UpdateEvent(id string, req dto.UpdateEventRequest) (domai
 
 	if err := s.EventRepo.UpdateEvent(event); err != nil {
 		return domainevents.Event{}, err
+	}
+
+	if prevStatus != utils.EventOpen && event.Status == utils.EventOpen {
+		_ = s.notifyEventOpen(event)
 	}
 
 	return event, nil
@@ -208,6 +217,64 @@ func (s *ServiceEvent) SubmitPitch(eventId, vendorId string, req dto.SubmitPitch
 	}
 
 	return submission, nil
+}
+
+func (s *ServiceEvent) notifyEventOpen(event domainevents.Event) error {
+	if s.NotificationSvc == nil {
+		return nil
+	}
+	title := "Event dibuka"
+	message := fmt.Sprintf("Event \"%s\" telah dibuka untuk submission.", event.Title)
+	return s.NotificationSvc.CreateForAll(title, message, utils.NotifEventOpen, "event", event.Id)
+}
+
+func (s *ServiceEvent) notifyWinnerAndLosers(event domainevents.Event, winnerSubmission domainevents.EventSubmission) {
+	if s.NotificationSvc == nil {
+		return
+	}
+
+	// Notify winner
+	if winnerSubmission.VendorID != "" {
+		if winnerVendor, err := s.VendorRepo.GetVendorByID(winnerSubmission.VendorID); err == nil && winnerVendor.UserId != "" {
+			_ = s.NotificationSvc.CreateForUser(
+				winnerVendor.UserId,
+				"Selamat! Anda menang",
+				fmt.Sprintf("Vendor Anda terpilih sebagai pemenang untuk event \"%s\".", event.Title),
+				utils.NotifEventWinner,
+				"event",
+				event.Id,
+			)
+		} else if err != nil {
+			logger.WriteLog(logger.LogLevelError, fmt.Sprintf("Failed to load winner vendor for notification: %s", err))
+		}
+	}
+
+	// Notify non-winners
+	submissions, err := s.EventRepo.GetSubmissionsByEventID(event.Id)
+	if err != nil {
+		return
+	}
+	for _, sub := range submissions {
+		if sub.VendorID == winnerSubmission.VendorID {
+			continue
+		}
+		vendor, err := s.VendorRepo.GetVendorByID(sub.VendorID)
+		if err != nil {
+			logger.WriteLog(logger.LogLevelError, fmt.Sprintf("Failed to load vendor for loser notification: %s", err))
+			continue
+		}
+		if vendor.UserId == "" {
+			continue
+		}
+		_ = s.NotificationSvc.CreateForUser(
+			vendor.UserId,
+			"Terima kasih sudah berpartisipasi",
+			fmt.Sprintf("Vendor Anda belum terpilih pada event \"%s\". Tetap semangat dan coba lagi!", event.Title),
+			utils.NotifEventLoser,
+			"event",
+			event.Id,
+		)
+	}
 }
 
 func (s *ServiceEvent) SubmitPitchWithFile(ctx context.Context, eventId, vendorId string, req dto.SubmitPitchRequest, fileHeader *multipart.FileHeader, fileType, caption string) (domainevents.EventSubmission, error) {
@@ -388,6 +455,8 @@ func (s *ServiceEvent) SelectWinner(eventId, submissionId string) (domainevents.
 	if err := s.EventRepo.UpdateEvent(event); err != nil {
 		return domainevents.Event{}, err
 	}
+
+	s.notifyWinnerAndLosers(event, submission)
 
 	return event, nil
 }

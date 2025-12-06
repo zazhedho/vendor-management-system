@@ -366,6 +366,21 @@ func (s *ServiceVendor) UpdateVendorStatus(vendorId string, status string, vendo
 		return domainvendors.Vendor{}, errors.New("vendor_code is required when activating vendor")
 	}
 
+	if status == utils.VendorActive {
+		profile, err := s.VendorRepo.GetVendorProfileByVendorID(vendor.Id)
+		if err != nil {
+			return domainvendors.Vendor{}, errors.New("vendor profile not found")
+		}
+		if len(profile.File) == 0 {
+			return domainvendors.Vendor{}, errors.New("vendor documents must be approved before activation")
+		}
+		for _, file := range profile.File {
+			if file.Status != utils.VendorDocApproved {
+				return domainvendors.Vendor{}, errors.New("vendor documents must be approved before activation")
+			}
+		}
+	}
+
 	if status == utils.VendorReject && strings.TrimSpace(rejectReason) == "" {
 		return domainvendors.Vendor{}, errors.New("reject_reason is required when rejecting vendor")
 	}

@@ -80,6 +80,8 @@ export const VendorProfile: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [showRejectReasonModal, setShowRejectReasonModal] = useState(false);
+  const [showFileStatusModal, setShowFileStatusModal] = useState(false);
+  const [isUpdatingFileStatus, setIsUpdatingFileStatus] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
   // isEditing based on URL for proper routing
@@ -88,6 +90,7 @@ export const VendorProfile: React.FC = () => {
   const isEditing = (isEditMode || isNewMode) && canEditProfile;
   const canExport = useMemo(() => canViewVendors, [canViewVendors]);
   const activeVendorId = useMemo(() => id || vendor?.id || '', [id, vendor?.id]);
+  const canVerifyDocs = useMemo(() => hasPermission('vendor', 'update_status'), [hasPermission]);
 
   // For admin list view
   const [vendorList, setVendorList] = useState<VendorWithProfile[]>([]);
@@ -159,6 +162,11 @@ export const VendorProfile: React.FC = () => {
   const [vendorCodeInput, setVendorCodeInput] = useState('');
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [rejectReasonInput, setRejectReasonInput] = useState('');
+  const [fileStatusModal, setFileStatusModal] = useState<{ fileId: string; status: 'approved' | 'rejected'; reason: string }>({
+    fileId: '',
+    status: 'approved',
+    reason: '',
+  });
 
   const companyDocs = ['ktp', 'domisili', 'siup', 'nib', 'skt', 'npwp', 'sppkp', 'akta', 'bank_book', 'rekening'];
   const individualDocs = ['ktp', 'npwp', 'bank_book'];
@@ -473,6 +481,11 @@ export const VendorProfile: React.FC = () => {
 
   const handleFileUpload = (fileType: string) => async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0] || !profile?.id) return;
+    if (profile?.files?.some((f) => f.file_type === fileType)) {
+      toast.error(`Dokumen ${formatFileType(fileType)} sudah diunggah, hapus dulu sebelum mengganti`);
+      e.target.value = '';
+      return;
+    }
 
     const file = e.target.files[0];
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
@@ -530,11 +543,60 @@ export const VendorProfile: React.FC = () => {
     }
   };
 
+  const handleFileStatusChange = (fileId: string, status: 'approved' | 'rejected') => {
+    if (!canVerifyDocs) return;
+    if (status === 'approved') {
+      return handleFileStatusConfirm(fileId, status, '');
+    }
+    setFileStatusModal({ fileId, status, reason: '' });
+    setShowFileStatusModal(true);
+  };
+
+  const handleFileStatusConfirm = async (fileId: string, status: 'approved' | 'rejected', reason?: string) => {
+    setIsUpdatingFileStatus(true);
+    try {
+      const response = await vendorsApi.updateFileStatus(fileId, status, reason);
+      if (response.status) {
+        toast.success(`File ${status === 'approved' ? 'approved' : 'rejected'}`);
+        await fetchVendorProfile(id);
+      } else {
+        toast.error('Failed to update file status');
+      }
+    } catch (error: any) {
+      console.error('Failed to update file status:', error);
+      toast.error(error?.response?.data?.message || 'Failed to update file status');
+    } finally {
+      setIsUpdatingFileStatus(false);
+      setShowFileStatusModal(false);
+      setFileStatusModal({ fileId: '', status: 'approved', reason: '' });
+    }
+  };
+
+  const handleFileStatusModalConfirm = () => {
+    if (!fileStatusModal.fileId) return;
+    if (fileStatusModal.status === 'rejected' && !fileStatusModal.reason.trim()) {
+      toast.error('Alasan penolakan dokumen wajib diisi');
+      return;
+    }
+    handleFileStatusConfirm(fileStatusModal.fileId, fileStatusModal.status, fileStatusModal.reason.trim());
+  };
+
+  const handleFileStatusModalCancel = () => {
+    setShowFileStatusModal(false);
+    setFileStatusModal({ fileId: '', status: 'approved', reason: '' });
+  };
+
   const handleUpdateStatus = async (newStatus: string) => {
     if (!vendor || !canUpdateStatus) return;
     setPendingStatus(null);
 
     if (newStatus === 'active') {
+      const hasUnapprovedDocs = !profile?.files?.length || profile.files.some((file) => file.status !== 'approved');
+      if (hasUnapprovedDocs) {
+        toast.error('Setujui/approve semua dokumen terlebih dahulu sebelum mengaktifkan vendor');
+        return;
+      }
+
       setPendingStatus(newStatus);
       setVendorCodeInput(vendor.vendor_code || '');
       setShowVendorCodeModal(true);
@@ -1296,71 +1358,6 @@ export const VendorProfile: React.FC = () => {
                 <FileText size={20} className="text-primary-600" />
                 Document Uploads
               </h4>
-              {/* Existing Files */}
-              {profile && profile.files && profile.files.length > 0 && (
-                <div className="mb-6">
-                  <p className="text-sm text-secondary-500 mb-3">Uploaded Documents</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {profile.files.map((file) => (
-                      <div
-                        key={file.id}
-                        className={`flex flex-col p-3 border rounded-lg ${file.status === 'rejected'
-                          ? 'border-danger-300 bg-danger-50'
-                          : file.status === 'approved'
-                            ? 'border-success-300 bg-success-50'
-                            : 'border-secondary-200 bg-secondary-50'
-                          }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <FileText className={`flex-shrink-0 ${file.status === 'rejected' ? 'text-danger-500' :
-                              file.status === 'approved' ? 'text-success-500' : 'text-primary-600'
-                              }`} size={20} />
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-secondary-900 capitalize truncate">
-                                {formatFileType(file.file_type)}
-                              </p>
-                              <div className="flex items-center gap-2">
-                                <span className={`text-xs capitalize ${file.status === 'rejected' ? 'text-danger-600' :
-                                  file.status === 'approved' ? 'text-success-600' : 'text-warning-600'
-                                  }`}>
-                                  {file.status}
-                                </span>
-                                <span className="text-secondary-300">•</span>
-                                <a
-                                  href={file.file_url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-xs text-primary-600 hover:underline"
-                                >
-                                  View File
-                                </a>
-                              </div>
-                            </div>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteFileClick(file.id)}
-                            className="text-danger-600 hover:bg-danger-50 flex-shrink-0"
-                            leftIcon={<AlertCircle size={14} />}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                        {file.status === 'rejected' && file.reject_reason && (
-                          <div className="mt-2 pt-2 border-t border-danger-200">
-                            <p className="text-xs text-danger-700">
-                              <span className="font-medium">Rejection Reason:</span> {file.reject_reason}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               <div className="mb-4">
                 <p className="text-sm text-secondary-600">
@@ -1376,24 +1373,69 @@ export const VendorProfile: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {(formData.vendor_type === 'individual' ? individualDocs : companyDocs).map((type) => (
-                  <label
-                    key={type}
-                    className={`flex flex-col items-center justify-center h-32 border-2 border-dashed border-secondary-300 rounded-xl cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-all group ${!formData.vendor_type ? 'opacity-60 cursor-not-allowed' : ''}`}
-                  >
-                    <Upload className="w-6 h-6 text-secondary-400 group-hover:text-primary-500 mb-2" />
-                    <span className="text-sm font-medium text-secondary-600 group-hover:text-primary-600 text-center px-2">
-                      {formatFileType(type)}
-                    </span>
-                    <input
-                      type="file"
-                      accept=".jpg,.jpeg,.png,.pdf"
-                      onChange={handleFileUpload(type)}
-                      className="hidden"
-                      disabled={uploadingFile || !formData.vendor_type}
-                    />
-                  </label>
-                ))}
+                {(formData.vendor_type === 'individual' ? individualDocs : companyDocs).map((type) => {
+                  const existing = profile?.files?.find((f) => f.file_type === type);
+                  if (existing) {
+                    return (
+                      <div
+                        key={type}
+                        className={`flex flex-col p-3 border rounded-lg ${existing.status === 'rejected'
+                          ? 'border-danger-300 bg-danger-50'
+                          : existing.status === 'approved'
+                            ? 'border-success-300 bg-success-50'
+                            : 'border-secondary-200 bg-secondary-50'
+                          }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <FileText size={18} className={existing.status === 'rejected'
+                              ? 'text-danger-500'
+                              : existing.status === 'approved'
+                                ? 'text-success-600'
+                                : 'text-primary-600'
+                            } />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-secondary-900 truncate">{formatFileType(existing.file_type)}</p>
+                              <p className="text-xs text-secondary-500 truncate">Status: {existing.status}</p>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteFileClick(existing.id)}
+                            className="text-danger-600 hover:bg-danger-50 flex-shrink-0"
+                            leftIcon={<AlertCircle size={14} />}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                        {existing.status === 'rejected' && existing.reject_reason && (
+                          <p className="text-xs text-danger-700 mt-2 whitespace-pre-line">Alasan: {existing.reject_reason}</p>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <label
+                      key={type}
+                      className={`flex flex-col items-center justify-center h-32 border-2 border-dashed border-secondary-300 rounded-xl cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-all group ${!formData.vendor_type ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    >
+                      <Upload className="w-6 h-6 text-secondary-400 group-hover:text-primary-500 mb-2" />
+                      <span className="text-sm font-medium text-secondary-600 group-hover:text-primary-600 text-center px-2">
+                        {formatFileType(type)}
+                      </span>
+                      <input
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.pdf"
+                        onChange={handleFileUpload(type)}
+                        className="hidden"
+                        disabled={uploadingFile || !formData.vendor_type}
+                      />
+                    </label>
+                  );
+                })}
               </div>
               <p className="text-xs text-secondary-500 mt-2">
                 Accepted formats: JPG, PNG, PDF (Max 5MB per file)
@@ -1586,26 +1628,49 @@ export const VendorProfile: React.FC = () => {
                     <div className="divide-y divide-secondary-100">
                       {profile.files.map((file) => (
                         <div key={file.id} className="py-2.5 px-4 hover:bg-secondary-50">
-                          <a
-                            href={file.file_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex items-center justify-between"
-                          >
-                            <div className="flex items-center gap-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <a
+                              href={file.file_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex items-center gap-3 flex-1 min-w-0"
+                            >
                               <FileText size={18} className={`flex-shrink-0 ${file.status === 'rejected' ? 'text-danger-500' :
                                 file.status === 'approved' ? 'text-success-500' : 'text-secondary-400'
                                 }`} />
-                              <span className="text-sm font-medium text-secondary-900">{formatFileType(file.file_type)}</span>
+                              <span className="text-sm font-medium text-secondary-900 truncate">{formatFileType(file.file_type)}</span>
                               <span className={`text-xs capitalize ${file.status === 'rejected' ? 'text-danger-600' :
                                 file.status === 'approved' ? 'text-success-600' : 'text-warning-600'
                                 }`}>({file.status})</span>
-                            </div>
-                          </a>
+                            </a>
+                            {canVerifyDocs && file.status === 'pending' && (
+                              <div className="flex gap-2 flex-shrink-0">
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => handleFileStatusChange(file.id, 'approved')}
+                                  disabled={isUpdatingFileStatus}
+                                >
+                                  Approve
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="danger"
+                                  size="sm"
+                                  onClick={() => handleFileStatusChange(file.id, 'rejected')}
+                                  disabled={isUpdatingFileStatus}
+                                >
+                                  Reject
+                                </Button>
+                              </div>
+                            )}
+                          </div>
                           {file.status === 'rejected' && file.reject_reason && (
-                            <div className="mt-2 pt-2 border-t border-danger-200">
-                              <p className="text-xs text-danger-700">
-                                <span className="font-medium">Rejection Reason:</span> {file.reject_reason}
+                            <div className="mt-2 pt-2 border-t border-danger-200 bg-danger-50 rounded-md px-3 py-2">
+                              <p className="text-xs text-secondary-900 font-semibold">Rejection Reason</p>
+                              <p className="text-xs text-danger-800 mt-1 whitespace-pre-line">
+                                {file.reject_reason}
                               </p>
                             </div>
                           )}
@@ -1794,6 +1859,54 @@ export const VendorProfile: React.FC = () => {
                 </Button>
                 <Button variant="primary" onClick={handleRejectConfirm} isLoading={isUpdatingStatus}>
                   Simpan & Reject
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showFileStatusModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50" onClick={handleFileStatusModalCancel} />
+          <div className="relative bg-white rounded-lg shadow-xl max-w-sm w-full">
+            <div className="p-5 space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-secondary-900">
+                    {fileStatusModal.status === 'approved' ? 'Approve Document' : 'Reject Document'}
+                  </h3>
+                  <p className="text-sm text-secondary-600 mt-1">
+                    {fileStatusModal.status === 'approved'
+                      ? 'Setujui dokumen vendor ini.'
+                      : 'Berikan alasan penolakan dokumen ini.'}
+                  </p>
+                </div>
+                <button
+                  className="text-secondary-400 hover:text-secondary-600"
+                  onClick={handleFileStatusModalCancel}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              {fileStatusModal.status === 'rejected' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-secondary-700">Reject Reason</label>
+                  <textarea
+                    value={fileStatusModal.reason}
+                    onChange={(e) => setFileStatusModal({ ...fileStatusModal, reason: e.target.value })}
+                    placeholder="Tulis alasan penolakan"
+                    className="w-full rounded-lg border border-secondary-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                    rows={3}
+                  />
+                </div>
+              )}
+              <div className="flex justify-end gap-2">
+                <Button variant="secondary" onClick={handleFileStatusModalCancel} disabled={isUpdatingFileStatus}>
+                  Batal
+                </Button>
+                <Button variant="primary" onClick={handleFileStatusModalConfirm} isLoading={isUpdatingFileStatus}>
+                  {fileStatusModal.status === 'approved' ? 'Approve' : 'Reject'}
                 </Button>
               </div>
             </div>

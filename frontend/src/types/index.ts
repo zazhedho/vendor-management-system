@@ -68,6 +68,18 @@ export interface Vendor {
   deleted_by?: string;
 }
 
+export interface NotificationItem {
+  id: string;
+  user_id?: string | null;
+  title: string;
+  message: string;
+  type: string;
+  reference_type?: string;
+  reference_id?: string;
+  is_read: boolean;
+  created_at: string;
+}
+
 export interface VendorProfile {
   id: string;
   vendor_id: string;
