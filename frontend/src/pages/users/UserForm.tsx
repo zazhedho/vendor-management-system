@@ -19,7 +19,7 @@ export const UserForm: React.FC = () => {
     email: '',
     phone: '',
     password: '',
-    role: 'viewer',
+    role: '',
   });
 
   const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
@@ -44,7 +44,7 @@ export const UserForm: React.FC = () => {
           email: user.email || '',
           phone: user.phone || '',
           password: '',
-          role: user.role || 'viewer',
+          role: user.role || '',
         });
       }
     } catch (error) {
@@ -68,6 +68,15 @@ export const UserForm: React.FC = () => {
       console.error('Failed to fetch roles');
     }
   };
+
+  // Ensure default role follows available list
+  useEffect(() => {
+    if (availableRoles.length === 0) return;
+    const exists = availableRoles.some((r) => r.name === formData.role);
+    if (!exists) {
+      setFormData((prev) => ({ ...prev, role: availableRoles[0].name }));
+    }
+  }, [availableRoles]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -189,15 +198,6 @@ export const UserForm: React.FC = () => {
                   {role.display_name || role.name}
                 </option>
               ))}
-              {availableRoles.length === 0 && (
-                <>
-                  {currentUser?.role === 'superadmin' && <option value="superadmin">Superadmin</option>}
-                  <option value="admin">Admin</option>
-                  <option value="staff">Staff</option>
-                  <option value="vendor">Vendor</option>
-                  <option value="viewer">Viewer</option>
-                </>
-              )}
             </select>
           </div>
 
