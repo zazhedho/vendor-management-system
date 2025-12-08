@@ -55,7 +55,7 @@ export const VendorProfile: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission, isLoading: authLoading } = useAuth();
 
   // Determine view mode based on permissions and ownership
   const isVendorRole = useMemo(() => user?.role === 'vendor', [user?.role]);
@@ -176,6 +176,7 @@ export const VendorProfile: React.FC = () => {
   const individualDocs = ['ktp', 'npwp', 'bank_book'];
 
   useEffect(() => {
+    if (authLoading) return;
     if (!canEditProfile && (isEditMode || isNewMode)) {
       // Prevent non-owner from accessing edit/create screens
       if (id) {
@@ -184,10 +185,10 @@ export const VendorProfile: React.FC = () => {
         navigate('/vendor/profile', { replace: true });
       }
     }
-  }, [canEditProfile, isEditMode, isNewMode, id]);
+  }, [authLoading, canEditProfile, isEditMode, isNewMode, id]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || authLoading) return;
 
     const loadData = async () => {
       if (showListView) {
@@ -200,14 +201,14 @@ export const VendorProfile: React.FC = () => {
       }
     };
     loadData();
-  }, [user, showListView, id]);
+  }, [user, authLoading, showListView, id]);
 
   useEffect(() => {
-    if (!user || !showListView) return;
+    if (!user || authLoading || !showListView) return;
     if (currentPage > 1) {
       fetchVendorsList();
     }
-  }, [currentPage]);
+  }, [authLoading, currentPage, showListView, user]);
 
   const handleSearch = () => {
     setCurrentPage(1);
@@ -468,9 +469,13 @@ export const VendorProfile: React.FC = () => {
           setProfile(resAny);
         }
 
-        // Always navigate back to profile view as requested
         toast.success('Profile saved successfully');
-        navigate('/vendor/profile');
+        if (isNewMode) {
+          // Stay on the page so user can directly upload documents
+          await fetchVendorProfile();
+        } else {
+          navigate('/vendor/profile');
+        }
       } else {
         console.error('Save profile failed. Response:', response);
         toast.error(response.message || 'Failed to save profile');
@@ -1064,7 +1069,7 @@ export const VendorProfile: React.FC = () => {
     </div>
   );
 
-  if (!user || isLoading) {
+  if (authLoading || !user || isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Spinner size="lg" />
@@ -1254,25 +1259,6 @@ export const VendorProfile: React.FC = () => {
     );
   }
 
-  // Show create form when on /new route
-  if (isNewMode || (!vendor && !profile && isEditing)) {
-    return (
-      <div className="max-w-3xl mx-auto">
-        <Card>
-          <h3 className="text-lg font-semibold mb-6">Create Vendor Profile</h3>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {renderFormFields()}
-            <div className="flex gap-3">
-              <Button type="submit" isLoading={isSaving} leftIcon={<Save size={16} />}>
-                Save Profile
-              </Button>
-            </div>
-          </form>
-        </Card>
-      </div>
-    );
-  }
-
   const handleBack = () => navigate('/vendor/profile');
 
   // Helper to get edit URL based on role
@@ -1357,6 +1343,10 @@ export const VendorProfile: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {renderFormFields()}
             {/* Document Upload Section */}
+            {/*
+              Allow the same upload UI on /new so users can continue after first save.
+              When profile belum dibuat, upload disabled dan user diberi informasi.
+            */}
             <Card>
               <h4 className="text-lg font-semibold text-secondary-900 mb-4 flex items-center gap-2">
                 <FileText size={20} className="text-primary-600" />
@@ -1369,6 +1359,11 @@ export const VendorProfile: React.FC = () => {
                     ? 'Perorangan wajib unggah: KTP, NPWP, Buku Tabungan.'
                     : 'Perusahaan wajib unggah: KTP pemilik, Izin Domisili, SIUP/NIB, SKT, NPWP, SP-PKP, Akta Perusahaan, Rekening (halaman depan/buku tabungan).'}
                 </p>
+                {!profile?.id && (
+                  <div className="mt-3 p-3 border border-secondary-200 rounded-lg bg-secondary-50 text-sm text-secondary-700">
+                    Simpan profil terlebih dahulu agar dapat mengunggah dokumen.
+                  </div>
+                )}
                 {formData.vendor_type === '' && (
                   <div className="mt-2 p-3 border border-warning-200 rounded-lg bg-warning-50 text-sm text-warning-800">
                     Pilih Vendor Type terlebih dahulu agar daftar dokumen sesuai.
@@ -1377,6 +1372,15 @@ export const VendorProfile: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {/*
+                  Disable upload action when profile belum ada untuk menghindari gagal upload tanpa id.
+                */}
+                {/*
+                  canUploadDocs diturunkan ke input dan label style.
+                */}
+                {/*
+                  NOTE: handleFileUpload tetap guard profile?.id.
+                */}
                 {(formData.vendor_type === 'individual' ? individualDocs : companyDocs).map((type) => {
                   const existing = profile?.files?.find((f) => f.file_type === type);
                   if (existing) {
@@ -1424,7 +1428,7 @@ export const VendorProfile: React.FC = () => {
                   return (
                     <label
                       key={type}
-                      className={`flex flex-col items-center justify-center h-32 border-2 border-dashed border-secondary-300 rounded-xl cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-all group ${!formData.vendor_type ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      className={`flex flex-col items-center justify-center h-32 border-2 border-dashed border-secondary-300 rounded-xl cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-all group ${!formData.vendor_type || !profile?.id ? 'opacity-60 cursor-not-allowed pointer-events-none' : ''}`}
                     >
                       <Upload className="w-6 h-6 text-secondary-400 group-hover:text-primary-500 mb-2" />
                       <span className="text-sm font-medium text-secondary-600 group-hover:text-primary-600 text-center px-2">
@@ -1435,7 +1439,7 @@ export const VendorProfile: React.FC = () => {
                         accept=".jpg,.jpeg,.png,.pdf"
                         onChange={handleFileUpload(type)}
                         className="hidden"
-                        disabled={uploadingFile || !formData.vendor_type}
+                        disabled={uploadingFile || !formData.vendor_type || !profile?.id}
                       />
                     </label>
                   );
