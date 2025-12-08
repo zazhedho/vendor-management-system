@@ -109,6 +109,9 @@ export const VendorProfile: React.FC = () => {
   const [selectedProvinceCode, setSelectedProvinceCode] = useState('');
   const [selectedCityCode, setSelectedCityCode] = useState('');
 
+  const DEFAULT_PURCH_GROUP = 'H530';
+  const DEFAULT_REGION_OR_SO = 'HSO NTB';
+
   const [formData, setFormData] = useState({
     vendor_type: 'company',
     vendor_name: '',
@@ -174,6 +177,7 @@ export const VendorProfile: React.FC = () => {
 
   const companyDocs = ['ktp', 'domisili', 'siup', 'nib', 'skt', 'npwp', 'sppkp', 'akta', 'bank_book', 'rekening'];
   const individualDocs = ['ktp', 'npwp', 'bank_book'];
+  const isNTBProvince = (name?: string) => (name || '').toLowerCase().includes('nusa tenggara barat');
 
   useEffect(() => {
     if (authLoading) return;
@@ -243,6 +247,30 @@ export const VendorProfile: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  // Ensure auto defaults only applied for NTB province; clear back when switching away
+  useEffect(() => {
+    const applyAutoDefaults = () => {
+      const isNTB = isNTBProvince(formData.province_name);
+      let changed = false;
+      const next = { ...formData };
+      if (isNTB) {
+        if (!next.purch_group) {
+          next.purch_group = DEFAULT_PURCH_GROUP;
+          changed = true;
+        }
+        if (!next.region_or_so) {
+          next.region_or_so = DEFAULT_REGION_OR_SO;
+          changed = true;
+        }
+      }
+      if (changed) {
+        setFormData(next);
+      }
+    };
+    applyAutoDefaults();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.province_name]);
 
   const extractFilename = (contentDisposition?: string | null) => {
     if (!contentDisposition) return '';
@@ -445,7 +473,9 @@ export const VendorProfile: React.FC = () => {
     e.preventDefault();
     setIsSaving(true);
     try {
-      const response = await vendorsApi.createOrUpdateProfile(formData);
+      const payload: any = { ...formData };
+
+      const response = await vendorsApi.createOrUpdateProfile(payload);
 
       // Check if status is true OR if we have valid data returned
       // This handles cases where backend might return data but status is missing/false
@@ -833,16 +863,23 @@ export const VendorProfile: React.FC = () => {
               onChange={(e) => {
                 const code = e.target.value;
                 const selected = provinces.find(p => p.code === code);
-                setSelectedProvinceCode(code);
-                setFormData({
+                const provinceName = selected?.name || '';
+                const willUseNTBDefaults = isNTBProvince(provinceName);
+                const nextData = {
                   ...formData,
                   province_id: code,
-                  province_name: selected?.name || '',
+                  province_name: provinceName,
                   city_id: '',
                   city_name: '',
                   district_id: '',
-                  district_name: ''
-                });
+                  district_name: '',
+                };
+                if (willUseNTBDefaults) {
+                  if (!nextData.purch_group) nextData.purch_group = DEFAULT_PURCH_GROUP;
+                  if (!nextData.region_or_so) nextData.region_or_so = DEFAULT_REGION_OR_SO;
+                }
+                setSelectedProvinceCode(code);
+                setFormData(nextData);
               }}
               className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
               required
@@ -1023,18 +1060,59 @@ export const VendorProfile: React.FC = () => {
             onChange={(e) => setFormData({ ...formData, transaction_type: e.target.value })}
             placeholder="e.g., B2B, B2C"
           />
-          <Input
-            label="Purch Group"
-            value={formData.purch_group}
-            onChange={(e) => setFormData({ ...formData, purch_group: e.target.value })}
-            placeholder="Purchase group code"
-          />
-          <Input
-            label="Region/SO"
-            value={formData.region_or_so}
-            onChange={(e) => setFormData({ ...formData, region_or_so: e.target.value })}
-            placeholder="Region or sales office"
-          />
+          {isNTBProvince(formData.province_name) ? (
+            <>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-secondary-800">
+                  Purch Group
+                </label>
+                <select
+                  value={formData.purch_group || DEFAULT_PURCH_GROUP}
+                  disabled
+                  className="w-full rounded-xl border border-secondary-200 bg-secondary-50 text-secondary-700 px-4 py-3 cursor-not-allowed"
+                  onChange={() => {}}
+                >
+                  <option value={formData.purch_group || DEFAULT_PURCH_GROUP}>
+                    {formData.purch_group || DEFAULT_PURCH_GROUP}
+                  </option>
+                </select>
+                <p className="text-xs text-secondary-500">Diisi otomatis oleh sistem (NTB)</p>
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-secondary-800">
+                  Region/SO
+                </label>
+                <select
+                  value={formData.region_or_so || DEFAULT_REGION_OR_SO}
+                  disabled
+                  className="w-full rounded-xl border border-secondary-200 bg-secondary-50 text-secondary-700 px-4 py-3 cursor-not-allowed"
+                  onChange={() => {}}
+                >
+                  <option value={formData.region_or_so || DEFAULT_REGION_OR_SO}>
+                    {formData.region_or_so || DEFAULT_REGION_OR_SO}
+                  </option>
+                </select>
+                <p className="text-xs text-secondary-500">Diisi otomatis oleh sistem (NTB)</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Purch Group"
+                value={formData.purch_group}
+                onChange={(e) => setFormData({ ...formData, purch_group: e.target.value })}
+                placeholder="Masukkan Purch Group"
+                helperText="Isi manual jika bukan NTB"
+              />
+              <Input
+                label="Region/SO"
+                value={formData.region_or_so}
+                onChange={(e) => setFormData({ ...formData, region_or_so: e.target.value })}
+                placeholder="Masukkan Region/SO"
+                helperText="Isi manual jika bukan NTB"
+              />
+            </>
+          )}
         </div>
       </Card>
 
@@ -1478,6 +1556,18 @@ export const VendorProfile: React.FC = () => {
                     <div className="flex py-2.5 px-4">
                       <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Business Field</span>
                       <span className="text-secondary-900 text-sm">{profile.business_field || '-'}</span>
+                    </div>
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Transaction Type</span>
+                      <span className="text-secondary-900 text-sm">{profile.transaction_type || '-'}</span>
+                    </div>
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Purch Group</span>
+                      <span className="text-secondary-900 text-sm">{profile.purch_group || '-'}</span>
+                    </div>
+                    <div className="flex py-2.5 px-4">
+                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Region/SO</span>
+                      <span className="text-secondary-900 text-sm">{profile.region_or_so || '-'}</span>
                     </div>
                     <div className="flex py-2.5 px-4">
                       <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Email</span>

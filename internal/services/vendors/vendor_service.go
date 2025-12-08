@@ -192,6 +192,9 @@ func (s *ServiceVendor) GenerateVendorProfileXLSX(vendorId string) ([]byte, stri
 }
 
 func (s *ServiceVendor) CreateOrUpdateVendorProfile(userId string, req dto.VendorProfileRequest) (map[string]interface{}, error) {
+	defaultPurchGroup := utils.GetEnv("DEFAULT_PURCH_GROUP", "H530").(string)
+	defaultRegionOrSO := utils.GetEnv("DEFAULT_REGION_OR_SO", "HSO NTB").(string)
+
 	vendor, err := s.VendorRepo.GetVendorByUserID(userId)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -232,6 +235,15 @@ func (s *ServiceVendor) CreateOrUpdateVendorProfile(userId string, req dto.Vendo
 
 	now := time.Now()
 	if profile.Id == "" {
+		purchGroup := strings.TrimSpace(req.PurchGroup)
+		if purchGroup == "" {
+			purchGroup = defaultPurchGroup
+		}
+		regionOrSO := strings.TrimSpace(req.RegionOrSo)
+		if regionOrSO == "" {
+			regionOrSO = defaultRegionOrSO
+		}
+
 		profile = domainvendors.VendorProfile{
 			Id:                utils.CreateUUID(),
 			VendorId:          vendor.Id,
@@ -261,8 +273,8 @@ func (s *ServiceVendor) CreateOrUpdateVendorProfile(userId string, req dto.Vendo
 			AccountNumber:     req.AccountNumber,
 			AccountHolderName: req.AccountHolderName,
 			TransactionType:   req.TransactionType,
-			PurchGroup:        req.PurchGroup,
-			RegionOrSo:        req.RegionOrSo,
+			PurchGroup:        purchGroup,
+			RegionOrSo:        regionOrSO,
 			ContactPerson:     req.ContactPerson,
 			ContactEmail:      req.ContactEmail,
 			ContactPhone:      req.ContactPhone,
@@ -301,8 +313,16 @@ func (s *ServiceVendor) CreateOrUpdateVendorProfile(userId string, req dto.Vendo
 		profile.AccountNumber = req.AccountNumber
 		profile.AccountHolderName = req.AccountHolderName
 		profile.TransactionType = req.TransactionType
-		profile.PurchGroup = req.PurchGroup
-		profile.RegionOrSo = req.RegionOrSo
+		if trimmed := strings.TrimSpace(req.PurchGroup); trimmed != "" {
+			profile.PurchGroup = trimmed
+		} else if strings.TrimSpace(profile.PurchGroup) == "" {
+			profile.PurchGroup = defaultPurchGroup
+		}
+		if trimmed := strings.TrimSpace(req.RegionOrSo); trimmed != "" {
+			profile.RegionOrSo = trimmed
+		} else if strings.TrimSpace(profile.RegionOrSo) == "" {
+			profile.RegionOrSo = defaultRegionOrSO
+		}
 		profile.ContactPerson = req.ContactPerson
 		profile.ContactEmail = req.ContactEmail
 		profile.ContactPhone = req.ContactPhone
