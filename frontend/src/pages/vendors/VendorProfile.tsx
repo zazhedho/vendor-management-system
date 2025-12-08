@@ -14,7 +14,6 @@ import {
   Save,
   Upload,
   CreditCard,
-  User,
   AlertCircle,
   Search,
   Plus,
@@ -969,7 +968,6 @@ export const VendorProfile: React.FC = () => {
             value={formData.ktp_name}
             onChange={(e) => setFormData({ ...formData, ktp_name: e.target.value })}
             placeholder="Full name as on KTP"
-            leftIcon={<User size={18} />}
           />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
@@ -1117,33 +1115,6 @@ export const VendorProfile: React.FC = () => {
       </Card>
 
       {/* Contact Person */}
-      <Card>
-        <h4 className="text-lg font-semibold text-secondary-900 mb-4 flex items-center gap-2">
-          <User size={20} className="text-primary-600" />
-          Contact Person
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Input
-            label="Contact Person Name"
-            value={formData.contact_person}
-            onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
-            placeholder="Contact person name"
-          />
-          <Input
-            label="Contact Email"
-            type="email"
-            value={formData.contact_email}
-            onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
-            placeholder="contact@example.com"
-          />
-          <Input
-            label="Contact Phone"
-            value={formData.contact_phone}
-            onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
-            placeholder="08123456789"
-          />
-        </div>
-      </Card>
     </div>
   );
 
@@ -1686,30 +1657,6 @@ export const VendorProfile: React.FC = () => {
                     <div className="flex py-2.5 px-4">
                       <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Account Holder</span>
                       <span className="text-secondary-900 text-sm">{profile.account_holder_name || '-'}</span>
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Contact Person */}
-                <Card className="overflow-hidden">
-                  <div className="bg-secondary-50 px-4 py-3 border-b border-secondary-200">
-                    <h3 className="font-semibold text-secondary-900 flex items-center gap-2">
-                      <User size={18} className="text-primary-600" />
-                      Contact Person
-                    </h3>
-                  </div>
-                  <div className="divide-y divide-secondary-100">
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Name</span>
-                      <span className="text-secondary-900 text-sm">{profile.contact_person || '-'}</span>
-                    </div>
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Email</span>
-                      <span className="text-secondary-900 text-sm">{profile.contact_email || '-'}</span>
-                    </div>
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Phone</span>
-                      <span className="text-secondary-900 text-sm">{profile.contact_phone || '-'}</span>
                     </div>
                   </div>
                 </Card>

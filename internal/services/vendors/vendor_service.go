@@ -249,9 +249,9 @@ func (s *ServiceVendor) CreateOrUpdateVendorProfile(userId string, req dto.Vendo
 			VendorId:          vendor.Id,
 			VendorName:        req.VendorName,
 			Email:             req.Email,
-			Telephone:         req.Telephone,
+			Telephone:         utils.NormalizePhoneTo62(req.Telephone),
 			Fax:               req.Fax,
-			Phone:             req.Phone,
+			Phone:             utils.NormalizePhoneTo62(req.Phone),
 			DistrictId:        req.DistrictId,
 			DistrictName:      req.DistrictName,
 			CityId:            req.CityId,
@@ -289,9 +289,9 @@ func (s *ServiceVendor) CreateOrUpdateVendorProfile(userId string, req dto.Vendo
 	} else {
 		profile.VendorName = req.VendorName
 		profile.Email = req.Email
-		profile.Telephone = req.Telephone
+		profile.Telephone = utils.NormalizePhoneTo62(req.Telephone)
 		profile.Fax = req.Fax
-		profile.Phone = req.Phone
+		profile.Phone = utils.NormalizePhoneTo62(req.Phone)
 		profile.DistrictId = req.DistrictId
 		profile.DistrictName = req.DistrictName
 		profile.CityId = req.CityId

@@ -1,8 +1,8 @@
 package dto
 
 type CreateEventRequest struct {
-	Title         string `json:"title" binding:"required,min=3,max=255"`
-	Description   string `json:"description" binding:"omitempty"`
+	Title         string `json:"title" binding:"required,min=3,max=100"`
+	Description   string `json:"description" binding:"omitempty,max=100"`
 	Category      string `json:"category" binding:"omitempty,max=100"`
 	StartDate     string `json:"start_date" binding:"omitempty"`
 	EndDate       string `json:"end_date" binding:"omitempty"`
@@ -10,8 +10,8 @@ type CreateEventRequest struct {
 }
 
 type UpdateEventRequest struct {
-	Title         string `json:"title" binding:"omitempty,min=3,max=255"`
-	Description   string `json:"description" binding:"omitempty"`
+	Title         string `json:"title" binding:"omitempty,min=3,max=100"`
+	Description   string `json:"description" binding:"omitempty,max=100"`
 	Category      string `json:"category" binding:"omitempty,max=100"`
 	StartDate     string `json:"start_date" binding:"omitempty"`
 	EndDate       string `json:"end_date" binding:"omitempty"`
@@ -22,7 +22,7 @@ type UpdateEventRequest struct {
 // For file uploads - separate from event creation
 type UploadEventFileRequest struct {
 	FileType string `json:"file_type" binding:"required,oneof=terms image document"`
-	Caption  string `json:"caption" binding:"omitempty,max=255"`
+	Caption  string `json:"caption" binding:"omitempty,max=100"`
 }
 
 type SubmitPitchRequest struct {
@@ -32,7 +32,7 @@ type SubmitPitchRequest struct {
 // For submission file uploads - separate from submission creation
 type UploadSubmissionFileRequest struct {
 	FileType string `json:"file_type" binding:"required,oneof=pitch proposal document"`
-	Caption  string `json:"caption" binding:"omitempty,max=255"`
+	Caption  string `json:"caption" binding:"omitempty,max=100"`
 }
 
 type ScoreSubmissionRequest struct {
