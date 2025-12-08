@@ -282,6 +282,7 @@ export const EventForm: React.FC = () => {
                       </div>
                       <div className="flex gap-2 sm:ml-auto">
                         <Button
+                          type="button"
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteExistingFile(existing.id)}
@@ -311,6 +312,7 @@ export const EventForm: React.FC = () => {
                       </div>
                       <div className="flex gap-2 sm:ml-auto">
                         <Button
+                          type="button"
                           variant="ghost"
                           size="sm"
                           onClick={() => handleRemoveNewFile(newFiles.findIndex((f) => f.type === type))}
