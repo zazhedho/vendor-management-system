@@ -23,6 +23,7 @@ const VendorList = lazy(() => import('./pages/vendors').then(m => ({ default: m.
 const VendorForm = lazy(() => import('./pages/vendors').then(m => ({ default: m.VendorForm })));
 const VendorDetail = lazy(() => import('./pages/vendors').then(m => ({ default: m.VendorDetail })));
 const VendorProfile = lazy(() => import('./pages/vendors').then(m => ({ default: m.VendorProfile })));
+const VendorDocuments = lazy(() => import('./pages/vendors').then(m => ({ default: m.VendorDocuments })));
 
 // Payments
 const PaymentList = lazy(() => import('./pages/payments').then(m => ({ default: m.PaymentList })));
@@ -498,6 +499,18 @@ function App() {
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <VendorProfile />
+                  </Suspense>
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor/profile/documents"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Suspense fallback={<PageLoader />}>
+                    <VendorDocuments />
                   </Suspense>
                 </Layout>
               </ProtectedRoute>

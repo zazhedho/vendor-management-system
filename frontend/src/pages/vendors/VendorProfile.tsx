@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { vendorsApi } from '../../api/vendors';
 import { locationApi, LocationItem } from '../../api/location';
@@ -94,6 +94,7 @@ export const VendorProfile: React.FC = () => {
   const canExport = useMemo(() => canViewVendors, [canViewVendors]);
   const activeVendorId = useMemo(() => id || vendor?.id || '', [id, vendor?.id]);
   const canVerifyDocs = useMemo(() => hasPermission('vendor', 'update_status'), [hasPermission]);
+  const docsSectionRef = useRef<HTMLDivElement | null>(null);
 
   // For admin list view
   const [vendorList, setVendorList] = useState<VendorWithProfile[]>([]);
@@ -174,7 +175,7 @@ export const VendorProfile: React.FC = () => {
     reason: '',
   });
 
-  const companyDocs = ['ktp', 'domisili', 'siup', 'nib', 'skt', 'npwp', 'sppkp', 'akta', 'bank_book', 'rekening'];
+  const companyDocs = ['ktp', 'domisili', 'siup', 'nib', 'skt', 'npwp', 'sppkp', 'akta', 'bank_book'];
   const individualDocs = ['ktp', 'npwp', 'bank_book'];
   const isNTBProvince = (name?: string) => (name || '').toLowerCase().includes('nusa tenggara barat');
 
@@ -205,6 +206,13 @@ export const VendorProfile: React.FC = () => {
     };
     loadData();
   }, [user, authLoading, showListView, id]);
+
+  // Scroll to documents section if requested via query param
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('section') === 'docs' && docsSectionRef.current) {
+      docsSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [location.search]);
 
   useEffect(() => {
     if (!user || authLoading || !showListView) return;
@@ -470,6 +478,11 @@ export const VendorProfile: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errors = validateForm();
+    if (errors.length > 0) {
+      toast.error(errors[0]);
+      return;
+    }
     setIsSaving(true);
     try {
       const payload: any = { ...formData };
@@ -500,8 +513,7 @@ export const VendorProfile: React.FC = () => {
 
         toast.success('Profile saved successfully');
         if (isNewMode) {
-          // Stay on the page so user can directly upload documents
-          await fetchVendorProfile();
+          navigate('/vendor/profile/documents');
         } else {
           navigate('/vendor/profile');
         }
@@ -747,6 +759,48 @@ export const VendorProfile: React.FC = () => {
     setShowRejectReasonModal(false);
     setPendingStatus(null);
     setRejectReasonInput('');
+  };
+
+  const validateForm = () => {
+    const errs: string[] = [];
+    const len = (v?: string) => (v || '').trim().length;
+    const maxCheck = (v: string | undefined, max: number, label: string) => {
+      if (len(v) > max) errs.push(`${label} maksimal ${max} karakter`);
+    };
+
+    if (!formData.vendor_type) errs.push('Vendor Type wajib dipilih');
+    if (!formData.vendor_name || len(formData.vendor_name) < 3) errs.push('Vendor/Company Name minimal 3 karakter');
+    if (len(formData.vendor_name) > 255) errs.push('Vendor/Company Name maksimal 255 karakter');
+
+    if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errs.push('Email tidak valid');
+    if (!formData.district_id || !formData.district_name) errs.push('District wajib diisi');
+    if (!formData.city_id || !formData.city_name) errs.push('City wajib diisi');
+    if (!formData.province_id || !formData.province_name) errs.push('Province wajib diisi');
+
+    maxCheck(formData.telephone, 20, 'Telephone');
+    maxCheck(formData.fax, 20, 'Fax');
+    maxCheck(formData.phone, 20, 'Phone');
+    maxCheck(formData.postal_code, 10, 'Postal Code');
+    maxCheck(formData.business_field, 255, 'Business Field');
+
+    maxCheck(formData.ktp_number, 20, 'KTP Number');
+    maxCheck(formData.ktp_name, 255, 'KTP Name');
+    maxCheck(formData.npwp_number, 50, 'NPWP Number');
+    maxCheck(formData.npwp_name, 255, 'NPWP Name');
+    maxCheck(formData.npwp_address, 255, 'NPWP Address');
+    maxCheck(formData.tax_status, 20, 'Tax Status');
+    maxCheck(formData.nib_number, 50, 'NIB Number');
+
+    maxCheck(formData.bank_name, 100, 'Bank Name');
+    maxCheck(formData.bank_branch, 100, 'Bank Branch');
+    maxCheck(formData.account_number, 50, 'Account Number');
+    maxCheck(formData.account_holder_name, 255, 'Account Holder Name');
+
+    maxCheck(formData.transaction_type, 100, 'Transaction Type');
+    maxCheck(formData.purch_group, 100, 'Purch Group');
+    maxCheck(formData.region_or_so, 100, 'Region/SO');
+
+    return errs;
   };
 
   const handleVendorCodeCancel = () => {
@@ -1377,131 +1431,127 @@ export const VendorProfile: React.FC = () => {
         <div className="max-w-4xl mx-auto">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
-              <h3 className="text-2xl font-bold text-secondary-900">Edit Profile</h3>
-              <p className="text-secondary-500 text-sm mt-1">Update vendor information and documents</p>
+              <h3 className="text-2xl font-bold text-secondary-900">
+                {isNewMode ? 'Create Vendor Profile' : 'Edit Profile'}
+              </h3>
+              <p className="text-secondary-500 text-sm mt-1">
+                {isNewMode ? 'Lengkapi profil vendor Anda lalu lanjut upload dokumen' : 'Update vendor information and documents'}
+              </p>
             </div>
             <div className="flex gap-3">
               <Button type="button" variant="secondary" onClick={() => navigate('/vendor/profile')}>
                 Cancel
               </Button>
               <Button type="submit" isLoading={isSaving} leftIcon={<Save size={16} />} onClick={handleSubmit}>
-                Save Changes
+                {isNewMode ? 'Next' : 'Save Changes'}
               </Button>
             </div>
           </div>
           <form onSubmit={handleSubmit} className="space-y-6">
             {renderFormFields()}
             {/* Document Upload Section */}
-            {/*
-              Allow the same upload UI on /new so users can continue after first save.
-              When profile belum dibuat, upload disabled dan user diberi informasi.
-            */}
-            <Card>
-              <h4 className="text-lg font-semibold text-secondary-900 mb-4 flex items-center gap-2">
-                <FileText size={20} className="text-primary-600" />
-                Document Uploads
-              </h4>
+            {!isNewMode && (
+              <div ref={docsSectionRef}>
+                <Card>
+                  <h4 className="text-lg font-semibold text-secondary-900 mb-4 flex items-center gap-2">
+                    <FileText size={20} className="text-primary-600" />
+                    Document Uploads
+                  </h4>
 
-              <div className="mb-4">
-                <p className="text-sm text-secondary-600">
-                  {formData.vendor_type === 'individual'
-                    ? 'Perorangan wajib unggah: KTP, NPWP, Buku Tabungan.'
-                    : 'Perusahaan wajib unggah: KTP pemilik, Izin Domisili, SIUP/NIB, SKT, NPWP, SP-PKP, Akta Perusahaan, Rekening (halaman depan/buku tabungan).'}
-                </p>
-                {!profile?.id && (
-                  <div className="mt-3 p-3 border border-secondary-200 rounded-lg bg-secondary-50 text-sm text-secondary-700">
-                    Simpan profil terlebih dahulu agar dapat mengunggah dokumen.
-                  </div>
-                )}
-                {formData.vendor_type === '' && (
-                  <div className="mt-2 p-3 border border-warning-200 rounded-lg bg-warning-50 text-sm text-warning-800">
-                    Pilih Vendor Type terlebih dahulu agar daftar dokumen sesuai.
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {/*
-                  Disable upload action when profile belum ada untuk menghindari gagal upload tanpa id.
-                */}
-                {/*
-                  canUploadDocs diturunkan ke input dan label style.
-                */}
-                {/*
-                  NOTE: handleFileUpload tetap guard profile?.id.
-                */}
-                {(formData.vendor_type === 'individual' ? individualDocs : companyDocs).map((type) => {
-                  const existing = profile?.files?.find((f) => f.file_type === type);
-                  if (existing) {
-                    return (
-                      <div
-                        key={type}
-                        className={`flex flex-col p-3 border rounded-lg ${existing.status === 'rejected'
-                          ? 'border-danger-300 bg-danger-50'
-                          : existing.status === 'approved'
-                            ? 'border-success-300 bg-success-50'
-                            : 'border-secondary-200 bg-secondary-50'
-                          }`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <FileText size={18} className={existing.status === 'rejected'
-                              ? 'text-danger-500'
-                              : existing.status === 'approved'
-                                ? 'text-success-600'
-                                : 'text-primary-600'
-                            } />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-secondary-900 truncate">{formatFileType(existing.file_type)}</p>
-                              <p className="text-xs text-secondary-500 truncate">Status: {existing.status}</p>
-                            </div>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteFileClick(existing.id)}
-                            className="text-danger-600 hover:bg-danger-50 flex-shrink-0"
-                            leftIcon={<AlertCircle size={14} />}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                        {existing.status === 'rejected' && existing.reject_reason && (
-                          <p className="text-xs text-danger-700 mt-2 whitespace-pre-line">Alasan: {existing.reject_reason}</p>
-                        )}
+                  <div className="mb-4">
+                    <p className="text-sm text-secondary-600">
+                      {formData.vendor_type === 'individual'
+                        ? 'Perorangan dianjurkan unggah: KTP, NPWP, Buku Tabungan.'
+                        : 'Perusahaan dianjurkan unggah: KTP pemilik, Izin Domisili, SIUP/NIB, SKT, NPWP, SP-PKP, Akta Perusahaan, Rekening (halaman depan/buku tabungan).'}
+                    </p>
+                    {!profile?.id && (
+                      <div className="mt-3 p-3 border border-secondary-200 rounded-lg bg-secondary-50 text-sm text-secondary-700">
+                        Simpan profil terlebih dahulu agar dapat mengunggah dokumen.
                       </div>
-                    );
-                  }
+                    )}
+                    {formData.vendor_type === '' && (
+                      <div className="mt-2 p-3 border border-warning-200 rounded-lg bg-warning-50 text-sm text-warning-800">
+                        Pilih Vendor Type terlebih dahulu agar daftar dokumen sesuai.
+                      </div>
+                    )}
+                  </div>
 
-                  return (
-                    <label
-                      key={type}
-                      className={`flex flex-col items-center justify-center h-32 border-2 border-dashed border-secondary-300 rounded-xl cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-all group ${!formData.vendor_type || !profile?.id ? 'opacity-60 cursor-not-allowed pointer-events-none' : ''}`}
-                    >
-                      <Upload className="w-6 h-6 text-secondary-400 group-hover:text-primary-500 mb-2" />
-                      <span className="text-sm font-medium text-secondary-600 group-hover:text-primary-600 text-center px-2">
-                        {formatFileType(type)}
-                      </span>
-                      <input
-                        type="file"
-                        accept=".jpg,.jpeg,.png,.pdf"
-                        onChange={handleFileUpload(type)}
-                        className="hidden"
-                        disabled={uploadingFile || !formData.vendor_type || !profile?.id}
-                      />
-                    </label>
-                  );
-                })}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                      {(formData.vendor_type === 'individual' ? individualDocs : companyDocs).map((type) => {
+                        const existing = profile?.files?.find((f) => f.file_type === type);
+                        if (existing) {
+                          return (
+                            <div
+                              key={type}
+                              className={`flex items-center gap-3 p-3 border rounded-xl shadow-sm ${existing.status === 'rejected'
+                                ? 'border-danger-200 bg-danger-50/70'
+                                : existing.status === 'approved'
+                                  ? 'border-success-200 bg-success-50/70'
+                                  : 'border-secondary-200 bg-secondary-50'
+                                }`}
+                            >
+                              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/60 border border-white/70">
+                                <FileText size={18} className={existing.status === 'rejected'
+                                  ? 'text-danger-500'
+                                  : existing.status === 'approved'
+                                    ? 'text-success-600'
+                                    : 'text-primary-600'
+                                } />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-secondary-900 truncate">{formatFileType(existing.file_type)}</p>
+                                <p className="text-xs text-secondary-500 truncate capitalize">Status: {existing.status}</p>
+                                {existing.status === 'rejected' && existing.reject_reason && (
+                                  <p className="text-[11px] text-danger-700 mt-1 whitespace-pre-line">Alasan: {existing.reject_reason}</p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteFileClick(existing.id)}
+                                  className="text-danger-600 hover:bg-danger-50"
+                                  leftIcon={<AlertCircle size={14} />}
+                                >
+                                  Delete
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <label
+                            key={type}
+                            className={`flex flex-col items-center justify-center h-28 border border-dashed border-secondary-300 rounded-lg cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-all group shadow-sm ${!formData.vendor_type || !profile?.id ? 'opacity-60 cursor-not-allowed pointer-events-none' : ''}`}
+                          >
+                            <Upload className="w-5 h-5 text-secondary-400 group-hover:text-primary-500 mb-1" />
+                            <span className="text-sm font-medium text-secondary-700 group-hover:text-primary-600 text-center px-2">
+                              {formatFileType(type)}
+                            </span>
+                          <p className="text-[11px] text-secondary-500 mt-1">PDF/JPG/PNG</p>
+                          <input
+                            type="file"
+                            accept=".jpg,.jpeg,.png,.pdf"
+                            onChange={handleFileUpload(type)}
+                            className="hidden"
+                            disabled={uploadingFile || !formData.vendor_type || !profile?.id}
+                          />
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-secondary-500 mt-2">
+                    Accepted formats: JPG, PNG, PDF (Max 5MB per file)
+                  </p>
+                </Card>
               </div>
-              <p className="text-xs text-secondary-500 mt-2">
-                Accepted formats: JPG, PNG, PDF (Max 5MB per file)
-              </p>
-            </Card>
+            )}
 
             <div className="flex gap-3 pt-4">
               <Button type="submit" isLoading={isSaving} leftIcon={<Save size={16} />} className="w-full sm:w-auto">
-                Save Changes
+                {isNewMode ? 'Next' : 'Save Changes'}
               </Button>
             </div>
           </form>
