@@ -581,7 +581,11 @@ export const VendorProfile: React.FC = () => {
       const response = await vendorsApi.deleteProfileFile(profile.id, deleteFileId);
       if (response.status) {
         toast.success('File deleted successfully');
-        await fetchVendorProfile();
+        setProfile(prev => {
+          if (!prev) return prev;
+          const filtered = (prev.files || []).filter(f => f.id !== deleteFileId);
+          return { ...prev, files: filtered };
+        });
       } else {
         toast.error('Failed to delete file');
       }
