@@ -86,7 +86,11 @@ export const VendorProfile: React.FC = () => {
 
   // isEditing based on URL for proper routing
   const isOwner = useMemo(() => !!vendor?.user_id && vendor.user_id === user?.id, [vendor?.user_id, user?.id]);
-  const canEditProfile = isOwner;
+  // Vendor role with permission can create/edit own profile even when vendor record not yet exists
+  const canEditProfile = useMemo(() => {
+    if (isVendorRole && hasPermission('vendor', 'update')) return true;
+    return isOwner && hasPermission('vendor', 'update');
+  }, [isVendorRole, isOwner, hasPermission]);
   const isEditing = (isEditMode || isNewMode) && canEditProfile;
   const canExport = useMemo(() => canViewVendors, [canViewVendors]);
   const activeVendorId = useMemo(() => id || vendor?.id || '', [id, vendor?.id]);
