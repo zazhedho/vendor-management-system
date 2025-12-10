@@ -67,7 +67,7 @@ CREATE INDEX IF NOT EXISTS idx_vendors_user_id
 CREATE INDEX IF NOT EXISTS idx_vendors_status
     ON vendors(status);
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_vendors_vendor_code
+CREATE INDEX IF NOT EXISTS idx_vendors_vendor_code
     ON vendors(vendor_code)
     WHERE vendor_code IS NOT NULL;
 
