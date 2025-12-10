@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { eventsApi } from '../api/events';
 import { vendorsApi } from '../api/vendors';
 import { paymentsApi } from '../api/payments';
-import { toast } from 'react-toastify';
 import { Calendar, Users, CreditCard, TrendingUp, FileText, CheckCircle, Activity } from 'lucide-react';
 import { Card, Badge, Spinner } from '../components/ui';
 
@@ -18,106 +18,71 @@ interface DashboardStats {
 
 export const Dashboard: React.FC = () => {
   const { user, hasPermission } = useAuth();
-  const [stats, setStats] = useState<DashboardStats>({});
-  const [recentEvents, setRecentEvents] = useState<any[]>([]);
-  const [recentActivities, setRecentActivities] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, [user]);
+  const canViewDashboard = hasPermission('dashboard', 'view');
+  const canViewEvents = hasPermission('event', 'view');
+  const canViewVendors = hasPermission('vendor', 'view');
+  const canViewPayments = hasPermission('payment', 'view');
+  const canManagePayments = hasPermission('payment', 'create') || hasPermission('payment', 'update') || hasPermission('payment', 'delete');
+  const canViewMySubmissions = hasPermission('event', 'view_my_submissions') || hasPermission('event', 'submit_pitch');
 
-  const fetchDashboardData = async () => {
-    if (!user) return;
+  const { data: eventsRes, isLoading: eventsLoading } = useQuery({
+    queryKey: ['events', { limit: 5 }],
+    queryFn: () => eventsApi.getAll({ limit: 5 }),
+    enabled: !!user && canViewDashboard && canViewEvents,
+  });
 
-    const canViewDashboard = hasPermission('dashboard', 'view');
-    if (!canViewDashboard) {
-      setLoading(false);
-      return;
-    }
+  const { data: vendorsRes, isLoading: vendorsLoading } = useQuery({
+    queryKey: ['vendors', { limit: 100 }],
+    queryFn: () => vendorsApi.getAll({ limit: 100 }),
+    enabled: !!user && canViewDashboard && canViewVendors,
+  });
 
-    const canViewEvents = hasPermission('event', 'view');
-    const canViewVendors = hasPermission('vendor', 'view');
-    const canViewPayments = hasPermission('payment', 'view');
-    const canManagePayments = hasPermission('payment', 'create') || hasPermission('payment', 'update') || hasPermission('payment', 'delete');
-    const canViewMySubmissions = hasPermission('event', 'view_my_submissions') || hasPermission('event', 'submit_pitch');
+  const { data: paymentsRes, isLoading: paymentsLoading } = useQuery({
+    queryKey: ['payments', { limit: 100, type: canManagePayments ? 'all' : 'my' }],
+    queryFn: () => canManagePayments ? paymentsApi.getAll({ limit: 100 }) : paymentsApi.getMyPayments(),
+    enabled: !!user && canViewDashboard && canViewPayments,
+  });
 
-    try {
-      setLoading(true);
+  const { data: submissionsRes, isLoading: submissionsLoading } = useQuery({
+    queryKey: ['submissions', { limit: 50 }],
+    queryFn: () => eventsApi.getMySubmissions({ limit: 50, order_by: 'updated_at', order_direction: 'desc' }),
+    enabled: !!user && canViewDashboard && canViewMySubmissions,
+  });
 
-      const eventsPromise = canViewEvents ? eventsApi.getAll({ limit: 5 }) : Promise.resolve(null);
-      const vendorsPromise = canViewVendors ? vendorsApi.getAll({ limit: 100 }) : Promise.resolve(null);
-      const paymentsPromise = canViewPayments
-        ? (canManagePayments ? paymentsApi.getAll({ limit: 100 }) : paymentsApi.getMyPayments().catch(() => null))
-        : Promise.resolve(null);
-      const submissionsPromise = canViewMySubmissions
-        ? eventsApi.getMySubmissions({ limit: 50, order_by: 'updated_at', order_direction: 'desc' }).catch(() => null)
-        : Promise.resolve(null);
+  const loading = eventsLoading || vendorsLoading || paymentsLoading || submissionsLoading;
 
-      const [eventsRes, vendorsRes, paymentsRes, submissionsRes] = await Promise.all([
-        eventsPromise,
-        vendorsPromise,
-        paymentsPromise,
-        submissionsPromise,
-      ]);
+  const stats: DashboardStats = {};
+  const events = eventsRes?.data || [];
+  const vendors = vendorsRes?.data || [];
+  const payments = paymentsRes?.data || [];
+  const submissions = submissionsRes?.data || [];
 
-      const newStats: DashboardStats = {};
+  if (eventsRes) stats.totalEvents = eventsRes.total_data || events.length;
+  if (vendorsRes) stats.totalVendors = vendorsRes.total_data || vendors.length;
+  if (paymentsRes) {
+    stats.totalPayments = Array.isArray(payments) ? payments.length : 0;
+    stats.pendingPayments = Array.isArray(payments) ? payments.filter((p: any) => p.status === 'pending').length : 0;
+  }
+  if (submissionsRes) {
+    stats.mySubmissions = Array.isArray(submissions) ? submissions.length : 0;
+    stats.wonEvents = Array.isArray(submissions) ? submissions.filter((s: any) => s.status === 'won' || s.is_winner).length : 0;
+  }
 
-      let activitiesBuffer: any[] = [];
-
-      if (eventsRes && eventsRes.data) {
-        const events = eventsRes.data || [];
-        newStats.totalEvents = eventsRes.total_data || events.length;
-        setRecentEvents(Array.isArray(events) ? events.slice(0, 5) : []);
-        activitiesBuffer = Array.isArray(events)
-          ? events.slice(0, 4).map((event: any, index: number) => ({
-              id: `activity-${index}`,
-              description: `Event "${event.title || event.name}" status updated`,
-              timestamp: event.updated_at || event.created_at || new Date().toISOString(),
-            }))
-          : [];
-      } else {
-        setRecentEvents([]);
-      }
-
-      if (vendorsRes && vendorsRes.data) {
-        const vendors = vendorsRes.data || [];
-        newStats.totalVendors = vendorsRes.total_data || vendors.length;
-      }
-
-      if (paymentsRes && paymentsRes.data) {
-        const payments = paymentsRes.data || [];
-        newStats.totalPayments = Array.isArray(payments) ? payments.length : 0;
-        newStats.pendingPayments = Array.isArray(payments)
-          ? payments.filter((p: any) => p.status === 'pending').length
-          : 0;
-      }
-
-      if (submissionsRes && submissionsRes.data) {
-        const submissions = submissionsRes.data || [];
-        newStats.mySubmissions = Array.isArray(submissions) ? submissions.length : 0;
-        newStats.wonEvents = Array.isArray(submissions)
-          ? submissions.filter((s: any) => s.status === 'won' || s.is_winner).length
-          : 0;
-        if (Array.isArray(submissions)) {
-          activitiesBuffer = submissions.slice(0, 4).map((submission: any, index: number) => ({
-            id: `activity-${index}`,
-            description: `Submitted pitch for event`,
-            timestamp: submission.created_at || new Date().toISOString(),
-          }));
-        }
-      }
-
-      setRecentActivities(activitiesBuffer);
-
-      setStats(newStats);
-    } catch (error: any) {
-      console.error('Failed to fetch dashboard data:', error);
-      toast.error('Failed to load dashboard data');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const recentEvents = Array.isArray(events) ? events.slice(0, 5) : [];
+  const recentActivities = Array.isArray(submissions) && submissions.length > 0
+    ? submissions.slice(0, 4).map((submission: any, index: number) => ({
+        id: `activity-${index}`,
+        description: `Submitted pitch for event`,
+        timestamp: submission.created_at || new Date().toISOString(),
+      }))
+    : Array.isArray(events)
+    ? events.slice(0, 4).map((event: any, index: number) => ({
+        id: `activity-${index}`,
+        description: `Event "${event.title || event.name}" status updated`,
+        timestamp: event.updated_at || event.created_at || new Date().toISOString(),
+      }))
+    : [];
 
   const getStatsCards = () => {
     const cards = [];

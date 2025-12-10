@@ -115,24 +115,41 @@ INSERT INTO permissions (id, name, display_name, resource, action) VALUES
     (gen_random_uuid(), 'view_dashboard', 'View Dashboard', 'dashboard', 'view'),
 
     -- User permissions
-    (gen_random_uuid(), 'view_users', 'View Users', 'users', 'view'),
+    (gen_random_uuid(), 'list_users', 'List Users', 'users', 'list'),
+    (gen_random_uuid(), 'view_users', 'View User Detail', 'users', 'view'),
     (gen_random_uuid(), 'create_users', 'Create Users', 'users', 'create'),
     (gen_random_uuid(), 'update_users', 'Update Users', 'users', 'update'),
     (gen_random_uuid(), 'delete_users', 'Delete Users', 'users', 'delete'),
 
     -- Role permissions
-    (gen_random_uuid(), 'view_roles', 'View Roles', 'roles', 'view'),
+    (gen_random_uuid(), 'list_roles', 'List Roles', 'roles', 'list'),
+    (gen_random_uuid(), 'view_roles', 'View Role Detail', 'roles', 'view'),
     (gen_random_uuid(), 'create_roles', 'Create Roles', 'roles', 'create'),
     (gen_random_uuid(), 'update_roles', 'Update Roles', 'roles', 'update'),
     (gen_random_uuid(), 'delete_roles', 'Delete Roles', 'roles', 'delete'),
     (gen_random_uuid(), 'assign_permissions', 'Assign Permissions', 'roles', 'assign_permissions'),
     (gen_random_uuid(), 'assign_menus', 'Assign Menus', 'roles', 'assign_menus'),
 
+    -- Menu permissions
+    (gen_random_uuid(), 'list_menus', 'List Menus', 'menus', 'list'),
+    (gen_random_uuid(), 'view_menu', 'View Menu Detail', 'menus', 'view'),
+    (gen_random_uuid(), 'create_menu', 'Create Menu', 'menus', 'create'),
+    (gen_random_uuid(), 'update_menu', 'Update Menu', 'menus', 'update'),
+    (gen_random_uuid(), 'delete_menu', 'Delete Menu', 'menus', 'delete'),
+
+    -- Permission management permissions
+    (gen_random_uuid(), 'list_permissions', 'List Permissions', 'permissions', 'list'),
+    (gen_random_uuid(), 'view_permissions', 'View Permission Detail', 'permissions', 'view'),
+    (gen_random_uuid(), 'create_permissions', 'Create Permissions', 'permissions', 'create'),
+    (gen_random_uuid(), 'update_permissions', 'Update Permissions', 'permissions', 'update'),
+    (gen_random_uuid(), 'delete_permissions', 'Delete Permissions', 'permissions', 'delete'),
+
     -- Profile permissions
     (gen_random_uuid(), 'view_profile', 'View Profile', 'profile', 'view'),
     (gen_random_uuid(), 'update_profile', 'Update Profile', 'profile', 'update'),
 
     -- Vendor permissions
+    (gen_random_uuid(), 'list_vendors', 'List Vendors', 'vendor', 'list'),
     (gen_random_uuid(), 'view_vendor_profile', 'View Vendor Profile', 'vendor', 'view'),
     (gen_random_uuid(), 'update_vendor_profile', 'Update Vendor Profile', 'vendor', 'update'),
     (gen_random_uuid(), 'update_vendor_status', 'Update Vendor Status', 'vendor', 'update_status'),
@@ -141,10 +158,12 @@ INSERT INTO permissions (id, name, display_name, resource, action) VALUES
     (gen_random_uuid(), 'delete_vendor', 'Delete Vendor', 'vendor', 'delete'),
 
     -- Event permissions
-    (gen_random_uuid(), 'view_events', 'View Events', 'event', 'view'),
+    (gen_random_uuid(), 'list_events', 'List Events', 'event', 'list'),
+    (gen_random_uuid(), 'view_events', 'View Event Detail', 'event', 'view'),
     (gen_random_uuid(), 'create_event', 'Create Event', 'event', 'create'),
     (gen_random_uuid(), 'update_event', 'Update Event', 'event', 'update'),
     (gen_random_uuid(), 'delete_event', 'Delete Event', 'event', 'delete'),
+    (gen_random_uuid(), 'list_submissions', 'List Event Submissions', 'event', 'list_submissions'),
     (gen_random_uuid(), 'view_submissions', 'View Event Submissions', 'event', 'view_submissions'),
     (gen_random_uuid(), 'score_submission', 'Score Event Submission', 'event', 'score'),
     (gen_random_uuid(), 'select_winner', 'Select Event Winner', 'event', 'select_winner'),
@@ -152,7 +171,8 @@ INSERT INTO permissions (id, name, display_name, resource, action) VALUES
     (gen_random_uuid(), 'view_my_submissions', 'View My Event Submissions', 'event', 'view_my_submissions'),
 
     -- Evaluation permissions
-    (gen_random_uuid(), 'view_evaluations', 'View Evaluations', 'evaluation', 'view'),
+    (gen_random_uuid(), 'list_evaluations', 'List Evaluations', 'evaluation', 'list'),
+    (gen_random_uuid(), 'view_evaluations', 'View Evaluation Detail', 'evaluation', 'view'),
     (gen_random_uuid(), 'create_evaluation', 'Create Evaluation', 'evaluation', 'create'),
     (gen_random_uuid(), 'update_evaluation', 'Update Evaluation', 'evaluation', 'update'),
     (gen_random_uuid(), 'delete_evaluation', 'Delete Evaluation', 'evaluation', 'delete'),
@@ -160,7 +180,8 @@ INSERT INTO permissions (id, name, display_name, resource, action) VALUES
     (gen_random_uuid(), 'review_photo', 'Review Evaluation Photo', 'evaluation', 'review_photo'),
 
     -- Payment permissions
-    (gen_random_uuid(), 'view_payments', 'View Payments', 'payment', 'view'),
+    (gen_random_uuid(), 'list_payments', 'List Payments', 'payment', 'list'),
+    (gen_random_uuid(), 'view_payments', 'View Payment Detail', 'payment', 'view'),
     (gen_random_uuid(), 'create_payment', 'Create Payment', 'payment', 'create'),
     (gen_random_uuid(), 'update_payment', 'Update Payment', 'payment', 'update'),
     (gen_random_uuid(), 'delete_payment', 'Delete Payment', 'payment', 'delete')
@@ -190,9 +211,10 @@ CROSS JOIN permissions p
 WHERE r.name = 'client'
 AND p.name IN (
     'view_profile', 'update_profile', 'view_dashboard',
-    'view_events', 'create_event', 'update_event',
-    'view_submissions', 'score_submission', 'select_winner',
-    'view_evaluations', 'create_evaluation', 'update_evaluation', 'review_photo'
+    'list_events', 'view_events', 'create_event', 'update_event',
+    'list_submissions', 'view_submissions', 'score_submission', 'select_winner',
+    'list_evaluations', 'view_evaluations', 'create_evaluation', 'update_evaluation', 'review_photo',
+    'list_vendors', 'view_vendor_profile'
 )
 ON CONFLICT DO NOTHING;
 
@@ -205,7 +227,9 @@ WHERE r.name = 'vendor'
 AND p.name IN (
     'view_profile', 'update_profile', 'view_dashboard',
     'view_vendor_profile', 'update_vendor_profile', 'view_vendor_submissions', 'create_vendor_submission',
-    'view_events', 'submit_pitch', 'view_payments', 'upload_evaluation_photo', 'view_evaluations'
+    'list_events', 'view_events', 'submit_pitch', 'view_my_submissions',
+    'list_payments', 'view_payments',
+    'upload_evaluation_photo', 'list_evaluations', 'view_evaluations'
 )
 ON CONFLICT DO NOTHING;
 

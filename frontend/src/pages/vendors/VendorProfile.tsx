@@ -15,15 +15,11 @@ import {
   Upload,
   CreditCard,
   AlertCircle,
-  Search,
-  Plus,
-  Eye,
-  Trash2,
-  X,
   ArrowLeft,
-  Download
+  Download,
+  X
 } from 'lucide-react';
-import { Button, Card, Badge, Spinner, Input, ConfirmModal, ActionMenu } from '../../components/ui';
+import { Button, Card, Badge, Spinner, Input, ConfirmModal } from '../../components/ui';
 import { toast } from 'react-toastify';
 
 // Helper to format file type with proper capitalization
@@ -45,11 +41,6 @@ const formatFileType = (type: string): string => {
   return upperCaseTypes[type.toLowerCase()] || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 };
 
-interface VendorWithProfile {
-  vendor: Vendor;
-  profile: VendorProfileType;
-}
-
 export const VendorProfile: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -64,14 +55,12 @@ export const VendorProfile: React.FC = () => {
   const isEditMode = location.pathname.endsWith('/edit');
   const isNewMode = location.pathname.endsWith('/new');
 
-
-  // For vendor role: always show their own profile form
-  // For admin role: show list on /vendor/profile, detail/edit on other routes
-  const showListView = useMemo(() => {
-    if (!canViewVendors) return false;
-    if (isVendorRole) return false;
-    return location.pathname === '/vendor/profile';
-  }, [canViewVendors, isVendorRole, location.pathname]);
+  // Redirect admin/client to /vendors list page
+  useEffect(() => {
+    if (!isVendorRole && canViewVendors && location.pathname === '/vendor/profile') {
+      navigate('/vendors');
+    }
+  }, [isVendorRole, canViewVendors, location.pathname, navigate]);
 
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [profile, setProfile] = useState<VendorProfileType | null>(null);
@@ -96,11 +85,6 @@ export const VendorProfile: React.FC = () => {
   const canVerifyDocs = useMemo(() => hasPermission('vendor', 'update_status'), [hasPermission]);
   const docsSectionRef = useRef<HTMLDivElement | null>(null);
 
-  // For admin list view
-  const [vendorList, setVendorList] = useState<VendorWithProfile[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
 
   // Location states
   const [provinces, setProvinces] = useState<LocationItem[]>([]);
@@ -195,17 +179,12 @@ export const VendorProfile: React.FC = () => {
     if (!user || authLoading) return;
 
     const loadData = async () => {
-      if (showListView) {
-        // Admin viewing list
-        await fetchVendorsList();
-      } else {
-        // Vendor viewing own profile OR admin viewing/editing specific vendor
-        await fetchVendorProfile(id);
-        await fetchProvinces();
-      }
+      // Vendor viewing own profile OR admin viewing/editing specific vendor
+      await fetchVendorProfile(id);
+      await fetchProvinces();
     };
     loadData();
-  }, [user, authLoading, showListView, id]);
+  }, [user, authLoading, id]);
 
   // Scroll to documents section if requested via query param
   useEffect(() => {
@@ -214,46 +193,7 @@ export const VendorProfile: React.FC = () => {
     }
   }, [location.search]);
 
-  useEffect(() => {
-    if (!user || authLoading || !showListView) return;
-    if (currentPage > 1) {
-      fetchVendorsList();
-    }
-  }, [authLoading, currentPage, showListView, user]);
 
-  const handleSearch = () => {
-    setCurrentPage(1);
-    fetchVendorsList();
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
-
-  const handleReset = async () => {
-    setSearchTerm('');
-    setCurrentPage(1);
-    
-    // Fetch with empty search
-    setIsLoading(true);
-    try {
-      const response = await vendorsApi.getAll({
-        page: 1,
-        limit: 10,
-        search: ''
-      });
-      if (response.status) {
-        setVendorList((response.data || []) as unknown as VendorWithProfile[]);
-        setTotalPages(response.total_pages || 1);
-      }
-    } catch (error) {
-      console.error('Failed to fetch vendors:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Ensure auto defaults only applied for NTB province; clear back when switching away
   useEffect(() => {
@@ -300,11 +240,12 @@ export const VendorProfile: React.FC = () => {
     return name.toLowerCase().endsWith('.xlsx') ? name : `${name}.xlsx`;
   };
 
-  const handleExport = async () => {
-    if (!activeVendorId || !canExport) return;
+  const handleExport = async (vendorId?: string) => {
+    const exportId = vendorId || activeVendorId;
+    if (!exportId || !canExport) return;
     setIsExporting(true);
     try {
-      const response = await vendorsApi.exportProfile(activeVendorId);
+      const response = await vendorsApi.exportProfile(exportId);
       const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
       const contentDisposition = response.headers?.['content-disposition'];
@@ -344,31 +285,7 @@ export const VendorProfile: React.FC = () => {
     }
   }, [selectedCityCode]);
 
-  useEffect(() => {
-    console.log('deleteVendorId changed:', deleteVendorId);
-  }, [deleteVendorId]);
 
-  // Fetch vendors list for admin/superadmin/client
-  const fetchVendorsList = async () => {
-    setIsLoading(true);
-    try {
-      const response = await vendorsApi.getAll({
-        page: currentPage,
-        limit: 10,
-        search: searchTerm
-      });
-      console.log('Vendors list response:', response);
-      if (response.status) {
-        setVendorList((response.data || []) as unknown as VendorWithProfile[]);
-        setTotalPages(response.total_pages || 1);
-      }
-    } catch (error: any) {
-      console.error('Failed to fetch vendors:', error);
-      setVendorList([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const fetchProvinces = async () => {
     try {
@@ -693,7 +610,7 @@ export const VendorProfile: React.FC = () => {
       const response = await vendorsApi.delete(deleteVendorId);
       if (response.status) {
         toast.success('Vendor deleted successfully');
-        await fetchVendorsList();
+        navigate('/vendors'); // Redirect to vendors list after delete
       } else {
         toast.error('Failed to delete vendor');
       }
@@ -1186,165 +1103,6 @@ export const VendorProfile: React.FC = () => {
 
   const vendorStatuses = ['pending', 'verify', 'active', 'suspended', 'rejected'];
 
-  // Admin/Superadmin/Client view - show vendors list
-  if (showListView) {
-    const getStatusVariant = (status: string): 'success' | 'info' | 'danger' | 'warning' => {
-      switch (status?.toLowerCase()) {
-        case 'active': return 'success';
-        case 'verified': return 'info';
-        case 'suspended': return 'danger';
-        case 'rejected': return 'danger';
-        default: return 'warning';
-      }
-    };
-
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-secondary-900">Vendor Profiles</h1>
-            <p className="text-secondary-500 text-sm mt-1">Manage and view all registered vendors</p>
-          </div>
-          {user?.role === 'superadmin' && (
-            <Button
-              onClick={() => navigate('/vendor/profile/new')}
-              leftIcon={<Plus size={20} />}
-            >
-              Add Vendor
-            </Button>
-          )}
-        </div>
-
-        {/* Search */}
-        <Card className="p-4">
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <input
-                type="text"
-                placeholder="Search vendors..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={handleKeyPress}
-                className="w-full px-4 py-2 rounded-lg border border-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-              />
-            </div>
-            <Button onClick={handleSearch} leftIcon={<Search size={20} />}>
-              Search
-            </Button>
-            {searchTerm && (
-              <Button onClick={handleReset} variant="secondary" leftIcon={<X size={20} />}>
-                Reset
-              </Button>
-            )}
-          </div>
-        </Card>
-
-        {/* Vendors Table */}
-        <Card className="p-0 overflow-hidden">
-          {vendorList.length === 0 ? (
-            <div className="text-center py-8">
-              <ShoppingBag size={40} className="mx-auto text-secondary-300 mb-3" />
-              <h3 className="font-medium text-secondary-900 mb-1">No vendors found</h3>
-              <p className="text-sm text-secondary-500">No vendor profiles available.</p>
-            </div>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-secondary-50">
-                    <tr>
-                      <th className="text-left py-2.5 px-4 font-medium text-secondary-600">Vendor</th>
-                      <th className="text-left py-2.5 px-4 font-medium text-secondary-600">Email</th>
-                      <th className="text-left py-2.5 px-4 font-medium text-secondary-600">Phone</th>
-                      <th className="text-left py-2.5 px-4 font-medium text-secondary-600">Type</th>
-                      <th className="text-left py-2.5 px-4 font-medium text-secondary-600">Status</th>
-                      {user?.role === 'superadmin' && (
-                        <th className="text-right py-2.5 px-4 font-medium text-secondary-600">Actions</th>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-secondary-100">
-                    {vendorList.map((item, index) => (
-                      <tr
-                        key={item?.vendor?.id || index}
-                        className="hover:bg-secondary-50"
-                      >
-                        <td
-                          className="py-2.5 px-4 cursor-pointer"
-                          onClick={() => navigate(`/vendor/profile/${item?.vendor?.id}/detail`)}
-                        >
-                          <p className="font-medium text-secondary-900">{item?.profile?.vendor_name || '-'}</p>
-                          <p className="text-xs text-secondary-500">{item?.profile?.city_name || '-'}, {item?.profile?.province_name || '-'}</p>
-                        </td>
-                        <td
-                          className="py-2.5 px-4 text-secondary-700 cursor-pointer"
-                          onClick={() => navigate(`/vendor/profile/${item?.vendor?.id}/detail`)}
-                        >{item?.profile?.email || '-'}</td>
-                        <td
-                          className="py-2.5 px-4 text-secondary-700 cursor-pointer"
-                          onClick={() => navigate(`/vendor/profile/${item?.vendor?.id}/detail`)}
-                        >{item?.profile?.phone || '-'}</td>
-                        <td
-                          className="py-2.5 px-4 text-secondary-700 capitalize cursor-pointer"
-                          onClick={() => navigate(`/vendor/profile/${item?.vendor?.id}/detail`)}
-                        >{item?.vendor?.vendor_type || '-'}</td>
-                        <td
-                          className="py-2.5 px-4 cursor-pointer"
-                          onClick={() => navigate(`/vendor/profile/${item?.vendor?.id}/detail`)}
-                        >
-                          <Badge variant={getStatusVariant(item?.vendor?.status || '')}>{item?.vendor?.status || 'pending'}</Badge>
-                        </td>
-                        {canDeleteVendor && (
-                          <td className="py-2.5 px-4 text-right">
-                            <ActionMenu
-                              items={[
-                                {
-                                  label: 'View',
-                                  icon: <Eye size={14} />,
-                                  onClick: () => navigate(`/vendor/profile/${item?.vendor?.id}/detail`),
-                                },
-                                {
-                                  label: 'Delete',
-                                  icon: <Trash2 size={14} />,
-                                  onClick: () => setDeleteVendorId(item?.vendor?.id || ''),
-                                  variant: 'danger',
-                                },
-                              ]}
-                            />
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between px-3 py-2.5 border-t border-secondary-100 bg-secondary-50">
-                  <span className="text-xs text-secondary-500">Page {currentPage}/{totalPages}</span>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>Prev</Button>
-                    <Button variant="ghost" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>Next</Button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </Card>
-
-        <ConfirmModal
-          show={!!deleteVendorId}
-          title="Delete Vendor"
-          message="Are you sure you want to delete this vendor? This action cannot be undone."
-          confirmText="Delete"
-          variant="danger"
-          isLoading={isDeletingVendor}
-          onConfirm={handleDeleteVendorConfirm}
-          onCancel={() => setDeleteVendorId(null)}
-        />
-      </div>
-    );
-  }
-
   // Vendor role - show own profile
   // No vendor record yet - show create form prompt
   if (!vendor && !profile && !isEditing) {
@@ -1390,7 +1148,7 @@ export const VendorProfile: React.FC = () => {
             {canExport && activeVendorId && (
               <Button
                 variant="secondary"
-                onClick={handleExport}
+                onClick={() => handleExport()}
                 isLoading={isExporting}
                 leftIcon={<Download size={16} />}
               >

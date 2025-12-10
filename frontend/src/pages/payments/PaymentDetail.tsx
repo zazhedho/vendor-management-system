@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { paymentsApi } from '../../api/payments';
-import { Payment } from '../../types';
 import { ArrowLeft, FileText, Calendar, Download, Edit, Trash2, Loader2 } from 'lucide-react';
 import { Button, Card, Badge, Spinner, ConfirmModal } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
@@ -10,68 +10,44 @@ import { toast } from 'react-toastify';
 export const PaymentDetail: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const queryClient = useQueryClient();
   const { hasPermission } = useAuth();
   const canUpdate = hasPermission('payment', 'update');
   const canDelete = hasPermission('payment', 'delete');
-  const [payment, setPayment] = useState<Payment | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
-  useEffect(() => {
-    if (id) fetchPayment(id);
-  }, [id]);
+  const { data: payment, isLoading } = useQuery({
+    queryKey: ['payment', id],
+    queryFn: () => (canUpdate || canDelete) ? paymentsApi.getById(id!) : paymentsApi.getMyPaymentById(id!),
+    enabled: !!id,
+    select: (response) => response.data,
+  });
 
-  const handleDelete = async () => {
-    if (!id) return;
-    setIsDeleting(true);
-    try {
-      await paymentsApi.delete(id);
+  const deleteMutation = useMutation({
+    mutationFn: () => paymentsApi.delete(id!),
+    onSuccess: () => {
       toast.success('Payment deleted successfully');
       navigate('/payments');
-    } catch (error: any) {
+    },
+    onError: (error: any) => {
       toast.error(error?.response?.data?.error || 'Failed to delete payment');
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteModal(false);
-    }
-  };
+    },
+  });
 
-  const fetchPayment = async (paymentId: string) => {
-    setIsLoading(true);
-    try {
-      const response = canUpdate || canDelete
-        ? await paymentsApi.getById(paymentId)
-        : await paymentsApi.getMyPaymentById(paymentId);
-      if (response.status && response.data) {
-        setPayment(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch payment:', error);
-      toast.error('Failed to load payment details');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleStatusChange = async (newStatus: string) => {
-    if (!id || !payment || !canUpdate) return;
-    setIsUpdatingStatus(true);
-    try {
-      const response = await paymentsApi.update(id, { status: newStatus });
-      if (response.status && response.data) {
-        setPayment(response.data);
-        toast.success('Payment status updated');
-      } else {
-        setPayment({ ...payment, status: newStatus });
-        toast.success('Payment status updated');
-      }
-    } catch (error: any) {
+  const statusMutation = useMutation({
+    mutationFn: (newStatus: string) => paymentsApi.update(id!, { status: newStatus }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payment', id] });
+      toast.success('Payment status updated');
+    },
+    onError: (error: any) => {
       toast.error(error?.response?.data?.error || 'Failed to update status');
-    } finally {
-      setIsUpdatingStatus(false);
-    }
+    },
+  });
+
+  const handleStatusChange = (newStatus: string) => {
+    if (!id || !payment || !canUpdate) return;
+    statusMutation.mutate(newStatus);
   };
 
   const getStatusVariant = (status: string) => {
@@ -155,7 +131,7 @@ export const PaymentDetail: React.FC = () => {
                   <select
                     value={payment.status}
                     onChange={(e) => handleStatusChange(e.target.value)}
-                    disabled={isUpdatingStatus}
+                    disabled={statusMutation.isPending}
                     className="px-3 py-1.5 text-sm rounded-lg bg-white/10 border border-white/30 text-white capitalize focus:outline-none focus:ring-2 focus:ring-white/40 disabled:opacity-60"
                   >
                     {['pending', 'paid', 'cancelled', 'failed'].map((status) => (
@@ -164,7 +140,7 @@ export const PaymentDetail: React.FC = () => {
                       </option>
                     ))}
                   </select>
-                  {isUpdatingStatus && <Loader2 className="w-4 h-4 animate-spin text-white" />}
+                  {statusMutation.isPending && <Loader2 className="w-4 h-4 animate-spin text-white" />}
                 </div>
               )}
             </div>
@@ -264,8 +240,8 @@ export const PaymentDetail: React.FC = () => {
         message="Are you sure you want to delete this payment? This action cannot be undone."
         confirmText="Delete"
         variant="danger"
-        isLoading={isDeleting}
-        onConfirm={handleDelete}
+        isLoading={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate()}
         onCancel={() => setShowDeleteModal(false)}
       />
     </div>

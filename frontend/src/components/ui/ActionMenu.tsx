@@ -14,7 +14,7 @@ interface ActionMenuProps {
   items: ActionMenuItem[];
 }
 
-export const ActionMenu: React.FC<ActionMenuProps> = ({ items }) => {
+export const ActionMenu: React.FC<ActionMenuProps> = React.memo(({ items }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, openUpward: false });
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -112,4 +112,4 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ items }) => {
       )}
     </>
   );
-};
+});

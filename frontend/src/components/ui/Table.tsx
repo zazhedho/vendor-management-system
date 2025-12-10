@@ -15,14 +15,14 @@ interface TableProps<T> {
     onRowClick?: (item: T) => void;
 }
 
-export function Table<T>({
+const TableComponent = <T,>({
     data,
     columns,
     keyField,
     isLoading,
     emptyMessage = 'No data available',
     onRowClick
-}: TableProps<T>) {
+}: TableProps<T>) => {
     if (isLoading) {
         return (
             <div className="w-full rounded-xl border border-secondary-200 bg-white shadow-soft overflow-hidden">
@@ -100,4 +100,6 @@ export function Table<T>({
             </div>
         </div>
     );
-}
+};
+
+export const Table = React.memo(TableComponent) as typeof TableComponent;

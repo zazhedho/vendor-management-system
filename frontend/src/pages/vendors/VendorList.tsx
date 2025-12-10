@@ -1,73 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { vendorsApi } from '../../api/vendors';
 import { Vendor } from '../../types';
 import { Plus, Search, Eye, Edit, Trash2 } from 'lucide-react';
 import { Button, Card, Table, Badge, ConfirmModal, ActionMenu } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
+import { usePagination, useDebounce } from '../../hooks';
 
 export const VendorList: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { hasPermission } = useAuth();
   const canUpdateVendor = hasPermission('vendor', 'update');
   const canDeleteVendor = hasPermission('vendor', 'delete');
-  
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const debouncedSearch = useDebounce(searchTerm, 300);
+  const { currentPage, goToNextPage, goToPrevPage, canGoNext, canGoPrev } = usePagination(1);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    fetchVendors();
-  }, [currentPage]);
+  const { data: response, isLoading } = useQuery({
+    queryKey: ['vendors', { page: currentPage, search: debouncedSearch }],
+    queryFn: () => vendorsApi.getAll({ page: currentPage, limit: 10, search: debouncedSearch }),
+  });
 
-  const handleSearch = () => {
-    setCurrentPage(1);
-    fetchVendors();
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
-
-  const fetchVendors = async () => {
-    setIsLoading(true);
-    try {
-      const response = await vendorsApi.getAll({
-        page: currentPage,
-        limit: 10,
-        search: searchTerm,
-      });
-
-      if (response.status) {
-        setVendors(response.data || []);
-        setTotalPages(response.total_pages || 1);
-      }
-    } catch (error) {
-      console.error('Failed to fetch vendors:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!deleteId) return;
-    setIsDeleting(true);
-    try {
-      await vendorsApi.delete(deleteId);
-      fetchVendors();
-    } catch (error) {
-      console.error('Failed to delete vendor:', error);
-    } finally {
-      setIsDeleting(false);
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => vendorsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vendors'] });
       setDeleteId(null);
-    }
-  };
+    },
+  });
+
+  const vendors = response?.data || [];
+  const totalPages = response?.total_pages || 1;
 
   const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -164,14 +131,9 @@ export const VendorList: React.FC = () => {
             placeholder="Search vendors..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyPress={handleKeyPress}
             className="w-full pl-10 pr-4 py-2 rounded-lg border border-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           />
           </div>
-          <Button onClick={handleSearch}>
-            <Search size={16} className="mr-2" />
-            Search
-          </Button>
         </div>
       </Card>
 
@@ -188,8 +150,8 @@ export const VendorList: React.FC = () => {
         <div className="flex justify-center gap-2">
           <Button
             variant="secondary"
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
+            onClick={goToPrevPage}
+            disabled={!canGoPrev}
           >
             Previous
           </Button>
@@ -198,8 +160,8 @@ export const VendorList: React.FC = () => {
           </span>
           <Button
             variant="secondary"
-            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
+            onClick={goToNextPage}
+            disabled={!canGoNext(totalPages)}
           >
             Next
           </Button>
@@ -212,8 +174,8 @@ export const VendorList: React.FC = () => {
         message="Are you sure you want to delete this vendor? This action cannot be undone."
         confirmText="Delete"
         variant="danger"
-        isLoading={isDeleting}
-        onConfirm={handleDeleteConfirm}
+        isLoading={deleteMutation.isPending}
+        onConfirm={() => deleteId && deleteMutation.mutate(deleteId)}
         onCancel={() => setDeleteId(null)}
       />
     </div>

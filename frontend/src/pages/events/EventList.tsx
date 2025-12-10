@@ -1,106 +1,61 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { eventsApi } from '../../api/events';
 import { Event } from '../../types';
-import { Plus, Search, Eye, Edit, Trash2, X } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, X } from 'lucide-react';
 import { Button, Card, Table, Badge, ConfirmModal, ActionMenu } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
+import { usePagination, useDebounce } from '../../hooks';
 import { toast } from 'react-toastify';
 
 export const EventList: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { hasPermission } = useAuth();
   const canCreate = hasPermission('event', 'create');
   const canUpdate = hasPermission('event', 'update');
   const canDelete = hasPermission('event', 'delete');
-  const [events, setEvents] = useState<Event[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const debouncedSearch = useDebounce(searchTerm, 300);
+  const { currentPage, setCurrentPage, goToNextPage, goToPrevPage, canGoNext, canGoPrev } = usePagination(1);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    fetchEvents();
-  }, [currentPage]);
+  const { data: response, isLoading } = useQuery({
+    queryKey: ['events', { page: currentPage, search: debouncedSearch }],
+    queryFn: () => eventsApi.getAll({ page: currentPage, limit: 10, search: debouncedSearch }),
+  });
 
-  const handleSearch = () => {
-    setCurrentPage(1);
-    fetchEvents();
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => eventsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      setDeleteId(null);
+    },
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => eventsApi.updateStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      toast.success('Event status updated successfully');
+    },
+    onError: () => {
+      toast.error('Failed to update event status');
+    },
+  });
+
+  const handleStatusChange = (eventId: string, newStatus: string) => {
+    statusMutation.mutate({ id: eventId, status: newStatus });
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
+  const events = response?.data || [];
+  const totalPages = response?.total_pages || 1;
 
-  const handleReset = async () => {
+  const handleReset = () => {
     setSearchTerm('');
     setCurrentPage(1);
-    
-    setIsLoading(true);
-    try {
-      const response = await eventsApi.getAll({
-        page: 1,
-        limit: 10,
-        search: ''
-      });
-      if (response.status) {
-        setEvents(response.data || []);
-        setTotalPages(response.total_pages || 1);
-      }
-    } catch (error) {
-      console.error('Failed to fetch events:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchEvents = async () => {
-    setIsLoading(true);
-    try {
-      const response = await eventsApi.getAll({
-        page: currentPage,
-        limit: 10,
-        search: searchTerm,
-      });
-
-      if (response.status) {
-        setEvents(response.data || []);
-        setTotalPages(response.total_pages || 1);
-      }
-    } catch (error) {
-      console.error('Failed to fetch events:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!deleteId) return;
-    setIsDeleting(true);
-    try {
-      await eventsApi.delete(deleteId);
-      fetchEvents();
-    } catch (error) {
-      console.error('Failed to delete event:', error);
-    } finally {
-      setIsDeleting(false);
-      setDeleteId(null);
-    }
-  };
-
-  const handleStatusChange = async (eventId: string, newStatus: string) => {
-    try {
-      await eventsApi.updateStatus(eventId, newStatus);
-      toast.success('Event status updated successfully');
-      fetchEvents();
-    } catch (error) {
-      console.error('Failed to update status:', error);
-      toast.error('Failed to update event status');
-    }
   };
 
   const getStatusVariant = (status: string) => {
@@ -225,13 +180,9 @@ export const EventList: React.FC = () => {
               placeholder="Search events..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyPress={handleKeyPress}
               className="w-full px-4 py-2 rounded-lg border border-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
             />
           </div>
-          <Button onClick={handleSearch} leftIcon={<Search size={20} />}>
-            Search
-          </Button>
           {searchTerm && (
             <Button onClick={handleReset} variant="secondary" leftIcon={<X size={20} />}>
               Reset
@@ -253,8 +204,8 @@ export const EventList: React.FC = () => {
         <div className="flex justify-center gap-2">
           <Button
             variant="secondary"
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
+            onClick={goToPrevPage}
+            disabled={!canGoPrev}
           >
             Previous
           </Button>
@@ -263,8 +214,8 @@ export const EventList: React.FC = () => {
           </span>
           <Button
             variant="secondary"
-            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
+            onClick={goToNextPage}
+            disabled={!canGoNext(totalPages)}
           >
             Next
           </Button>
@@ -277,8 +228,8 @@ export const EventList: React.FC = () => {
         message="Are you sure you want to delete this event? This action cannot be undone."
         confirmText="Delete"
         variant="danger"
-        isLoading={isDeleting}
-        onConfirm={handleDeleteConfirm}
+        isLoading={deleteMutation.isPending}
+        onConfirm={() => deleteId && deleteMutation.mutate(deleteId)}
         onCancel={() => setDeleteId(null)}
       />
     </div>

@@ -130,7 +130,7 @@ func (r *Routes) UserRoutes() {
 		}
 	}
 
-	r.App.GET("/api/users", mdw.AuthMiddleware(), mdw.PermissionMiddleware("users", "view"), h.GetAllUsers)
+	r.App.GET("/api/users", mdw.AuthMiddleware(), mdw.PermissionMiddleware("users", "list"), h.GetAllUsers)
 }
 
 func (r *Routes) RoleRoutes() {
@@ -142,7 +142,7 @@ func (r *Routes) RoleRoutes() {
 	h := roleHandler.NewRoleHandler(svc)
 	mdw := middlewares.NewMiddleware(blacklistRepo, repoPermission)
 
-	r.App.GET("/api/roles", mdw.AuthMiddleware(), mdw.PermissionMiddleware("roles", "view"), h.GetAll)
+	r.App.GET("/api/roles", mdw.AuthMiddleware(), mdw.PermissionMiddleware("roles", "list"), h.GetAll)
 
 	role := r.App.Group("/api/role").Use(mdw.AuthMiddleware())
 	{
@@ -163,15 +163,19 @@ func (r *Routes) PermissionRoutes() {
 	h := permissionHandler.NewPermissionHandler(svc)
 	mdw := middlewares.NewMiddleware(blacklistRepo, repo)
 
-	r.App.GET("/api/permissions", mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin), h.GetAll)
+	// List endpoints
+	r.App.GET("/api/permissions", mdw.AuthMiddleware(), mdw.PermissionMiddleware("permissions", "list"), h.GetAll)
+
+	// Get current user's permissions
 	r.App.GET("/api/permissions/me", mdw.AuthMiddleware(), h.GetUserPermissions)
 
-	permission := r.App.Group("/api/permission").Use(mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin))
+	// CRUD endpoints
+	permission := r.App.Group("/api/permission").Use(mdw.AuthMiddleware())
 	{
-		permission.POST("", h.Create)
-		permission.GET("/:id", h.GetByID)
-		permission.PUT("/:id", h.Update)
-		permission.DELETE("/:id", h.Delete)
+		permission.POST("", mdw.PermissionMiddleware("permissions", "create"), h.Create)
+		permission.GET("/:id", mdw.PermissionMiddleware("permissions", "view"), h.GetByID)
+		permission.PUT("/:id", mdw.PermissionMiddleware("permissions", "update"), h.Update)
+		permission.DELETE("/:id", mdw.PermissionMiddleware("permissions", "delete"), h.Delete)
 	}
 }
 
@@ -182,16 +186,20 @@ func (r *Routes) MenuRoutes() {
 	h := menuHandler.NewMenuHandler(svc)
 	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB), pRepo)
 
+	// Public endpoints for authenticated users
 	r.App.GET("/api/menus/active", mdw.AuthMiddleware(), h.GetActiveMenus)
 	r.App.GET("/api/menus/me", mdw.AuthMiddleware(), h.GetUserMenus)
-	r.App.GET("/api/menus", mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin), h.GetAll)
 
-	menu := r.App.Group("/api/menu").Use(mdw.AuthMiddleware(), mdw.RoleMiddleware(utils.RoleAdmin))
+	// List endpoints
+	r.App.GET("/api/menus", mdw.AuthMiddleware(), mdw.PermissionMiddleware("menus", "list"), h.GetAll)
+
+	// CRUD endpoints
+	menu := r.App.Group("/api/menu").Use(mdw.AuthMiddleware())
 	{
-		menu.POST("", h.Create)
-		menu.GET("/:id", h.GetByID)
-		menu.PUT("/:id", h.Update)
-		menu.DELETE("/:id", h.Delete)
+		menu.POST("", mdw.PermissionMiddleware("menus", "create"), h.Create)
+		menu.GET("/:id", mdw.PermissionMiddleware("menus", "view"), h.GetByID)
+		menu.PUT("/:id", mdw.PermissionMiddleware("menus", "update"), h.Update)
+		menu.DELETE("/:id", mdw.PermissionMiddleware("menus", "delete"), h.Delete)
 	}
 }
 
@@ -269,7 +277,7 @@ func (r *Routes) VendorRoutes() {
 
 	vendorAdmin := r.App.Group("/api/vendors").Use(mdw.AuthMiddleware())
 	{
-		vendorAdmin.GET("", mdw.PermissionMiddleware("vendor", "view"), h.GetAllVendors)
+		vendorAdmin.GET("", mdw.PermissionMiddleware("vendor", "list"), h.GetAllVendors)
 		vendorAdmin.GET("/:id", mdw.PermissionMiddleware("vendor", "view"), h.GetVendorDetail)
 		vendorAdmin.GET("/:id/export", mdw.PermissionMiddleware("vendor", "view"), h.ExportVendorProfile)
 		vendorAdmin.PUT("/:id/status", mdw.PermissionMiddleware("vendor", "update_status"), h.UpdateVendorStatus)
@@ -296,7 +304,7 @@ func (r *Routes) EventRoutes() {
 	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB), pRepo)
 
 	// Public event list (for vendors to see open events)
-	r.App.GET("/api/events", mdw.AuthMiddleware(), mdw.PermissionMiddleware("event", "view"), h.GetAllEvents)
+	r.App.GET("/api/events", mdw.AuthMiddleware(), mdw.PermissionMiddleware("event", "list"), h.GetAllEvents)
 	r.App.GET("/api/event/:id", mdw.AuthMiddleware(), mdw.PermissionMiddleware("event", "view"), h.GetEventByID)
 
 	// Client/Admin event management
@@ -307,8 +315,8 @@ func (r *Routes) EventRoutes() {
 		eventAdmin.DELETE("/:id", mdw.PermissionMiddleware("event", "delete"), h.DeleteEvent)
 		eventAdmin.POST("/:id/files", mdw.PermissionMiddleware("event", "update"), h.UploadEventFile)
 		eventAdmin.DELETE("/:id/files/:fileId", mdw.PermissionMiddleware("event", "update"), h.DeleteEventFile)
-		eventAdmin.GET("/submissions", mdw.PermissionMiddleware("event", "view_submissions"), h.GetAllSubmissions)
-		eventAdmin.GET("/submissions/grouped", mdw.PermissionMiddleware("event", "view_submissions"), h.GetGroupedSubmissions)
+		eventAdmin.GET("/submissions", mdw.PermissionMiddleware("event", "list_submissions"), h.GetAllSubmissions)
+		eventAdmin.GET("/submissions/grouped", mdw.PermissionMiddleware("event", "list_submissions"), h.GetGroupedSubmissions)
 		eventAdmin.GET("/:id/submissions", mdw.PermissionMiddleware("event", "view_submissions"), h.GetSubmissionsByEventID)
 		eventAdmin.PUT("/submission/:id/score", mdw.PermissionMiddleware("event", "score"), h.ScoreSubmission)
 		eventAdmin.PUT("/submission/:id/shortlist", mdw.PermissionMiddleware("event", "score"), h.ShortlistSubmission)
@@ -356,7 +364,7 @@ func (r *Routes) PaymentRoutes() {
 		paymentAdmin.DELETE("/:id/files/:file_id", mdw.PermissionMiddleware("payment", "update"), h.DeletePaymentFile)
 	}
 
-	r.App.GET("/api/payments", mdw.AuthMiddleware(), mdw.PermissionMiddleware("payment", "view"), h.GetAllPayments)
+	r.App.GET("/api/payments", mdw.AuthMiddleware(), mdw.PermissionMiddleware("payment", "list"), h.GetAllPayments)
 }
 
 func (r *Routes) EvaluationRoutes() {
@@ -376,7 +384,7 @@ func (r *Routes) EvaluationRoutes() {
 	mdw := middlewares.NewMiddleware(authRepo.NewBlacklistRepo(r.DB), pRepo)
 
 	// View evaluations (shared access)
-	r.App.GET("/api/evaluations", mdw.AuthMiddleware(), mdw.PermissionMiddleware("evaluation", "view"), h.GetAllEvaluations)
+	r.App.GET("/api/evaluations", mdw.AuthMiddleware(), mdw.PermissionMiddleware("evaluation", "list"), h.GetAllEvaluations)
 	r.App.GET("/api/evaluation/:id", mdw.AuthMiddleware(), mdw.PermissionMiddleware("evaluation", "view"), h.GetEvaluationByID)
 	r.App.GET("/api/event/:id/evaluations", mdw.AuthMiddleware(), mdw.PermissionMiddleware("evaluation", "view"), h.GetEvaluationsByEventID)
 

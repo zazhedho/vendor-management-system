@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { eventsApi } from '../../api/events';
 import { vendorsApi } from '../../api/vendors';
-import { Event } from '../../types';
 import { ArrowLeft, Edit, Calendar, Tag, FileText, Trophy, AlertCircle } from 'lucide-react';
 import { Button, Card, Badge, Spinner } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
@@ -12,59 +12,33 @@ export const EventDetail: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { hasPermission } = useAuth();
-  const [event, setEvent] = useState<Event | null>(null);
-  const [vendorProfile, setVendorProfile] = useState<any>(null);
-  const [hasSubmitted, setHasSubmitted] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
 
   const canSubmit = hasPermission('event', 'submit_pitch');
   const canUpdate = hasPermission('event', 'update');
 
-  useEffect(() => {
-    if (id) fetchEvent(id);
-    if (canSubmit) {
-      fetchVendorProfile();
-      checkExistingSubmission();
-    }
-  }, [id, canSubmit]);
+  const { data: event, isLoading } = useQuery({
+    queryKey: ['event', id],
+    queryFn: () => eventsApi.getById(id!),
+    enabled: !!id,
+    select: (response) => response.data,
+  });
 
-  const checkExistingSubmission = async () => {
-    try {
-      const response = await eventsApi.getMySubmissions();
-      if (response.status && response.data) {
-        const existingSubmission = response.data.find((s: any) => s.event_id === id);
-        setHasSubmitted(!!existingSubmission);
-      }
-    } catch (error) {
-      console.error('Failed to check submissions:', error);
-    }
-  };
+  const { data: vendorProfile } = useQuery({
+    queryKey: ['myVendorProfile'],
+    queryFn: () => vendorsApi.getMyVendorProfile(),
+    enabled: canSubmit,
+    select: (response) => response.data,
+  });
 
-  const fetchEvent = async (eventId: string) => {
-    setIsLoading(true);
-    try {
-      const response = await eventsApi.getById(eventId);
-      if (response.status && response.data) {
-        setEvent(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch event:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const { data: submissions } = useQuery({
+    queryKey: ['mySubmissions'],
+    queryFn: () => eventsApi.getMySubmissions(),
+    enabled: canSubmit,
+    select: (response) => response.data,
+  });
 
-  const fetchVendorProfile = async () => {
-    try {
-      const response = await vendorsApi.getMyVendorProfile();
-      if (response.status && response.data) {
-        setVendorProfile(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch vendor profile:', error);
-    }
-  };
+  const hasSubmitted = submissions?.find((s: any) => s.event_id === id);
 
   const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -241,7 +215,6 @@ export const EventDetail: React.FC = () => {
           onClose={() => setShowSubmitModal(false)}
           onSuccess={() => {
             setShowSubmitModal(false);
-            fetchEvent(id);
           }}
         />
       )}

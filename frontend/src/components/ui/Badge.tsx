@@ -6,7 +6,7 @@ interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
     dot?: boolean;
 }
 
-export const Badge = ({ className = '', variant = 'primary', size = 'md', dot = false, children, ...props }: BadgeProps) => {
+export const Badge = React.memo(({ className = '', variant = 'primary', size = 'md', dot = false, children, ...props }: BadgeProps) => {
     const variants = {
         primary: 'bg-gradient-to-br from-primary-50 to-primary-100/80 text-primary-700 border-primary-200/50 shadow-sm',
         secondary: 'bg-gradient-to-br from-secondary-50 to-secondary-100/80 text-secondary-700 border-secondary-200/50 shadow-sm',
@@ -45,4 +45,6 @@ export const Badge = ({ className = '', variant = 'primary', size = 'md', dot = 
             {children}
         </span>
     );
-};
+});
+
+Badge.displayName = 'Badge';

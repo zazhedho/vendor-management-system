@@ -1,3 +1,4 @@
+import React from 'react';
 import { Loader2 } from 'lucide-react';
 
 interface SpinnerProps {
@@ -5,7 +6,7 @@ interface SpinnerProps {
     className?: string;
 }
 
-export const Spinner = ({ size = 'md', className = '' }: SpinnerProps) => {
+export const Spinner = React.memo(({ size = 'md', className = '' }: SpinnerProps) => {
     const sizes = {
         sm: 'w-4 h-4',
         md: 'w-6 h-6',
@@ -15,4 +16,6 @@ export const Spinner = ({ size = 'md', className = '' }: SpinnerProps) => {
     return (
         <Loader2 className={`animate-spin text-primary-600 ${sizes[size]} ${className}`} />
     );
-};
+});
+
+Spinner.displayName = 'Spinner';
