@@ -23,8 +23,8 @@ const VendorList = lazy(() => import('./pages/vendors').then(m => ({ default: m.
 const VendorForm = lazy(() => import('./pages/vendors').then(m => ({ default: m.VendorForm })));
 const VendorDetail = lazy(() => import('./pages/vendors').then(m => ({ default: m.VendorDetail })));
 const VendorProfile = lazy(() => import('./pages/vendors').then(m => ({ default: m.VendorProfile })));
-const VendorProfileList = lazy(() => import('./pages/vendors').then(m => ({ default: m.VendorProfileList })));
 const VendorDocuments = lazy(() => import('./pages/vendors').then(m => ({ default: m.VendorDocuments })));
+const VendorProfileRedirect = lazy(() => import('./pages/vendors').then(m => ({ default: m.VendorProfileRedirect })));
 
 // Payments
 const PaymentList = lazy(() => import('./pages/payments').then(m => ({ default: m.PaymentList })));
@@ -448,10 +448,10 @@ function App() {
           <Route
             path="/vendor/profile"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="vendor" action="view">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
-                    <VendorProfileList />
+                    <VendorProfileRedirect />
                   </Suspense>
                 </Layout>
               </ProtectedRoute>
@@ -460,7 +460,7 @@ function App() {
           <Route
             path="/vendor/profile/detail"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="vendor" action="view">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <VendorProfile />
@@ -472,7 +472,7 @@ function App() {
           <Route
             path="/vendor/profile/edit"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="vendor" action="update">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <VendorForm />
@@ -484,7 +484,7 @@ function App() {
           <Route
             path="/vendor/profile/:id/detail"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="vendor" action="view">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <VendorDetail />
@@ -496,7 +496,7 @@ function App() {
           <Route
             path="/vendor/profile/new"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="vendor" action="create">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <VendorForm />
@@ -508,7 +508,7 @@ function App() {
           <Route
             path="/vendor/profile/documents"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="vendor" action="view">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <VendorDocuments />
@@ -520,7 +520,7 @@ function App() {
           <Route
             path="/vendor/profile/:id/edit"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="vendor" action="update">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <VendorForm />

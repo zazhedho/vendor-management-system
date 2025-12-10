@@ -467,7 +467,7 @@ export const VendorProfile: React.FC = () => {
               : 'This vendor has not created a profile yet.'
           }
           actionLabel={canUpdateVendor && isVendorRole ? 'Create Vendor Profile' : undefined}
-          onAction={canUpdateVendor && isVendorRole ? () => navigate('/vendor/profile/edit') : undefined}
+          onAction={canUpdateVendor && isVendorRole ? () => navigate('/vendor/profile/new') : undefined}
         />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
