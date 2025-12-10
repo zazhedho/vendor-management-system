@@ -138,7 +138,10 @@ func (h *HandlerEvaluation) GetMyEvaluations(ctx *gin.Context) {
 	logId := utils.GenerateLogId(ctx)
 	logPrefix := fmt.Sprintf("[%s][EvaluationHandler][GetMyEvaluations]", logId)
 
-	data, err := h.Service.GetMyEvaluations(userId)
+	params, _ := filter.GetBaseParams(ctx, "created_at", "desc", 10)
+	params.Filters = filter.WhitelistFilter(params.Filters, []string{"event_id"})
+
+	data, totalData, err := h.Service.GetMyEvaluations(userId, params)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetMyEvaluations; ERROR: %s;", logPrefix, err))
 		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
@@ -147,7 +150,7 @@ func (h *HandlerEvaluation) GetMyEvaluations(ctx *gin.Context) {
 		return
 	}
 
-	res := response.Response(http.StatusOK, "success", logId, data)
+	res := response.PaginationResponse(http.StatusOK, int(totalData), params.Page, params.Limit, logId, data)
 	ctx.JSON(http.StatusOK, res)
 }
 

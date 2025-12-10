@@ -8,9 +8,9 @@ export const evaluationsApi = {
     return response.data;
   },
 
-  // Get my evaluations (Vendor)
-  getMyEvaluations: async () => {
-    const response = await apiClient.get<ApiResponse<Evaluation[]>>('/vendor/evaluations');
+  // Get my evaluations (Vendor) with pagination
+  getMyEvaluations: async (params?: { page?: number; limit?: number; search?: string }) => {
+    const response = await apiClient.get<PaginatedResponse<Evaluation>>('/vendor/evaluations', { params });
     return response.data;
   },
 

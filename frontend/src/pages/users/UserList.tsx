@@ -1,111 +1,66 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi } from '../../api/users';
 import { useAuth } from '../../context/AuthContext';
 import { User } from '../../types';
-import { Plus, Search, Edit, Trash2, Shield, X, Users } from 'lucide-react';
+import { Plus, Edit, Trash2, Shield, X, Users } from 'lucide-react';
 import { Button, Card, Table, Badge, ConfirmModal, ActionMenu, EmptyState } from '../../components/ui';
+import { useDebounce } from '../../hooks';
+import { toast } from 'react-toastify';
 
 export const UserList: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user: currentUser, hasPermission } = useAuth();
   const canListUsers = hasPermission('users', 'list');
   const canCreateUser = hasPermission('users', 'create');
   const canUpdateUser = hasPermission('users', 'update');
   const canDeleteUser = hasPermission('users', 'delete');
-  const [users, setUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const debouncedSearch = useDebounce(searchTerm, 300);
 
-  useEffect(() => {
-    if (!canListUsers) return;
-    fetchUsers();
-  }, [currentPage, canListUsers]);
+  const { data: response, isLoading } = useQuery({
+    queryKey: ['users', { page: currentPage, search: debouncedSearch }],
+    queryFn: () => usersApi.getAll({
+      page: currentPage,
+      limit: 10,
+      search: debouncedSearch,
+    }),
+    enabled: canListUsers,
+    select: (data) => {
+      if (data.status && data.data) {
+        let userData = data.data;
+        if (currentUser?.role !== 'superadmin') {
+          userData = userData.filter((u: User) => u.role !== 'superadmin');
+        }
+        return { ...data, data: userData };
+      }
+      return data;
+    },
+  });
 
-  const handleSearch = () => {
-    setCurrentPage(1);
-    fetchUsers();
-  };
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => usersApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setDeleteId(null);
+      toast.success('User deleted successfully');
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.error || 'Failed to delete user');
+    },
+  });
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
+  const users = response?.data || [];
+  const totalPages = response?.total_pages || 1;
 
-  const handleReset = async () => {
+  const handleReset = () => {
     setSearchTerm('');
     setCurrentPage(1);
-    
-    if (!canListUsers) return;
-
-    // Fetch with empty search
-    setIsLoading(true);
-    try {
-      const response = await usersApi.getAll({
-        page: 1,
-        limit: 10,
-        search: '',
-      });
-
-      if (response.status) {
-        let userData = response.data || [];
-        if (currentUser?.role !== 'superadmin') {
-          userData = userData.filter((u: User) => u.role !== 'superadmin');
-        }
-        setUsers(userData);
-        setTotalPages(response.total_pages || 1);
-      }
-    } catch (error) {
-      console.error('Failed to fetch users:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchUsers = async () => {
-    if (!canListUsers) return;
-
-    setIsLoading(true);
-    try {
-      const response = await usersApi.getAll({
-        page: currentPage,
-        limit: 10,
-        search: searchTerm,
-      });
-
-      if (response.status) {
-        let userData = response.data || [];
-        if (currentUser?.role !== 'superadmin') {
-          userData = userData.filter((u: User) => u.role !== 'superadmin');
-        }
-        // Superadmin sees everyone, including other superadmins
-        setUsers(userData);
-        setTotalPages(response.total_pages || 1);
-      }
-    } catch (error) {
-      console.error('Failed to fetch users:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!deleteId) return;
-    setIsDeleting(true);
-    try {
-      await usersApi.delete(deleteId);
-      fetchUsers();
-    } catch (error) {
-      console.error('Failed to delete user:', error);
-    } finally {
-      setIsDeleting(false);
-      setDeleteId(null);
-    }
   };
 
   const getRoleVariant = (role: string) => {
@@ -210,14 +165,13 @@ export const UserList: React.FC = () => {
               type="text"
               placeholder="Search users by name or email..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={handleKeyDown}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full px-4 py-2 rounded-lg border border-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
             />
           </div>
-          <Button onClick={handleSearch} leftIcon={<Search size={20} />}>
-            Search
-          </Button>
           {searchTerm && (
             <Button onClick={handleReset} variant="secondary" leftIcon={<X size={20} />}>
               Reset
@@ -272,8 +226,8 @@ export const UserList: React.FC = () => {
         message="Are you sure you want to delete this user? This action cannot be undone."
         confirmText="Delete"
         variant="danger"
-        isLoading={isDeleting}
-        onConfirm={handleDeleteConfirm}
+        isLoading={deleteMutation.isPending}
+        onConfirm={() => deleteId && deleteMutation.mutate(deleteId)}
         onCancel={() => setDeleteId(null)}
       />
     </div>

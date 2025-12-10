@@ -94,13 +94,13 @@ func (s *ServiceEvaluation) GetEvaluationsByVendorID(vendorId string) ([]domaine
 	return s.EvaluationRepo.GetEvaluationsByVendorID(vendorId)
 }
 
-// GetMyEvaluations - For vendor to get their own evaluations
-func (s *ServiceEvaluation) GetMyEvaluations(vendorUserId string) ([]domainevaluations.Evaluation, error) {
+// GetMyEvaluations - For vendor to get their own evaluations with pagination
+func (s *ServiceEvaluation) GetMyEvaluations(vendorUserId string, params filter.BaseParams) ([]domainevaluations.Evaluation, int64, error) {
 	vendor, err := s.VendorRepo.GetVendorByUserID(vendorUserId)
 	if err != nil {
-		return nil, errors.New("vendor profile not found")
+		return nil, 0, errors.New("vendor profile not found")
 	}
-	return s.EvaluationRepo.GetEvaluationsByVendorID(vendor.Id)
+	return s.EvaluationRepo.GetEvaluationsByVendorIDPaginated(vendor.Id, params)
 }
 
 func (s *ServiceEvaluation) GetAllEvaluations(params filter.BaseParams) ([]domainevaluations.Evaluation, int64, error) {

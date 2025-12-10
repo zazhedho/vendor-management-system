@@ -67,6 +67,40 @@ func (r *repo) GetEvaluationsByVendorID(vendorId string) (ret []domainevaluation
 	return ret, nil
 }
 
+func (r *repo) GetEvaluationsByVendorIDPaginated(vendorId string, params filter.BaseParams) (ret []domainevaluations.Evaluation, totalData int64, err error) {
+	query := r.DB.Model(&domainevaluations.Evaluation{}).Where("vendor_id = ?", vendorId)
+
+	if params.Search != "" {
+		query = query.Joins("LEFT JOIN events ON evaluations.event_id = events.id AND events.deleted_at IS NULL").
+			Where("LOWER(events.title) LIKE LOWER(?)", "%"+params.Search+"%")
+	}
+
+	if err := query.Count(&totalData).Error; err != nil {
+		return nil, 0, err
+	}
+
+	orderBy := "created_at"
+	orderDir := "desc"
+	if params.OrderBy != "" {
+		orderBy = params.OrderBy
+	}
+	if params.OrderDirection != "" {
+		orderDir = params.OrderDirection
+	}
+
+	if err = r.DB.
+		Preload("Event").
+		Preload("Photos").
+		Where("vendor_id = ?", vendorId).
+		Order(fmt.Sprintf("%s %s", orderBy, orderDir)).
+		Offset(params.Offset).
+		Limit(params.Limit).
+		Find(&ret).Error; err != nil {
+		return nil, 0, err
+	}
+	return ret, totalData, nil
+}
+
 func (r *repo) GetAllEvaluations(params filter.BaseParams) (ret []domainevaluations.Evaluation, totalData int64, err error) {
 	query := r.DB.Model(&domainevaluations.Evaluation{}).
 		Joins("LEFT JOIN events ON evaluations.event_id = events.id AND events.deleted_at IS NULL").

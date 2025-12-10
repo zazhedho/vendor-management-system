@@ -13,6 +13,7 @@ type RepoEvaluationInterface interface {
 	GetEvaluationByEventAndVendor(eventId string, vendorId string) (domainevaluations.Evaluation, error)
 	GetEvaluationsByEventID(eventId string) ([]domainevaluations.Evaluation, error)
 	GetEvaluationsByVendorID(vendorId string) ([]domainevaluations.Evaluation, error)
+	GetEvaluationsByVendorIDPaginated(vendorId string, params filter.BaseParams) ([]domainevaluations.Evaluation, int64, error)
 	GetAllEvaluations(params filter.BaseParams) ([]domainevaluations.Evaluation, int64, error)
 	UpdateEvaluation(m domainevaluations.Evaluation) error
 	DeleteEvaluation(id string) error
