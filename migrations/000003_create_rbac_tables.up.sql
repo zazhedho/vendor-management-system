@@ -219,6 +219,8 @@ AND p.name IN (
 ON CONFLICT DO NOTHING;
 
 -- Assign permissions to vendor role
+-- Note: vendor uses 'view_payments' for /api/vendor/payments (own payments only, filtered by vendor_id)
+-- vendor does NOT have 'list_payments' which is for /api/payments (all payments - admin only)
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r
@@ -228,7 +230,7 @@ AND p.name IN (
     'view_profile', 'update_profile', 'view_dashboard',
     'view_vendor_profile', 'update_vendor_profile', 'view_vendor_submissions', 'create_vendor_submission',
     'list_events', 'view_events', 'submit_pitch', 'view_my_submissions',
-    'list_payments', 'view_payments',
+    'view_payments',
     'upload_evaluation_photo', 'list_evaluations', 'view_evaluations'
 )
 ON CONFLICT DO NOTHING;
