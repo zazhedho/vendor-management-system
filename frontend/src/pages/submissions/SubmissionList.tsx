@@ -1,28 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { eventsApi } from '../../api/events';
-import { EventSubmission, GroupedSubmissionsResponse, EventSubmissionGroup } from '../../types';
-import { FileText, Award, Trophy, Star, Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Send } from 'lucide-react';
+import { EventSubmission, EventSubmissionGroup } from '../../types';
+import { FileText, Award, Trophy, Star, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Send } from 'lucide-react';
 import { Button, Card, Badge, Spinner, EmptyState } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
+import { useDebounce } from '../../hooks';
 import { ScoreSubmissionModal } from './ScoreSubmissionModal';
 import { SelectWinnerModal } from './SelectWinnerModal';
 import { toast } from 'react-toastify';
 
 export const SubmissionList: React.FC = () => {
+  const queryClient = useQueryClient();
   const { hasPermission } = useAuth();
-  const [vendorSubmissions, setVendorSubmissions] = useState<EventSubmission[]>([]);
-  const [groupedData, setGroupedData] = useState<GroupedSubmissionsResponse | null>(null);
+  
   const [searchTerm, setSearchTerm] = useState('');
-  const [appliedSearch, setAppliedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [vendorPage, setVendorPage] = useState(1);
-  const [vendorTotalPages, setVendorTotalPages] = useState(1);
-  const [vendorTotalData, setVendorTotalData] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
   const [scoreModalData, setScoreModalData] = useState<{ submissionId: string; currentScore?: number } | null>(null);
   const [winnerModalData, setWinnerModalData] = useState<{ eventId: string; eventTitle: string; submissions: EventSubmission[] } | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
+  
+  const debouncedSearch = useDebounce(searchTerm, 300);
 
   const canSubmit = hasPermission('event', 'submit_pitch');
   const canListSubmissions = hasPermission('event', 'list_submissions');
@@ -36,56 +36,56 @@ export const SubmissionList: React.FC = () => {
   const isVendorView = canViewMySubmissions && !canViewEventSubmissions;
   const vendorPageSize = 10;
 
-  useEffect(() => {
-    if (!hasSubmissionAccess) {
-      setIsLoading(false);
-      return;
-    }
+  // Vendor submissions query
+  const { data: vendorResponse, isLoading: isLoadingVendor } = useQuery({
+    queryKey: ['mySubmissions', { page: vendorPage, search: debouncedSearch }],
+    queryFn: () => eventsApi.getMySubmissions({
+      page: vendorPage,
+      limit: vendorPageSize,
+      search: debouncedSearch,
+      order_by: 'updated_at',
+      order_direction: 'desc'
+    }),
+    enabled: hasSubmissionAccess && isVendorView,
+  });
 
-    if (isVendorView) {
-      fetchVendorSubmissions(vendorPage, appliedSearch);
-    } else if (canViewEventSubmissions) {
-      fetchGroupedSubmissions();
-    }
-  }, [currentPage, vendorPage, appliedSearch, hasSubmissionAccess, isVendorView, canViewEventSubmissions]);
+  // Grouped submissions query (admin view)
+  const { data: groupedResponse, isLoading: isLoadingGrouped } = useQuery({
+    queryKey: ['groupedSubmissions', { page: currentPage, search: debouncedSearch }],
+    queryFn: () => eventsApi.getGroupedSubmissions({
+      page: currentPage,
+      limit: 10,
+      search: debouncedSearch,
+      submission_page: 1,
+      submission_limit: 10
+    }),
+    enabled: hasSubmissionAccess && !isVendorView && canViewEventSubmissions,
+  });
 
-  const handleSearch = () => {
-    setAppliedSearch(searchTerm);
-    if (isVendorView) {
-      setVendorPage(1);
-    }
-    if (canViewEventSubmissions) {
-      setCurrentPage(1);
-      fetchGroupedSubmissions();
-    }
-  };
+  // Shortlist mutation
+  const shortlistMutation = useMutation({
+    mutationFn: ({ submissionId, isShortlisted }: { submissionId: string; isShortlisted: boolean }) =>
+      eventsApi.shortlistSubmission(submissionId, isShortlisted),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['groupedSubmissions'] });
+      toast.success(variables.isShortlisted ? 'Submission shortlisted' : 'Shortlist removed');
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.error || 'Failed to update shortlist');
+    },
+  });
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
+  const vendorSubmissions = vendorResponse?.data || [];
+  const vendorTotalPages = vendorResponse?.total_pages || 1;
+  const vendorTotalData = vendorResponse?.total_data || vendorSubmissions.length;
+  const groupedData = groupedResponse?.data || null;
 
-  const handleReset = async () => {
+  const isLoading = isVendorView ? isLoadingVendor : isLoadingGrouped;
+
+  const handleReset = () => {
     setSearchTerm('');
-    setAppliedSearch('');
     setCurrentPage(1);
     setVendorPage(1);
-    
-    if (isVendorView) {
-      return;
-    } else if (canViewEventSubmissions) {
-      const response = await eventsApi.getGroupedSubmissions({
-        page: 1,
-        limit: 10,
-        search: '',
-        submission_page: 1,
-        submission_limit: 10
-      });
-      if (response.status && response.data) {
-        setGroupedData(response.data);
-      }
-    }
   };
 
   const toggleRow = (submissionId: string) => {
@@ -108,66 +108,8 @@ export const SubmissionList: React.FC = () => {
     setExpandedEvents(newExpanded);
   };
 
-  const handleSubmissionPageChange = async (newPage: number) => {
-    // Fetch with new submission page for this event
-    await fetchGroupedSubmissions(newPage);
-  };
-
-  const toggleShortlist = async (submissionId: string, current: boolean) => {
-    try {
-      await eventsApi.shortlistSubmission(submissionId, !current);
-      toast.success(!current ? 'Submission shortlisted' : 'Shortlist removed');
-      fetchGroupedSubmissions();
-    } catch (error: any) {
-      console.error('Failed to update shortlist:', error);
-      toast.error(error?.response?.data?.error || 'Failed to update shortlist');
-    }
-  };
-
-  const fetchVendorSubmissions = async (page: number = vendorPage, searchValue: string = appliedSearch) => {
-    setIsLoading(true);
-    try {
-      const response = await eventsApi.getMySubmissions({
-        page,
-        limit: vendorPageSize,
-        search: searchValue,
-        order_by: 'updated_at',
-        order_direction: 'desc'
-      });
-      if (response.status && response.data) {
-        setVendorSubmissions(response.data);
-        setVendorTotalPages(response.total_pages || 1);
-        setVendorTotalData(response.total_data || response.data.length);
-      } else {
-        setVendorSubmissions([]);
-        setVendorTotalPages(1);
-        setVendorTotalData(0);
-      }
-    } catch (error) {
-      console.error('Failed to fetch submissions:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchGroupedSubmissions = async (submissionPage: number = 1) => {
-    setIsLoading(true);
-    try {
-      const response = await eventsApi.getGroupedSubmissions({
-        page: currentPage,
-        limit: 10,
-        search: searchTerm,
-        submission_page: submissionPage,
-        submission_limit: 10
-      });
-      if (response.status && response.data) {
-        setGroupedData(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch submissions:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const toggleShortlist = (submissionId: string, current: boolean) => {
+    shortlistMutation.mutate({ submissionId, isShortlisted: !current });
   };
 
   const getStatusBadge = (submission: EventSubmission) => {
@@ -208,32 +150,33 @@ export const SubmissionList: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">My Submissions</h1>
         </div>
 
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <input
-              type="text"
-              placeholder="Search by event name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+        <Card className="p-4">
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="Search by event name..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setVendorPage(1);
+                }}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            {searchTerm && (
+              <Button onClick={handleReset} variant="secondary" leftIcon={<X className="w-4 h-4" />}>
+                Reset
+              </Button>
+            )}
           </div>
-          <Button onClick={handleSearch} leftIcon={<Search className="w-4 h-4" />}>
-            Search
-          </Button>
-          {searchTerm && (
-            <Button onClick={handleReset} variant="secondary" leftIcon={<X className="w-4 h-4" />}>
-              Reset
-            </Button>
-          )}
-        </div>
+        </Card>
 
-      {vendorSubmissions.length === 0 ? (
+        {vendorSubmissions.length === 0 ? (
           <EmptyState
             icon={Send}
             title="No Submissions Found"
-            description={appliedSearch ? "No submissions match your search criteria. Try adjusting your search terms." : "You haven't submitted any pitches yet. Browse available events and submit your proposals to participate."}
+            description={debouncedSearch ? "No submissions match your search criteria. Try adjusting your search terms." : "You haven't submitted any pitches yet. Browse available events and submit your proposals to participate."}
             variant="compact"
           />
         ) : (
@@ -367,26 +310,27 @@ export const SubmissionList: React.FC = () => {
         <h1 className="text-2xl font-bold text-gray-900">All Submissions</h1>
       </div>
 
-      <div className="flex gap-4">
-        <div className="flex-1">
-          <input
-            type="text"
-            placeholder="Search by event name..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+      <Card className="p-4">
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Search by event name..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          {searchTerm && (
+            <Button onClick={handleReset} variant="secondary" leftIcon={<X className="w-4 h-4" />}>
+              Reset
+            </Button>
+          )}
         </div>
-        <Button onClick={handleSearch} leftIcon={<Search className="w-4 h-4" />}>
-          Search
-        </Button>
-        {searchTerm && (
-          <Button onClick={handleReset} variant="secondary" leftIcon={<X className="w-4 h-4" />}>
-            Reset
-          </Button>
-        )}
-      </div>
+      </Card>
 
       {!groupedData || groupedData.event_groups.length === 0 ? (
         <EmptyState
@@ -488,6 +432,7 @@ export const SubmissionList: React.FC = () => {
                                     variant={submission.is_shortlisted ? 'secondary' : 'ghost'}
                                     size="sm"
                                     onClick={() => toggleShortlist(submission.id, submission.is_shortlisted || false)}
+                                    disabled={shortlistMutation.isPending}
                                   >
                                     {submission.is_shortlisted ? 'Unshortlist' : 'Shortlist'}
                                   </Button>
@@ -565,35 +510,6 @@ export const SubmissionList: React.FC = () => {
                       ))}
                     </tbody>
                   </table>
-
-                  {/* Submission pagination per event */}
-                  {group.total_submission_pages > 1 && (
-                    <div className="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
-                      <div className="text-sm text-gray-700">
-                        Page {group.submission_page} of {group.total_submission_pages}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleSubmissionPageChange(group.submission_page - 1)}
-                          disabled={group.submission_page === 1}
-                          leftIcon={<ChevronLeft className="w-4 h-4" />}
-                        >
-                          Previous
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleSubmissionPageChange(group.submission_page + 1)}
-                          disabled={group.submission_page === group.total_submission_pages}
-                          rightIcon={<ChevronRight className="w-4 h-4" />}
-                        >
-                          Next
-                        </Button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
             </Card>
@@ -607,7 +523,7 @@ export const SubmissionList: React.FC = () => {
               </div>
               <div className="flex gap-2">
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
                   leftIcon={<ChevronLeft className="w-4 h-4" />}
@@ -615,10 +531,10 @@ export const SubmissionList: React.FC = () => {
                   Previous
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => setCurrentPage(prev => Math.min(groupedData.total_pages, prev + 1))}
                   disabled={currentPage === groupedData.total_pages}
-                  leftIcon={<ChevronRight className="w-4 h-4" />}
+                  rightIcon={<ChevronRight className="w-4 h-4" />}
                 >
                   Next
                 </Button>
@@ -635,11 +551,8 @@ export const SubmissionList: React.FC = () => {
           onClose={() => setScoreModalData(null)}
           onSuccess={() => {
             setScoreModalData(null);
-            if (isVendorView) {
-              fetchVendorSubmissions();
-            } else {
-              fetchGroupedSubmissions();
-            }
+            queryClient.invalidateQueries({ queryKey: ['groupedSubmissions'] });
+            queryClient.invalidateQueries({ queryKey: ['mySubmissions'] });
           }}
         />
       )}
@@ -652,7 +565,7 @@ export const SubmissionList: React.FC = () => {
           onClose={() => setWinnerModalData(null)}
           onSuccess={() => {
             setWinnerModalData(null);
-            fetchGroupedSubmissions();
+            queryClient.invalidateQueries({ queryKey: ['groupedSubmissions'] });
           }}
         />
       )}

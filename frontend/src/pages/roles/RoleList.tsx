@@ -1,57 +1,46 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { rolesApi } from '../../api/roles';
 import { Role } from '../../types';
-import { Plus, Search, Shield, Edit, Trash2, Lock, UserCheck } from 'lucide-react';
+import { Plus, Shield, Edit, Trash2, Lock, UserCheck } from 'lucide-react';
 import { Button, Card, Table, Badge, ConfirmModal, ActionMenu, EmptyState } from '../../components/ui';
+import { useDebounce } from '../../hooks';
+import { toast } from 'react-toastify';
 
 export const RoleList: React.FC = () => {
   const navigate = useNavigate();
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const debouncedSearch = useDebounce(searchTerm, 300);
 
-  useEffect(() => {
-    fetchRoles();
-  }, [currentPage, searchTerm]);
+  const { data: response, isLoading } = useQuery({
+    queryKey: ['roles', { page: currentPage, search: debouncedSearch }],
+    queryFn: () => rolesApi.getAll({
+      page: currentPage,
+      limit: 10,
+      search: debouncedSearch,
+    }),
+  });
 
-  const fetchRoles = async () => {
-    setIsLoading(true);
-    try {
-      const response = await rolesApi.getAll({
-        page: currentPage,
-        limit: 10,
-        search: searchTerm,
-      });
-
-      if (response.status) {
-        setRoles(response.data || []);
-        setTotalPages(response.total_pages || 1);
-      }
-    } catch (error) {
-      console.error('Failed to fetch roles:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!deleteId) return;
-    setIsDeleting(true);
-    try {
-      await rolesApi.delete(deleteId);
-      fetchRoles();
-    } catch (error) {
-      console.error('Failed to delete role:', error);
-    } finally {
-      setIsDeleting(false);
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => rolesApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
       setDeleteId(null);
-    }
-  };
+      toast.success('Role deleted successfully');
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.error || 'Failed to delete role');
+    },
+  });
+
+  const roles = response?.data || [];
+  const totalPages = response?.total_pages || 1;
 
   const columns = [
     {
@@ -121,18 +110,18 @@ export const RoleList: React.FC = () => {
         </Button>
       </div>
 
-      <Card>
-        <div className="flex gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary-400" size={20} />
-            <input
-              type="text"
-              placeholder="Search roles..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
-            />
-          </div>
+      <Card className="p-4">
+        <div className="flex-1">
+          <input
+            type="text"
+            placeholder="Search roles..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
+          />
         </div>
       </Card>
 
@@ -186,8 +175,8 @@ export const RoleList: React.FC = () => {
         message="Are you sure you want to delete this role? This action cannot be undone."
         confirmText="Delete"
         variant="danger"
-        isLoading={isDeleting}
-        onConfirm={handleDeleteConfirm}
+        isLoading={deleteMutation.isPending}
+        onConfirm={() => deleteId && deleteMutation.mutate(deleteId)}
         onCancel={() => setDeleteId(null)}
       />
     </div>

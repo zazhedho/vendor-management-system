@@ -1,57 +1,46 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { menusApi } from '../../api/menus';
 import { Menu } from '../../types';
-import { Plus, Search, Edit, Trash2, LayoutGrid } from 'lucide-react';
+import { Plus, Edit, Trash2, LayoutGrid } from 'lucide-react';
 import { Button, Card, Table, Badge, ConfirmModal, ActionMenu, EmptyState } from '../../components/ui';
+import { useDebounce } from '../../hooks';
+import { toast } from 'react-toastify';
 
 export const MenuList: React.FC = () => {
   const navigate = useNavigate();
-  const [menus, setMenus] = useState<Menu[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const debouncedSearch = useDebounce(searchTerm, 300);
 
-  useEffect(() => {
-    fetchMenus();
-  }, [currentPage, searchTerm]);
+  const { data: response, isLoading } = useQuery({
+    queryKey: ['menus', { page: currentPage, search: debouncedSearch }],
+    queryFn: () => menusApi.getAll({
+      page: currentPage,
+      limit: 10,
+      search: debouncedSearch,
+    }),
+  });
 
-  const fetchMenus = async () => {
-    setIsLoading(true);
-    try {
-      const response = await menusApi.getAll({
-        page: currentPage,
-        limit: 10,
-        search: searchTerm,
-      });
-
-      if (response.status) {
-        setMenus(response.data || []);
-        setTotalPages(response.total_pages || 1);
-      }
-    } catch (error) {
-      console.error('Failed to fetch menus:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!deleteId) return;
-    setIsDeleting(true);
-    try {
-      await menusApi.delete(deleteId);
-      fetchMenus();
-    } catch (error) {
-      console.error('Failed to delete menu:', error);
-    } finally {
-      setIsDeleting(false);
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => menusApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['menus'] });
       setDeleteId(null);
-    }
-  };
+      toast.success('Menu deleted successfully');
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.error || 'Failed to delete menu');
+    },
+  });
+
+  const menus = response?.data || [];
+  const totalPages = response?.total_pages || 1;
 
   const columns = [
     {
@@ -116,14 +105,16 @@ export const MenuList: React.FC = () => {
       </div>
 
       <Card className="p-4">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-400" size={20} />
+        <div className="max-w-md">
           <input
             type="text"
             placeholder="Search menus..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg border border-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full px-4 py-2 rounded-lg border border-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           />
         </div>
       </Card>
@@ -174,8 +165,8 @@ export const MenuList: React.FC = () => {
         message="Are you sure you want to delete this menu? This action cannot be undone."
         confirmText="Delete"
         variant="danger"
-        isLoading={isDeleting}
-        onConfirm={handleDeleteConfirm}
+        isLoading={deleteMutation.isPending}
+        onConfirm={() => deleteId && deleteMutation.mutate(deleteId)}
         onCancel={() => setDeleteId(null)}
       />
     </div>

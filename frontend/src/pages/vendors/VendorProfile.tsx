@@ -562,13 +562,13 @@ export const VendorProfile: React.FC = () => {
                       Legal Information
                     </h3>
                   </div>
-              <div className="divide-y divide-secondary-100">
-                <div className="flex py-2.5 px-4">
-                  <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">KTP Number</span>
-                  <span className="text-secondary-900 font-mono text-sm">{profile.ktp_number || '-'}</span>
-                </div>
-                <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">KTP Name</span>
+                  <div className="divide-y divide-secondary-100">
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">KTP Number</span>
+                      <span className="text-secondary-900 font-mono text-sm">{profile.ktp_number || '-'}</span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">KTP Name</span>
                       <span className="text-secondary-900 text-sm">{profile.ktp_name || '-'}</span>
                     </div>
                     <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
@@ -583,18 +583,18 @@ export const VendorProfile: React.FC = () => {
                       <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">NPWP Address</span>
                       <span className="text-secondary-900 text-sm">{profile.npwp_address || '-'}</span>
                     </div>
-                <div className="flex py-2.5 px-4">
-                  <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Tax Status</span>
-                  <span className="text-secondary-900 text-sm">{profile.tax_status || '-'}</span>
-                </div>
-                {vendor?.vendor_type === 'company' && (
-                  <div className="flex py-2.5 px-4">
-                    <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">NIB Number</span>
-                    <span className="text-secondary-900 font-mono text-sm">{profile.nib_number || '-'}</span>
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">Tax Status</span>
+                      <span className="text-secondary-900 text-sm">{profile.tax_status || '-'}</span>
+                    </div>
+                    {vendor?.vendor_type === 'company' && (
+                      <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                        <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">NIB Number</span>
+                        <span className="text-secondary-900 font-mono text-sm">{profile.nib_number || '-'}</span>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </Card>
+                </Card>
 
                 {/* Bank Account */}
                 <Card className="overflow-hidden">
