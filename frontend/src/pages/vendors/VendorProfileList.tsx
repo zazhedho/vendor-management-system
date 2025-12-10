@@ -24,7 +24,7 @@ export const VendorProfileList: React.FC = () => {
   const [isDeletingVendor, setIsDeletingVendor] = useState(false);
 
   const canListVendors = hasPermission('vendor', 'list');
-  const canEditProfile = hasPermission('vendor', 'update');
+  const canUpdateVendor = hasPermission('vendor', 'update'); // Covers both create and update
   const canDeleteVendor = hasPermission('vendor', 'delete');
   const canExport = hasPermission('vendor', 'read');
 
@@ -163,7 +163,7 @@ export const VendorProfileList: React.FC = () => {
           <h1 className="text-2xl font-bold text-secondary-900">Vendor Profiles</h1>
           <p className="text-secondary-500 text-sm mt-1">Manage and view all registered vendors</p>
         </div>
-        {user?.role === 'superadmin' && (
+        {canUpdateVendor && (
           <Button
             onClick={() => navigate('/vendor/profile/new')}
             leftIcon={<Plus size={20} />}
@@ -199,7 +199,7 @@ export const VendorProfileList: React.FC = () => {
       <VendorListTable
         vendors={vendorList}
         isLoading={isLoading}
-        canUpdateVendor={canEditProfile}
+        canUpdateVendor={canUpdateVendor}
         canDeleteVendor={canDeleteVendor}
         canExport={canExport}
         onDelete={(id) => setDeleteVendorId(id)}

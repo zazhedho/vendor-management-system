@@ -357,9 +357,9 @@ export const VendorForm: React.FC = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto pb-12">
+    <div className="max-w-7xl mx-auto pb-12 px-4 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-secondary-900">
+        <h1 className="text-2xl sm:text-3xl font-bold text-secondary-900">
           {isEditMode ? 'Edit Vendor Profile' : 'New Vendor Registration'}
         </h1>
         <p className="text-secondary-500 mt-2">
@@ -372,9 +372,9 @@ export const VendorForm: React.FC = () => {
       <div className="mt-8">
         {/* Step 1: General Info */}
         {currentStep === 0 && (
-          <Card className="animate-fade-in">
+          <Card className="animate-fade-in p-6 md:p-8 lg:p-10">
             <h2 className="text-xl font-semibold mb-6">General Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {!isVendorSelfEdit && (
                 <Input
                   label="User ID"
@@ -454,9 +454,9 @@ export const VendorForm: React.FC = () => {
 
         {/* Step 2: Address */}
         {currentStep === 1 && (
-          <Card className="animate-fade-in">
+          <Card className="animate-fade-in p-6 md:p-8 lg:p-10">
             <h2 className="text-xl font-semibold mb-6">Address Details</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-medium text-secondary-700 mb-1.5">
                   Province <span className="text-danger-500">*</span>
@@ -540,7 +540,7 @@ export const VendorForm: React.FC = () => {
                 </select>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
               <Input
                 label="Postal Code"
                 name="postal_code"
@@ -565,10 +565,10 @@ export const VendorForm: React.FC = () => {
 
         {/* Step 3: Legal & Bank */}
         {currentStep === 2 && (
-          <Card className="animate-fade-in">
+          <Card className="animate-fade-in p-6 md:p-8 lg:p-10">
             <h2 className="text-xl font-semibold mb-6">Legal & Financial</h2>
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <Input
                   label="KTP Number"
                   name="ktp_number"
@@ -612,7 +612,7 @@ export const VendorForm: React.FC = () => {
 
               <div className="border-t border-secondary-100 pt-6">
                 <h3 className="text-lg font-medium mb-4">Bank Account</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                   <Input
                     label="Bank Name"
                     name="bank_name"
@@ -642,7 +642,7 @@ export const VendorForm: React.FC = () => {
 
         {/* Step 4: Documents */}
         {currentStep === 3 && (
-          <Card className="animate-fade-in">
+          <Card className="animate-fade-in p-6 md:p-8 lg:p-10">
             <h2 className="text-xl font-semibold mb-6">Document Uploads</h2>
             <p className="text-sm text-secondary-600 mb-4">
               {vendorData.vendor_type === 'individual'

@@ -12,6 +12,7 @@ interface TableProps<T> {
     keyField: keyof T;
     isLoading?: boolean;
     emptyMessage?: string;
+    emptyState?: React.ReactNode;
     onRowClick?: (item: T) => void;
 }
 
@@ -21,6 +22,7 @@ const TableComponent = <T,>({
     keyField,
     isLoading,
     emptyMessage = 'No data available',
+    emptyState,
     onRowClick
 }: TableProps<T>) => {
     if (isLoading) {
@@ -38,6 +40,10 @@ const TableComponent = <T,>({
     }
 
     if (data.length === 0) {
+        if (emptyState) {
+            return <>{emptyState}</>;
+        }
+
         return (
             <div className="w-full rounded-xl border border-dashed border-secondary-300 bg-secondary-50/50 backdrop-blur-sm overflow-hidden">
                 <div className="p-12 flex flex-col items-center justify-center space-y-3">

@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { rolesApi } from '../../api/roles';
 import { Role } from '../../types';
-import { Plus, Search, Shield, Edit, Trash2, Lock } from 'lucide-react';
-import { Button, Card, Table, Badge, ConfirmModal, ActionMenu } from '../../components/ui';
+import { Plus, Search, Shield, Edit, Trash2, Lock, UserCheck } from 'lucide-react';
+import { Button, Card, Table, Badge, ConfirmModal, ActionMenu, EmptyState } from '../../components/ui';
 
 export const RoleList: React.FC = () => {
   const navigate = useNavigate();
@@ -143,7 +143,16 @@ export const RoleList: React.FC = () => {
           keyField="id"
           isLoading={isLoading}
           onRowClick={(role) => navigate(`/roles/${role.id}/edit`)}
-          emptyMessage="No roles found."
+          emptyState={
+            <EmptyState
+              icon={UserCheck}
+              title="No Roles Found"
+              description="You haven't created any custom roles yet. Start by creating your first role to manage permissions effectively."
+              actionLabel="Create Role"
+              onAction={() => navigate('/roles/new')}
+              variant="compact"
+            />
+          }
         />
 
         {totalPages > 1 && (

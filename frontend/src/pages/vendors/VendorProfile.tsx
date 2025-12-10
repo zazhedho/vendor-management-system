@@ -1,29 +1,20 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { vendorsApi } from '../../api/vendors';
-import { locationApi, LocationItem } from '../../api/location';
 import { useAuth } from '../../context/AuthContext';
 import { Vendor, VendorProfile as VendorProfileType } from '../../types';
 import {
   ShoppingBag,
   MapPin,
-  Phone,
-  Mail,
   Building,
   FileText,
-  Save,
-  Upload,
   CreditCard,
-  AlertCircle,
-  Search,
-  Plus,
-  Eye,
-  Trash2,
   X,
   ArrowLeft,
-  Download
+  Download,
+  Edit
 } from 'lucide-react';
-import { Button, Card, Badge, Spinner, Input, ConfirmModal, ActionMenu } from '../../components/ui';
+import { Button, Card, Badge, Spinner, Input, ConfirmModal, EmptyState } from '../../components/ui';
 import { toast } from 'react-toastify';
 
 // Helper to format file type with proper capitalization
@@ -45,116 +36,30 @@ const formatFileType = (type: string): string => {
   return upperCaseTypes[type.toLowerCase()] || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 };
 
-interface VendorWithProfile {
-  vendor: Vendor;
-  profile: VendorProfileType;
-}
-
 export const VendorProfile: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const location = useLocation();
   const { user, hasPermission, isLoading: authLoading } = useAuth();
 
   // Determine view mode based on permissions and ownership
   const isVendorRole = useMemo(() => user?.role === 'vendor', [user?.role]);
   const canViewVendors = useMemo(() => hasPermission('vendor', 'view'), [hasPermission]);
+  const canUpdateVendor = useMemo(() => hasPermission('vendor', 'update'), [hasPermission]);
   const canUpdateStatus = useMemo(() => hasPermission('vendor', 'update_status'), [hasPermission]);
   const canDeleteVendor = useMemo(() => hasPermission('vendor', 'delete'), [hasPermission]);
-  const isEditMode = location.pathname.endsWith('/edit');
-  const isNewMode = location.pathname.endsWith('/new');
-
-
-  // For vendor role: always show their own profile form
-  // For admin role: show list on /vendor/profile, detail/edit on other routes
-  const showListView = useMemo(() => {
-    if (!canViewVendors) return false;
-    if (isVendorRole) return false;
-    return location.pathname === '/vendor/profile';
-  }, [canViewVendors, isVendorRole, location.pathname]);
 
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [profile, setProfile] = useState<VendorProfileType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [showRejectReasonModal, setShowRejectReasonModal] = useState(false);
   const [showFileStatusModal, setShowFileStatusModal] = useState(false);
   const [isUpdatingFileStatus, setIsUpdatingFileStatus] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
-  // isEditing based on URL for proper routing
-  const isOwner = useMemo(() => !!vendor?.user_id && vendor.user_id === user?.id, [vendor?.user_id, user?.id]);
-  // Vendor role with permission can create/edit own profile even when vendor record not yet exists
-  const canEditProfile = useMemo(() => {
-    if (isVendorRole && hasPermission('vendor', 'update')) return true;
-    return isOwner && hasPermission('vendor', 'update');
-  }, [isVendorRole, isOwner, hasPermission]);
-  const isEditing = (isEditMode || isNewMode) && canEditProfile;
   const canExport = useMemo(() => canViewVendors, [canViewVendors]);
   const activeVendorId = useMemo(() => id || vendor?.id || '', [id, vendor?.id]);
   const canVerifyDocs = useMemo(() => hasPermission('vendor', 'update_status'), [hasPermission]);
-  const docsSectionRef = useRef<HTMLDivElement | null>(null);
-
-  // For admin list view
-  const [vendorList, setVendorList] = useState<VendorWithProfile[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-
-  // Location states
-  const [provinces, setProvinces] = useState<LocationItem[]>([]);
-  const [cities, setCities] = useState<LocationItem[]>([]);
-  const [districts, setDistricts] = useState<LocationItem[]>([]);
-  const [selectedProvinceCode, setSelectedProvinceCode] = useState('');
-  const [selectedCityCode, setSelectedCityCode] = useState('');
-
-  const DEFAULT_PURCH_GROUP = 'H530';
-  const DEFAULT_REGION_OR_SO = 'HSO NTB';
-
-  const [formData, setFormData] = useState({
-    vendor_type: 'company',
-    vendor_name: '',
-    email: '',
-    telephone: '',
-    fax: '',
-    phone: '',
-    address: '',
-    province_id: '',
-    province_name: '',
-    city_id: '',
-    city_name: '',
-    district_id: '',
-    district_name: '',
-    postal_code: '',
-    business_field: '',
-    // KTP
-    ktp_number: '',
-    ktp_name: '',
-    // NPWP
-    npwp_number: '',
-    npwp_name: '',
-    npwp_address: '',
-    tax_status: '',
-    // NIB
-    nib_number: '',
-    // Bank
-    bank_name: '',
-    bank_branch: '',
-    account_number: '',
-    account_holder_name: '',
-    // Business
-    transaction_type: '',
-    purch_group: '',
-    region_or_so: '',
-    // Contact
-    contact_person: '',
-    contact_email: '',
-    contact_phone: '',
-  });
-
-  // File upload states
-  const [uploadingFile, setUploadingFile] = useState(false);
 
   // Delete file modal
   const [deleteFileId, setDeleteFileId] = useState<string | null>(null);
@@ -175,109 +80,16 @@ export const VendorProfile: React.FC = () => {
     reason: '',
   });
 
-  const companyDocs = ['ktp', 'domisili', 'siup', 'nib', 'skt', 'npwp', 'sppkp', 'akta', 'bank_book'];
-  const individualDocs = ['ktp', 'npwp', 'bank_book'];
-  const isNTBProvince = (name?: string) => (name || '').toLowerCase().includes('nusa tenggara barat');
-
-  useEffect(() => {
-    if (authLoading) return;
-    if (!canEditProfile && (isEditMode || isNewMode)) {
-      // Prevent non-owner from accessing edit/create screens
-      if (id) {
-        navigate(`/vendor/profile/${id}/detail`, { replace: true });
-      } else {
-        navigate('/vendor/profile', { replace: true });
-      }
-    }
-  }, [authLoading, canEditProfile, isEditMode, isNewMode, id]);
 
   useEffect(() => {
     if (!user || authLoading) return;
 
     const loadData = async () => {
-      if (showListView) {
-        // Admin viewing list
-        await fetchVendorsList();
-      } else {
-        // Vendor viewing own profile OR admin viewing/editing specific vendor
-        await fetchVendorProfile(id);
-        await fetchProvinces();
-      }
+      // Vendor viewing own profile OR admin viewing/editing specific vendor
+      await fetchVendorProfile(id);
     };
     loadData();
-  }, [user, authLoading, showListView, id]);
-
-  // Scroll to documents section if requested via query param
-  useEffect(() => {
-    if (new URLSearchParams(location.search).get('section') === 'docs' && docsSectionRef.current) {
-      docsSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, [location.search]);
-
-  useEffect(() => {
-    if (!user || authLoading || !showListView) return;
-    if (currentPage > 1) {
-      fetchVendorsList();
-    }
-  }, [authLoading, currentPage, showListView, user]);
-
-  const handleSearch = () => {
-    setCurrentPage(1);
-    fetchVendorsList();
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
-
-  const handleReset = async () => {
-    setSearchTerm('');
-    setCurrentPage(1);
-    
-    // Fetch with empty search
-    setIsLoading(true);
-    try {
-      const response = await vendorsApi.getAll({
-        page: 1,
-        limit: 10,
-        search: ''
-      });
-      if (response.status) {
-        setVendorList((response.data || []) as unknown as VendorWithProfile[]);
-        setTotalPages(response.total_pages || 1);
-      }
-    } catch (error) {
-      console.error('Failed to fetch vendors:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Ensure auto defaults only applied for NTB province; clear back when switching away
-  useEffect(() => {
-    const applyAutoDefaults = () => {
-      const isNTB = isNTBProvince(formData.province_name);
-      let changed = false;
-      const next = { ...formData };
-      if (isNTB) {
-        if (!next.purch_group) {
-          next.purch_group = DEFAULT_PURCH_GROUP;
-          changed = true;
-        }
-        if (!next.region_or_so) {
-          next.region_or_so = DEFAULT_REGION_OR_SO;
-          changed = true;
-        }
-      }
-      if (changed) {
-        setFormData(next);
-      }
-    };
-    applyAutoDefaults();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.province_name]);
+  }, [user, authLoading, id]);
 
   const extractFilename = (contentDisposition?: string | null) => {
     if (!contentDisposition) return '';
@@ -328,80 +140,6 @@ export const VendorProfile: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    if (selectedProvinceCode) {
-      fetchCities(selectedProvinceCode);
-      setCities([]);
-      setDistricts([]);
-      setSelectedCityCode('');
-    }
-  }, [selectedProvinceCode]);
-
-  useEffect(() => {
-    if (selectedProvinceCode && selectedCityCode) {
-      fetchDistricts(selectedProvinceCode, selectedCityCode);
-      setDistricts([]);
-    }
-  }, [selectedCityCode]);
-
-  useEffect(() => {
-    console.log('deleteVendorId changed:', deleteVendorId);
-  }, [deleteVendorId]);
-
-  // Fetch vendors list for admin/superadmin/client
-  const fetchVendorsList = async () => {
-    setIsLoading(true);
-    try {
-      const response = await vendorsApi.getAll({
-        page: currentPage,
-        limit: 10,
-        search: searchTerm
-      });
-      console.log('Vendors list response:', response);
-      if (response.status) {
-        setVendorList((response.data || []) as unknown as VendorWithProfile[]);
-        setTotalPages(response.total_pages || 1);
-      }
-    } catch (error: any) {
-      console.error('Failed to fetch vendors:', error);
-      setVendorList([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchProvinces = async () => {
-    try {
-      const response = await locationApi.getProvinces();
-      if (response.status && response.data) {
-        setProvinces(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch provinces:', error);
-    }
-  };
-
-  const fetchCities = async (provinceCode: string) => {
-    try {
-      const response = await locationApi.getCities(provinceCode);
-      if (response.status && response.data) {
-        setCities(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch cities:', error);
-    }
-  };
-
-  const fetchDistricts = async (provinceCode: string, cityCode: string) => {
-    try {
-      const response = await locationApi.getDistricts(provinceCode, cityCode);
-      if (response.status && response.data) {
-        setDistricts(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch districts:', error);
-    }
-  };
 
   const fetchVendorProfile = async (vendorId?: string) => {
     setIsLoading(true);
@@ -421,46 +159,6 @@ export const VendorProfile: React.FC = () => {
 
         setVendor(vendorData?.id ? vendorData : null);
         setProfile(profileData);
-
-        if (profileData) {
-          setFormData({
-            vendor_type: vendorData?.vendor_type || '',
-            vendor_name: profileData.vendor_name || '',
-            email: profileData.email || '',
-            telephone: profileData.telephone || '',
-            fax: profileData.fax || '',
-            phone: profileData.phone || '',
-            address: profileData.address || '',
-            province_id: profileData.province_id || '',
-            province_name: profileData.province_name || '',
-            city_id: profileData.city_id || '',
-            city_name: profileData.city_name || '',
-            district_id: profileData.district_id || '',
-            district_name: profileData.district_name || '',
-            postal_code: profileData.postal_code || '',
-            business_field: profileData.business_field || '',
-            ktp_number: profileData.ktp_number || '',
-            ktp_name: profileData.ktp_name || '',
-            npwp_number: profileData.npwp_number || '',
-            npwp_name: profileData.npwp_name || '',
-            npwp_address: profileData.npwp_address || '',
-            tax_status: profileData.tax_status || '',
-            nib_number: profileData.nib_number || '',
-            bank_name: profileData.bank_name || '',
-            bank_branch: profileData.bank_branch || '',
-            account_number: profileData.account_number || '',
-            account_holder_name: profileData.account_holder_name || '',
-            transaction_type: profileData.transaction_type || '',
-            purch_group: profileData.purch_group || '',
-            region_or_so: profileData.region_or_so || '',
-            contact_person: profileData.contact_person || '',
-            contact_email: profileData.contact_email || '',
-            contact_phone: profileData.contact_phone || '',
-          });
-          // Set location codes for dropdowns
-          if (profileData.province_id) setSelectedProvinceCode(profileData.province_id);
-          if (profileData.city_id) setSelectedCityCode(profileData.city_id);
-        }
       }
     } catch (error: any) {
       console.error('Failed to fetch vendor profile:', error);
@@ -474,104 +172,6 @@ export const VendorProfile: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const errors = validateForm();
-    if (errors.length > 0) {
-      toast.error(errors[0]);
-      return;
-    }
-    setIsSaving(true);
-    try {
-      const payload: any = { ...formData };
-
-      const response = await vendorsApi.createOrUpdateProfile(payload);
-
-      // Check if status is true OR if we have valid data returned
-      // This handles cases where backend might return data but status is missing/false
-      // Also check for 'id' in case data is returned directly (response IS the data)
-      const resAny = response as any;
-      const isSuccess = response.status === true ||
-        (response.data && (response.data.vendor || response.data.profile || resAny.data?.id)) ||
-        resAny.id ||
-        resAny.vendor_id;
-
-      if (isSuccess) {
-        // Update local state with returned data if available
-        if (response.data) {
-          const vData = response.data.vendor || (resAny.data?.id ? response.data : null);
-          const pData = response.data.profile || (resAny.data?.id ? response.data : null);
-
-          if (vData) setVendor(vData);
-          if (pData) setProfile(pData);
-        } else if (resAny.id) {
-          // If response is the data itself
-          setProfile(resAny);
-        }
-
-        toast.success('Profile saved successfully');
-        if (isNewMode) {
-          navigate('/vendor/profile/documents');
-        } else {
-          navigate('/vendor/profile');
-        }
-      } else {
-        console.error('Save profile failed. Response:', response);
-        toast.error(response.message || 'Failed to save profile');
-      }
-    } catch (error: any) {
-      console.error('Save profile error:', error);
-      toast.error(error.response?.data?.message || error.response?.data?.error || 'Failed to save profile');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleFileUpload = (fileType: string) => async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || !e.target.files[0] || !profile?.id) return;
-    if (profile?.files?.some((f) => f.file_type === fileType)) {
-      toast.error(`Dokumen ${formatFileType(fileType)} sudah diunggah, hapus dulu sebelum mengganti`);
-      e.target.value = '';
-      return;
-    }
-
-    const file = e.target.files[0];
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
-
-    if (!allowedTypes.includes(file.type)) {
-      toast.error('Only JPG, PNG, and PDF files are allowed');
-      e.target.value = '';
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('File size must be less than 5MB');
-      e.target.value = '';
-      return;
-    }
-
-    setUploadingFile(true);
-    try {
-      const response = await vendorsApi.uploadProfileFile(profile.id, file, fileType);
-      if (response.status) {
-        toast.success('File uploaded successfully');
-        await fetchVendorProfile();
-      } else {
-        toast.error('Failed to upload file');
-      }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to upload file');
-    } finally {
-      setUploadingFile(false);
-      e.target.value = '';
-    }
-  };
-
-  const handleDeleteFileClick = (fileId: string) => {
-    if (!profile?.id) return;
-    setDeleteFileId(fileId);
   };
 
   const handleDeleteFileConfirm = async () => {
@@ -689,7 +289,7 @@ export const VendorProfile: React.FC = () => {
       const response = await vendorsApi.delete(deleteVendorId);
       if (response.status) {
         toast.success('Vendor deleted successfully');
-        await fetchVendorsList();
+        navigate('/vendor/profile');
       } else {
         toast.error('Failed to delete vendor');
       }
@@ -761,47 +361,6 @@ export const VendorProfile: React.FC = () => {
     setRejectReasonInput('');
   };
 
-  const validateForm = () => {
-    const errs: string[] = [];
-    const len = (v?: string) => (v || '').trim().length;
-    const maxCheck = (v: string | undefined, max: number, label: string) => {
-      if (len(v) > max) errs.push(`${label} maksimal ${max} karakter`);
-    };
-
-    if (!formData.vendor_type) errs.push('Vendor Type wajib dipilih');
-    if (!formData.vendor_name || len(formData.vendor_name) < 3) errs.push('Vendor/Company Name minimal 3 karakter');
-    if (len(formData.vendor_name) > 255) errs.push('Vendor/Company Name maksimal 255 karakter');
-
-    if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errs.push('Email tidak valid');
-    if (!formData.district_id || !formData.district_name) errs.push('District wajib diisi');
-    if (!formData.city_id || !formData.city_name) errs.push('City wajib diisi');
-    if (!formData.province_id || !formData.province_name) errs.push('Province wajib diisi');
-
-    maxCheck(formData.telephone, 20, 'Telephone');
-    maxCheck(formData.fax, 20, 'Fax');
-    maxCheck(formData.phone, 20, 'Phone');
-    maxCheck(formData.postal_code, 10, 'Postal Code');
-    maxCheck(formData.business_field, 255, 'Business Field');
-
-    maxCheck(formData.ktp_number, 20, 'KTP Number');
-    maxCheck(formData.ktp_name, 255, 'KTP Name');
-    maxCheck(formData.npwp_number, 50, 'NPWP Number');
-    maxCheck(formData.npwp_name, 255, 'NPWP Name');
-    maxCheck(formData.npwp_address, 255, 'NPWP Address');
-    maxCheck(formData.tax_status, 20, 'Tax Status');
-    maxCheck(formData.nib_number, 50, 'NIB Number');
-
-    maxCheck(formData.bank_name, 100, 'Bank Name');
-    maxCheck(formData.bank_branch, 100, 'Bank Branch');
-    maxCheck(formData.account_number, 50, 'Account Number');
-    maxCheck(formData.account_holder_name, 255, 'Account Holder Name');
-
-    maxCheck(formData.transaction_type, 100, 'Transaction Type');
-    maxCheck(formData.purch_group, 100, 'Purch Group');
-    maxCheck(formData.region_or_so, 100, 'Region/SO');
-
-    return errs;
-  };
 
   const handleVendorCodeCancel = () => {
     setShowVendorCodeModal(false);
@@ -819,359 +378,6 @@ export const VendorProfile: React.FC = () => {
     }
   };
 
-  const renderFormFields = () => (
-    <div className="space-y-6">
-      {/* Company Information */}
-      <Card>
-        <h4 className="text-lg font-semibold text-secondary-900 mb-4 flex items-center gap-2">
-          <Building size={20} className="text-primary-600" />
-          Company Information
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-secondary-700 mb-1.5">
-              Vendor Type <span className="text-danger-500">*</span>
-            </label>
-            <select
-              value={formData.vendor_type}
-              onChange={(e) => setFormData({ ...formData, vendor_type: e.target.value })}
-              className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
-              required
-            >
-              <option value="">Select Type</option>
-              <option value="company">Company</option>
-              <option value="individual">Individual</option>
-            </select>
-          </div>
-          <Input
-            label="Vendor/Company Name"
-            value={formData.vendor_name}
-            onChange={(e) => setFormData({ ...formData, vendor_name: e.target.value })}
-            placeholder="Enter vendor or company name"
-            leftIcon={<Building size={18} />}
-            required
-          />
-          <Input
-            label="Business Field"
-            value={formData.business_field}
-            onChange={(e) => setFormData({ ...formData, business_field: e.target.value })}
-            placeholder="e.g., Catering, Event Management"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          <Input
-            label="Email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            placeholder="vendor@example.com"
-            leftIcon={<Mail size={18} />}
-            required
-          />
-          <Input
-            label="Phone (Mobile)"
-            value={formData.phone}
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            placeholder="08123456789"
-            leftIcon={<Phone size={18} />}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          <Input
-            label="Telephone"
-            value={formData.telephone}
-            onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
-            placeholder="021-12345678"
-            leftIcon={<Phone size={18} />}
-          />
-          <Input
-            label="Fax"
-            value={formData.fax}
-            onChange={(e) => setFormData({ ...formData, fax: e.target.value })}
-            placeholder="021-87654321"
-          />
-        </div>
-      </Card>
-
-      {/* Address */}
-      <Card>
-        <h4 className="text-lg font-semibold text-secondary-900 mb-4 flex items-center gap-2">
-          <MapPin size={20} className="text-primary-600" />
-          Address
-        </h4>
-        <Input
-          label="Full Address"
-          value={formData.address}
-          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-          placeholder="Enter complete address"
-          leftIcon={<MapPin size={18} />}
-        />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-          <div>
-            <label className="block text-sm font-medium text-secondary-700 mb-1.5">Province <span className="text-danger-500">*</span></label>
-            <select
-              value={selectedProvinceCode}
-              onChange={(e) => {
-                const code = e.target.value;
-                const selected = provinces.find(p => p.code === code);
-                const provinceName = selected?.name || '';
-                const willUseNTBDefaults = isNTBProvince(provinceName);
-                const nextData = {
-                  ...formData,
-                  province_id: code,
-                  province_name: provinceName,
-                  city_id: '',
-                  city_name: '',
-                  district_id: '',
-                  district_name: '',
-                };
-                if (willUseNTBDefaults) {
-                  if (!nextData.purch_group) nextData.purch_group = DEFAULT_PURCH_GROUP;
-                  if (!nextData.region_or_so) nextData.region_or_so = DEFAULT_REGION_OR_SO;
-                }
-                setSelectedProvinceCode(code);
-                setFormData(nextData);
-              }}
-              className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
-              required
-            >
-              <option value="">Select Province</option>
-              {provinces.map((prov) => (
-                <option key={prov.code} value={prov.code}>{prov.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-secondary-700 mb-1.5">City <span className="text-danger-500">*</span></label>
-            <select
-              value={selectedCityCode}
-              onChange={(e) => {
-                const code = e.target.value;
-                const selected = cities.find(c => c.code === code);
-                setSelectedCityCode(code);
-                setFormData({
-                  ...formData,
-                  city_id: code,
-                  city_name: selected?.name || '',
-                  district_id: '',
-                  district_name: ''
-                });
-              }}
-              disabled={!selectedProvinceCode}
-              className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none disabled:bg-secondary-50 disabled:cursor-not-allowed transition-all"
-              required
-            >
-              <option value="">Select City</option>
-              {cities.map((city) => (
-                <option key={city.code} value={city.code}>{city.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-secondary-700 mb-1.5">District <span className="text-danger-500">*</span></label>
-            <select
-              value={formData.district_id}
-              onChange={(e) => {
-                const code = e.target.value;
-                const selected = districts.find(d => d.code === code);
-                setFormData({
-                  ...formData,
-                  district_id: code,
-                  district_name: selected?.name || ''
-                });
-              }}
-              disabled={!selectedCityCode}
-              className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none disabled:bg-secondary-50 disabled:cursor-not-allowed transition-all"
-              required
-            >
-              <option value="">Select District</option>
-              {districts.map((dist) => (
-                <option key={dist.code} value={dist.code}>{dist.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="mt-4">
-          <Input
-            label="Postal Code"
-            value={formData.postal_code}
-            onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
-            placeholder="e.g. 12345"
-          />
-        </div>
-      </Card>
-
-      {/* Legal Information */}
-      <Card>
-        <h4 className="text-lg font-semibold text-secondary-900 mb-4 flex items-center gap-2">
-          <FileText size={20} className="text-primary-600" />
-          Legal Information
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input
-            label="KTP Number"
-            value={formData.ktp_number}
-            onChange={(e) => setFormData({ ...formData, ktp_number: e.target.value })}
-            placeholder="16 digit KTP number"
-            leftIcon={<CreditCard size={18} />}
-          />
-          <Input
-            label="KTP Name"
-            value={formData.ktp_name}
-            onChange={(e) => setFormData({ ...formData, ktp_name: e.target.value })}
-            placeholder="Full name as on KTP"
-          />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          <Input
-            label="NPWP Number"
-            value={formData.npwp_number}
-            onChange={(e) => setFormData({ ...formData, npwp_number: e.target.value })}
-            placeholder="15 digit NPWP number"
-          />
-          <Input
-            label="NPWP Name"
-            value={formData.npwp_name}
-            onChange={(e) => setFormData({ ...formData, npwp_name: e.target.value })}
-            placeholder="Full name as on NPWP"
-          />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-          <Input
-            label="NPWP Address"
-            value={formData.npwp_address}
-            onChange={(e) => setFormData({ ...formData, npwp_address: e.target.value })}
-            placeholder="Enter NPWP address"
-          />
-          <Input
-            label="Tax Status"
-            value={formData.tax_status}
-            onChange={(e) => setFormData({ ...formData, tax_status: e.target.value })}
-            placeholder="e.g., PKP, Non-PKP"
-          />
-          {formData.vendor_type === 'company' && (
-            <Input
-              label="NIB Number"
-              value={formData.nib_number}
-              onChange={(e) => setFormData({ ...formData, nib_number: e.target.value })}
-              placeholder="e.g. 1234567890123"
-              leftIcon={<FileText size={18} />}
-            />
-          )}
-        </div>
-      </Card>
-
-      {/* Bank Account */}
-      <Card>
-        <h4 className="text-lg font-semibold text-secondary-900 mb-4 flex items-center gap-2">
-          <CreditCard size={20} className="text-primary-600" />
-          Bank Account
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input
-            label="Bank Name"
-            value={formData.bank_name}
-            onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
-            placeholder="e.g., BCA, Mandiri"
-          />
-          <Input
-            label="Bank Branch"
-            value={formData.bank_branch}
-            onChange={(e) => setFormData({ ...formData, bank_branch: e.target.value })}
-            placeholder="e.g., Jakarta Pusat"
-          />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          <Input
-            label="Account Number"
-            value={formData.account_number}
-            onChange={(e) => setFormData({ ...formData, account_number: e.target.value })}
-            placeholder="Bank account number"
-          />
-          <Input
-            label="Account Holder Name"
-            value={formData.account_holder_name}
-            onChange={(e) => setFormData({ ...formData, account_holder_name: e.target.value })}
-            placeholder="Account holder name"
-          />
-        </div>
-      </Card>
-
-      {/* Business Information */}
-      <Card>
-        <h4 className="text-lg font-semibold text-secondary-900 mb-4 flex items-center gap-2">
-          <Building size={20} className="text-primary-600" />
-          Business Details
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Input
-            label="Transaction Type"
-            value={formData.transaction_type}
-            onChange={(e) => setFormData({ ...formData, transaction_type: e.target.value })}
-            placeholder="e.g., B2B, B2C"
-          />
-          {isNTBProvince(formData.province_name) ? (
-            <>
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-secondary-800">
-                  Purch Group
-                </label>
-                <select
-                  value={formData.purch_group || DEFAULT_PURCH_GROUP}
-                  disabled
-                  className="w-full rounded-xl border border-secondary-200 bg-secondary-50 text-secondary-700 px-4 py-3 cursor-not-allowed"
-                  onChange={() => {}}
-                >
-                  <option value={formData.purch_group || DEFAULT_PURCH_GROUP}>
-                    {formData.purch_group || DEFAULT_PURCH_GROUP}
-                  </option>
-                </select>
-                <p className="text-xs text-secondary-500">Diisi otomatis oleh sistem (NTB)</p>
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-secondary-800">
-                  Region/SO
-                </label>
-                <select
-                  value={formData.region_or_so || DEFAULT_REGION_OR_SO}
-                  disabled
-                  className="w-full rounded-xl border border-secondary-200 bg-secondary-50 text-secondary-700 px-4 py-3 cursor-not-allowed"
-                  onChange={() => {}}
-                >
-                  <option value={formData.region_or_so || DEFAULT_REGION_OR_SO}>
-                    {formData.region_or_so || DEFAULT_REGION_OR_SO}
-                  </option>
-                </select>
-                <p className="text-xs text-secondary-500">Diisi otomatis oleh sistem (NTB)</p>
-              </div>
-            </>
-          ) : (
-            <>
-              <Input
-                label="Purch Group"
-                value={formData.purch_group}
-                onChange={(e) => setFormData({ ...formData, purch_group: e.target.value })}
-                placeholder="Masukkan Purch Group"
-                helperText="Isi manual jika bukan NTB"
-              />
-              <Input
-                label="Region/SO"
-                value={formData.region_or_so}
-                onChange={(e) => setFormData({ ...formData, region_or_so: e.target.value })}
-                placeholder="Masukkan Region/SO"
-                helperText="Isi manual jika bukan NTB"
-              />
-            </>
-          )}
-        </div>
-      </Card>
-
-      {/* Contact Person */}
-    </div>
-  );
-
   if (authLoading || !user || isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -1182,235 +388,58 @@ export const VendorProfile: React.FC = () => {
 
   const vendorStatuses = ['pending', 'verify', 'active', 'suspended', 'rejected'];
 
-  // Admin/Superadmin/Client view - show vendors list
-  if (showListView) {
-    const getStatusVariant = (status: string): 'success' | 'info' | 'danger' | 'warning' => {
-      switch (status?.toLowerCase()) {
-        case 'active': return 'success';
-        case 'verified': return 'info';
-        case 'suspended': return 'danger';
-        case 'rejected': return 'danger';
-        default: return 'warning';
-      }
-    };
-
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-secondary-900">Vendor Profiles</h1>
-            <p className="text-secondary-500 text-sm mt-1">Manage and view all registered vendors</p>
-          </div>
-          {user?.role === 'superadmin' && (
-            <Button
-              onClick={() => navigate('/vendor/profile/new')}
-              leftIcon={<Plus size={20} />}
-            >
-              Add Vendor
-            </Button>
-          )}
-        </div>
-
-        {/* Search */}
-        <Card className="p-4">
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <input
-                type="text"
-                placeholder="Search vendors..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={handleKeyPress}
-                className="w-full px-4 py-2 rounded-lg border border-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-              />
-            </div>
-            <Button onClick={handleSearch} leftIcon={<Search size={20} />}>
-              Search
-            </Button>
-            {searchTerm && (
-              <Button onClick={handleReset} variant="secondary" leftIcon={<X size={20} />}>
-                Reset
-              </Button>
-            )}
-          </div>
-        </Card>
-
-        {/* Vendors Table */}
-        <Card className="p-0 overflow-hidden">
-          {vendorList.length === 0 ? (
-            <div className="text-center py-8">
-              <ShoppingBag size={40} className="mx-auto text-secondary-300 mb-3" />
-              <h3 className="font-medium text-secondary-900 mb-1">No vendors found</h3>
-              <p className="text-sm text-secondary-500">No vendor profiles available.</p>
-            </div>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-secondary-50">
-                    <tr>
-                      <th className="text-left py-2.5 px-4 font-medium text-secondary-600">Vendor</th>
-                      <th className="text-left py-2.5 px-4 font-medium text-secondary-600">Email</th>
-                      <th className="text-left py-2.5 px-4 font-medium text-secondary-600">Phone</th>
-                      <th className="text-left py-2.5 px-4 font-medium text-secondary-600">Type</th>
-                      <th className="text-left py-2.5 px-4 font-medium text-secondary-600">Status</th>
-                      {user?.role === 'superadmin' && (
-                        <th className="text-right py-2.5 px-4 font-medium text-secondary-600">Actions</th>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-secondary-100">
-                    {vendorList.map((item, index) => (
-                      <tr
-                        key={item?.vendor?.id || index}
-                        className="hover:bg-secondary-50"
-                      >
-                        <td
-                          className="py-2.5 px-4 cursor-pointer"
-                          onClick={() => navigate(`/vendor/profile/${item?.vendor?.id}/detail`)}
-                        >
-                          <p className="font-medium text-secondary-900">{item?.profile?.vendor_name || '-'}</p>
-                          <p className="text-xs text-secondary-500">{item?.profile?.city_name || '-'}, {item?.profile?.province_name || '-'}</p>
-                        </td>
-                        <td
-                          className="py-2.5 px-4 text-secondary-700 cursor-pointer"
-                          onClick={() => navigate(`/vendor/profile/${item?.vendor?.id}/detail`)}
-                        >{item?.profile?.email || '-'}</td>
-                        <td
-                          className="py-2.5 px-4 text-secondary-700 cursor-pointer"
-                          onClick={() => navigate(`/vendor/profile/${item?.vendor?.id}/detail`)}
-                        >{item?.profile?.phone || '-'}</td>
-                        <td
-                          className="py-2.5 px-4 text-secondary-700 capitalize cursor-pointer"
-                          onClick={() => navigate(`/vendor/profile/${item?.vendor?.id}/detail`)}
-                        >{item?.vendor?.vendor_type || '-'}</td>
-                        <td
-                          className="py-2.5 px-4 cursor-pointer"
-                          onClick={() => navigate(`/vendor/profile/${item?.vendor?.id}/detail`)}
-                        >
-                          <Badge variant={getStatusVariant(item?.vendor?.status || '')}>{item?.vendor?.status || 'pending'}</Badge>
-                        </td>
-                        {canDeleteVendor && (
-                          <td className="py-2.5 px-4 text-right">
-                            <ActionMenu
-                              items={[
-                                {
-                                  label: 'View',
-                                  icon: <Eye size={14} />,
-                                  onClick: () => navigate(`/vendor/profile/${item?.vendor?.id}/detail`),
-                                },
-                                {
-                                  label: 'Delete',
-                                  icon: <Trash2 size={14} />,
-                                  onClick: () => setDeleteVendorId(item?.vendor?.id || ''),
-                                  variant: 'danger',
-                                },
-                              ]}
-                            />
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between px-3 py-2.5 border-t border-secondary-100 bg-secondary-50">
-                  <span className="text-xs text-secondary-500">Page {currentPage}/{totalPages}</span>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>Prev</Button>
-                    <Button variant="ghost" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>Next</Button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </Card>
-
-        <ConfirmModal
-          show={!!deleteVendorId}
-          title="Delete Vendor"
-          message="Are you sure you want to delete this vendor? This action cannot be undone."
-          confirmText="Delete"
-          variant="danger"
-          isLoading={isDeletingVendor}
-          onConfirm={handleDeleteVendorConfirm}
-          onCancel={() => setDeleteVendorId(null)}
-        />
-      </div>
-    );
-  }
-
-  // Vendor role - show own profile
-  // No vendor record yet - show create form prompt
-  if (!vendor && !profile && !isEditing) {
-    return (
-      <div className="max-w-3xl mx-auto">
-        <Card className="text-center py-12">
-          <AlertCircle size={48} className="mx-auto text-warning-500 mb-4" />
-          <h2 className="text-xl font-semibold text-secondary-900 mb-2">
-            Vendor Profile Not Found
-          </h2>
-          <p className="text-secondary-500 mb-6">
-            Your account is not registered as a vendor yet. Please complete your vendor profile to get started.
-          </p>
-          <Button onClick={() => navigate('/vendor/profile/new')}>
-            Create Vendor Profile
-          </Button>
-        </Card>
-      </div>
-    );
-  }
-
   const handleBack = () => navigate('/vendor/profile');
 
-  // Helper to get edit URL based on role
-  const getEditUrl = () => {
-    if (isVendorRole) return '/vendor/profile/edit';
-    return id ? `/vendor/profile/${id}/edit` : '/vendor/profile/edit';
-  };
-
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between gap-3">
+    <div className="max-w-7xl mx-auto space-y-6 px-4 sm:px-6 lg:px-8 py-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           {id && (
             <Button variant="ghost" size="sm" onClick={handleBack} leftIcon={<ArrowLeft size={16} />}>
               Back
             </Button>
           )}
-          <h1 className="text-2xl font-bold text-secondary-900">Vendor Profile</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-secondary-900">Vendor Profile</h1>
         </div>
-        {!isEditing && (
-          <div className="flex items-center gap-3">
-            {canExport && activeVendorId && (
-              <Button
-                variant="secondary"
-                onClick={handleExport}
-                isLoading={isExporting}
-                leftIcon={<Download size={16} />}
-              >
-                Export
-              </Button>
-            )}
-            {canEditProfile && (
-              <Button onClick={() => navigate(getEditUrl())}>Edit Profile</Button>
-            )}
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {canExport && activeVendorId && (
+            <Button
+              variant="secondary"
+              onClick={handleExport}
+              isLoading={isExporting}
+              leftIcon={<Download size={16} />}
+            >
+              Export
+            </Button>
+          )}
+          {canUpdateVendor && activeVendorId && (
+            <Button
+              onClick={() => {
+                if (isVendorRole) {
+                  navigate('/vendor/profile/edit');
+                } else {
+                  navigate(`/vendors/${activeVendorId}/edit`);
+                }
+              }}
+              leftIcon={<Edit size={16} />}
+            >
+              Edit Profile
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Header Card */}
-      <Card className="bg-gradient-to-r from-secondary-900 to-secondary-800 text-white border-none">
-        <div className="flex items-start gap-6">
-          <div className="w-20 h-20 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+      <Card className="bg-gradient-to-r from-secondary-900 to-secondary-800 text-white border-none p-6 md:p-8">
+        <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm flex-shrink-0">
             <ShoppingBag className="text-white" size={40} />
           </div>
-          <div>
-            <h1 className="text-3xl font-bold">
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold">
               {profile?.vendor_name || 'My Vendor Profile'}
             </h1>
-            <div className="flex items-center gap-3 mt-3">
+            <div className="flex flex-wrap items-center gap-3 mt-3">
               {vendor && (
                 <>
                   <Badge
@@ -1427,183 +456,67 @@ export const VendorProfile: React.FC = () => {
         </div>
       </Card>
 
-      {isEditing ? (
-        <div className="max-w-4xl mx-auto">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div>
-              <h3 className="text-2xl font-bold text-secondary-900">
-                {isNewMode ? 'Create Vendor Profile' : 'Edit Profile'}
-              </h3>
-              <p className="text-secondary-500 text-sm mt-1">
-                {isNewMode ? 'Lengkapi profil vendor Anda lalu lanjut upload dokumen' : 'Update vendor information and documents'}
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <Button type="button" variant="secondary" onClick={() => navigate('/vendor/profile')}>
-                Cancel
-              </Button>
-              <Button type="submit" isLoading={isSaving} leftIcon={<Save size={16} />} onClick={handleSubmit}>
-                {isNewMode ? 'Next' : 'Save Changes'}
-              </Button>
-            </div>
-          </div>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {renderFormFields()}
-            {/* Document Upload Section */}
-            {!isNewMode && (
-              <div ref={docsSectionRef}>
-                <Card>
-                  <h4 className="text-lg font-semibold text-secondary-900 mb-4 flex items-center gap-2">
-                    <FileText size={20} className="text-primary-600" />
-                    Document Uploads
-                  </h4>
-
-                  <div className="mb-4">
-                    <p className="text-sm text-secondary-600">
-                      {formData.vendor_type === 'individual'
-                        ? 'Perorangan dianjurkan unggah: KTP, NPWP, Buku Tabungan.'
-                        : 'Perusahaan dianjurkan unggah: KTP pemilik, Izin Domisili, SIUP/NIB, SKT, NPWP, SP-PKP, Akta Perusahaan, Rekening (halaman depan/buku tabungan).'}
-                    </p>
-                    {!profile?.id && (
-                      <div className="mt-3 p-3 border border-secondary-200 rounded-lg bg-secondary-50 text-sm text-secondary-700">
-                        Simpan profil terlebih dahulu agar dapat mengunggah dokumen.
-                      </div>
-                    )}
-                    {formData.vendor_type === '' && (
-                      <div className="mt-2 p-3 border border-warning-200 rounded-lg bg-warning-50 text-sm text-warning-800">
-                        Pilih Vendor Type terlebih dahulu agar daftar dokumen sesuai.
-                      </div>
-                    )}
-                  </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                      {(formData.vendor_type === 'individual' ? individualDocs : companyDocs).map((type) => {
-                        const existing = profile?.files?.find((f) => f.file_type === type);
-                        if (existing) {
-                          return (
-                            <div
-                              key={type}
-                              className={`flex items-center gap-3 p-3 border rounded-xl shadow-sm ${existing.status === 'rejected'
-                                ? 'border-danger-200 bg-danger-50/70'
-                                : existing.status === 'approved'
-                                  ? 'border-success-200 bg-success-50/70'
-                                  : 'border-secondary-200 bg-secondary-50'
-                                }`}
-                            >
-                              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/60 border border-white/70">
-                                <FileText size={18} className={existing.status === 'rejected'
-                                  ? 'text-danger-500'
-                                  : existing.status === 'approved'
-                                    ? 'text-success-600'
-                                    : 'text-primary-600'
-                                } />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-semibold text-secondary-900 truncate">{formatFileType(existing.file_type)}</p>
-                                <p className="text-xs text-secondary-500 truncate capitalize">Status: {existing.status}</p>
-                                {existing.status === 'rejected' && existing.reject_reason && (
-                                  <p className="text-[11px] text-danger-700 mt-1 whitespace-pre-line">Alasan: {existing.reject_reason}</p>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDeleteFileClick(existing.id)}
-                                  className="text-danger-600 hover:bg-danger-50"
-                                  leftIcon={<AlertCircle size={14} />}
-                                >
-                                  Delete
-                                </Button>
-                              </div>
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <label
-                            key={type}
-                            className={`flex flex-col items-center justify-center h-28 border border-dashed border-secondary-300 rounded-lg cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-all group shadow-sm ${!formData.vendor_type || !profile?.id ? 'opacity-60 cursor-not-allowed pointer-events-none' : ''}`}
-                          >
-                            <Upload className="w-5 h-5 text-secondary-400 group-hover:text-primary-500 mb-1" />
-                            <span className="text-sm font-medium text-secondary-700 group-hover:text-primary-600 text-center px-2">
-                              {formatFileType(type)}
-                            </span>
-                          <p className="text-[11px] text-secondary-500 mt-1">PDF/JPG/PNG</p>
-                          <input
-                            type="file"
-                            accept=".jpg,.jpeg,.png,.pdf"
-                            onChange={handleFileUpload(type)}
-                            className="hidden"
-                            disabled={uploadingFile || !formData.vendor_type || !profile?.id}
-                          />
-                        </label>
-                      );
-                    })}
-                  </div>
-                  <p className="text-xs text-secondary-500 mt-2">
-                    Accepted formats: JPG, PNG, PDF (Max 5MB per file)
-                  </p>
-                </Card>
-              </div>
-            )}
-
-            <div className="flex gap-3 pt-4">
-              <Button type="submit" isLoading={isSaving} leftIcon={<Save size={16} />} className="w-full sm:w-auto">
-                {isNewMode ? 'Next' : 'Save Changes'}
-              </Button>
-            </div>
-          </form>
-        </div>
+      {/* Detail View */}
+      {!profile ? (
+        <EmptyState
+          icon={ShoppingBag}
+          title="No Vendor Profile Yet"
+          description={
+            isVendorRole
+              ? 'You haven\'t created your vendor profile yet. Complete your profile to get started.'
+              : 'This vendor has not created a profile yet.'
+          }
+          actionLabel={canUpdateVendor && isVendorRole ? 'Create Vendor Profile' : undefined}
+          onAction={canUpdateVendor && isVendorRole ? () => navigate('/vendor/profile/edit') : undefined}
+        />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 space-y-4">
-            {profile ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            {profile && (
               <>
                 {/* Business Information */}
                 <Card className="overflow-hidden">
-                  <div className="bg-secondary-50 px-4 py-3 border-b border-secondary-200">
-                    <h3 className="font-semibold text-secondary-900 flex items-center gap-2">
+                  <div className="bg-secondary-50 px-4 sm:px-6 py-3 sm:py-4 border-b border-secondary-200">
+                    <h3 className="font-semibold text-base sm:text-lg text-secondary-900 flex items-center gap-2">
                       <Building size={18} className="text-primary-600" />
                       Business Information
                     </h3>
                   </div>
                   <div className="divide-y divide-secondary-100">
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Vendor Name</span>
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">Vendor Name</span>
                       <span className="text-secondary-900 font-medium text-sm">{profile.vendor_name || '-'}</span>
                     </div>
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Business Field</span>
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">Business Field</span>
                       <span className="text-secondary-900 text-sm">{profile.business_field || '-'}</span>
                     </div>
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Transaction Type</span>
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">Transaction Type</span>
                       <span className="text-secondary-900 text-sm">{profile.transaction_type || '-'}</span>
                     </div>
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Purch Group</span>
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">Purch Group</span>
                       <span className="text-secondary-900 text-sm">{profile.purch_group || '-'}</span>
                     </div>
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Region/SO</span>
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">Region/SO</span>
                       <span className="text-secondary-900 text-sm">{profile.region_or_so || '-'}</span>
                     </div>
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Email</span>
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">Email</span>
                       <span className="text-secondary-900 text-sm">{profile.email || '-'}</span>
                     </div>
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Phone</span>
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">Phone</span>
                       <span className="text-secondary-900 text-sm">{profile.phone || '-'}</span>
                     </div>
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Telephone</span>
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">Telephone</span>
                       <span className="text-secondary-900 text-sm">{profile.telephone || '-'}</span>
                     </div>
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Fax</span>
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">Fax</span>
                       <span className="text-secondary-900 text-sm">{profile.fax || '-'}</span>
                     </div>
                   </div>
@@ -1611,31 +524,31 @@ export const VendorProfile: React.FC = () => {
 
                 {/* Location */}
                 <Card className="overflow-hidden">
-                  <div className="bg-secondary-50 px-4 py-3 border-b border-secondary-200">
-                    <h3 className="font-semibold text-secondary-900 flex items-center gap-2">
+                  <div className="bg-secondary-50 px-4 sm:px-6 py-3 sm:py-4 border-b border-secondary-200">
+                    <h3 className="font-semibold text-base sm:text-lg text-secondary-900 flex items-center gap-2">
                       <MapPin size={18} className="text-primary-600" />
                       Location
                     </h3>
                   </div>
                   <div className="divide-y divide-secondary-100">
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Address</span>
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">Address</span>
                       <span className="text-secondary-900 text-sm">{profile.address || '-'}</span>
                     </div>
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Province</span>
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">Province</span>
                       <span className="text-secondary-900 text-sm">{profile.province_name || '-'}</span>
                     </div>
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">City</span>
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">City</span>
                       <span className="text-secondary-900 text-sm">{profile.city_name || '-'}</span>
                     </div>
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">District</span>
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">District</span>
                       <span className="text-secondary-900 text-sm">{profile.district_name || '-'}</span>
                     </div>
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Postal Code</span>
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">Postal Code</span>
                       <span className="text-secondary-900 text-sm">{profile.postal_code || '-'}</span>
                     </div>
                   </div>
@@ -1643,8 +556,8 @@ export const VendorProfile: React.FC = () => {
 
                 {/* Legal Information */}
                 <Card className="overflow-hidden">
-                  <div className="bg-secondary-50 px-4 py-3 border-b border-secondary-200">
-                    <h3 className="font-semibold text-secondary-900 flex items-center gap-2">
+                  <div className="bg-secondary-50 px-4 sm:px-6 py-3 sm:py-4 border-b border-secondary-200">
+                    <h3 className="font-semibold text-base sm:text-lg text-secondary-900 flex items-center gap-2">
                       <FileText size={18} className="text-primary-600" />
                       Legal Information
                     </h3>
@@ -1658,16 +571,16 @@ export const VendorProfile: React.FC = () => {
                       <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">KTP Name</span>
                       <span className="text-secondary-900 text-sm">{profile.ktp_name || '-'}</span>
                     </div>
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">NPWP Number</span>
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">NPWP Number</span>
                       <span className="text-secondary-900 font-mono text-sm">{profile.npwp_number || '-'}</span>
                     </div>
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">NPWP Name</span>
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">NPWP Name</span>
                       <span className="text-secondary-900 text-sm">{profile.npwp_name || '-'}</span>
                     </div>
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">NPWP Address</span>
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">NPWP Address</span>
                       <span className="text-secondary-900 text-sm">{profile.npwp_address || '-'}</span>
                     </div>
                 <div className="flex py-2.5 px-4">
@@ -1685,27 +598,27 @@ export const VendorProfile: React.FC = () => {
 
                 {/* Bank Account */}
                 <Card className="overflow-hidden">
-                  <div className="bg-secondary-50 px-4 py-3 border-b border-secondary-200">
-                    <h3 className="font-semibold text-secondary-900 flex items-center gap-2">
+                  <div className="bg-secondary-50 px-4 sm:px-6 py-3 sm:py-4 border-b border-secondary-200">
+                    <h3 className="font-semibold text-base sm:text-lg text-secondary-900 flex items-center gap-2">
                       <CreditCard size={18} className="text-primary-600" />
                       Bank Account
                     </h3>
                   </div>
                   <div className="divide-y divide-secondary-100">
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Bank Name</span>
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">Bank Name</span>
                       <span className="text-secondary-900 text-sm">{profile.bank_name || '-'}</span>
                     </div>
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Branch</span>
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">Branch</span>
                       <span className="text-secondary-900 text-sm">{profile.bank_branch || '-'}</span>
                     </div>
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Account Number</span>
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">Account Number</span>
                       <span className="text-secondary-900 font-mono text-sm">{profile.account_number || '-'}</span>
                     </div>
-                    <div className="flex py-2.5 px-4">
-                      <span className="text-secondary-500 w-40 flex-shrink-0 text-sm">Account Holder</span>
+                    <div className="flex flex-col sm:flex-row py-3 px-4 sm:px-6 gap-1 sm:gap-4">
+                      <span className="text-secondary-500 sm:w-48 flex-shrink-0 text-sm font-medium">Account Holder</span>
                       <span className="text-secondary-900 text-sm">{profile.account_holder_name || '-'}</span>
                     </div>
                   </div>
@@ -1713,8 +626,8 @@ export const VendorProfile: React.FC = () => {
 
                 {/* Documents */}
                 <Card className="overflow-hidden">
-                  <div className="bg-secondary-50 px-4 py-3 border-b border-secondary-200">
-                    <h3 className="font-semibold text-secondary-900 flex items-center gap-2">
+                  <div className="bg-secondary-50 px-4 sm:px-6 py-3 sm:py-4 border-b border-secondary-200">
+                    <h3 className="font-semibold text-base sm:text-lg text-secondary-900 flex items-center gap-2">
                       <FileText size={18} className="text-primary-600" />
                       Documents
                     </h3>
@@ -1777,20 +690,13 @@ export const VendorProfile: React.FC = () => {
                   )}
                 </Card>
               </>
-            ) : (
-              <Card className="py-8 text-center">
-                <p className="text-secondary-500">No profile information available.</p>
-                <Button variant="secondary" className="mt-4" onClick={() => navigate(getEditUrl())}>
-                  Complete Profile
-                </Button>
-              </Card>
             )}
           </div>
 
           <div className="space-y-6">
             {vendor && (
-              <Card>
-                <h3 className="font-semibold text-secondary-900 mb-4">Vendor Status</h3>
+              <Card className="p-6">
+                <h3 className="font-semibold text-lg text-secondary-900 mb-4">Vendor Status</h3>
                 <div className="space-y-4">
                   <div>
                     <p className="text-xs text-secondary-500">Status</p>

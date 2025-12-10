@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { paymentsApi } from '../../api/payments';
 import { Payment } from '../../types';
-import { Plus, CreditCard, Eye, Edit, Trash2, X } from 'lucide-react';
-import { Button, Card, Table, Badge, ConfirmModal, ActionMenu } from '../../components/ui';
+import { Plus, CreditCard, Eye, Edit, Trash2, X, DollarSign } from 'lucide-react';
+import { Button, Card, Table, Badge, ConfirmModal, ActionMenu, EmptyState } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { usePagination, useDebounce } from '../../hooks';
 import { toast } from 'react-toastify';
@@ -199,7 +199,16 @@ export const PaymentList: React.FC = () => {
         keyField="id"
         isLoading={isLoading}
         onRowClick={(payment) => navigate(`/payments/${payment.id}`)}
-        emptyMessage={isSelfService ? "No payments found for your account." : "No payments found."}
+        emptyState={
+          <EmptyState
+            icon={DollarSign}
+            title={canCreate ? "No Payments Found" : "No Payment History"}
+            description={canCreate ? "You haven't recorded any payments yet. Start by creating your first payment transaction." : "You don't have any payment records yet. Payments will appear here once transactions are processed."}
+            actionLabel={canCreate ? "Create Payment" : undefined}
+            onAction={canCreate ? () => navigate('/payments/new') : undefined}
+            variant="compact"
+          />
+        }
       />
 
       {totalPages > 1 && (

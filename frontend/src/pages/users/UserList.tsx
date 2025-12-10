@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { usersApi } from '../../api/users';
 import { useAuth } from '../../context/AuthContext';
 import { User } from '../../types';
-import { Plus, Search, Edit, Trash2, Shield, X } from 'lucide-react';
-import { Button, Card, Table, Badge, ConfirmModal, ActionMenu } from '../../components/ui';
+import { Plus, Search, Edit, Trash2, Shield, X, Users } from 'lucide-react';
+import { Button, Card, Table, Badge, ConfirmModal, ActionMenu, EmptyState } from '../../components/ui';
 
 export const UserList: React.FC = () => {
   const navigate = useNavigate();
@@ -232,7 +232,16 @@ export const UserList: React.FC = () => {
         keyField="id"
         isLoading={isLoading}
         onRowClick={canUpdateUser ? (user) => navigate(`/users/${user.id}/edit`) : undefined}
-        emptyMessage="No users found."
+        emptyState={
+          <EmptyState
+            icon={Users}
+            title="No Users Found"
+            description={canCreateUser ? "You haven't added any users yet. Start by creating your first user account to manage system access." : "There are no user records available at the moment."}
+            actionLabel={canCreateUser ? "Add User" : undefined}
+            onAction={canCreateUser ? () => navigate('/users/new') : undefined}
+            variant="compact"
+          />
+        }
       />
 
       {totalPages > 1 && (

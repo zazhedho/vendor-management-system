@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { eventsApi } from '../../api/events';
 import { EventSubmission, GroupedSubmissionsResponse, EventSubmissionGroup } from '../../types';
-import { FileText, Award, Trophy, Star, Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { Button, Card, Badge, Spinner } from '../../components/ui';
+import { FileText, Award, Trophy, Star, Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Send } from 'lucide-react';
+import { Button, Card, Badge, Spinner, EmptyState } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { ScoreSubmissionModal } from './ScoreSubmissionModal';
 import { SelectWinnerModal } from './SelectWinnerModal';
@@ -229,15 +229,12 @@ export const SubmissionList: React.FC = () => {
         </div>
 
       {vendorSubmissions.length === 0 ? (
-          <Card>
-            <div className="text-center py-12">
-              <FileText className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No submissions found</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {appliedSearch ? 'Try adjusting your search terms.' : "You haven't submitted any pitches yet."}
-              </p>
-            </div>
-          </Card>
+          <EmptyState
+            icon={Send}
+            title="No Submissions Found"
+            description={appliedSearch ? "No submissions match your search criteria. Try adjusting your search terms." : "You haven't submitted any pitches yet. Browse available events and submit your proposals to participate."}
+            variant="compact"
+          />
         ) : (
           <>
             <div className="bg-white shadow-sm rounded-lg overflow-hidden">
@@ -391,13 +388,12 @@ export const SubmissionList: React.FC = () => {
       </div>
 
       {!groupedData || groupedData.event_groups.length === 0 ? (
-        <Card>
-          <div className="text-center py-12">
-            <FileText className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No submissions found</h3>
-            <p className="mt-1 text-sm text-gray-500">No submissions match your search criteria.</p>
-          </div>
-        </Card>
+        <EmptyState
+          icon={Send}
+          title="No Submissions Found"
+          description="No submissions match your search criteria. Try adjusting your search terms or wait for vendors to submit their proposals."
+          variant="compact"
+        />
       ) : (
         <div className="space-y-4">
           {groupedData.event_groups.map((group: EventSubmissionGroup) => (

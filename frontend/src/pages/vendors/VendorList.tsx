@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { vendorsApi } from '../../api/vendors';
 import { Vendor, VendorProfile } from '../../types';
-import { Plus, Search, Eye, Edit, Trash2 } from 'lucide-react';
-import { Button, Card, Table, Badge, ConfirmModal, ActionMenu } from '../../components/ui';
+import { Plus, Search, Eye, Edit, Trash2, ShoppingBag } from 'lucide-react';
+import { Button, Card, Table, Badge, ConfirmModal, ActionMenu, EmptyState } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { usePagination, useDebounce } from '../../hooks';
 
@@ -172,7 +172,16 @@ export const VendorList: React.FC = () => {
         keyField="id"
         isLoading={isLoading}
         onRowClick={(item) => navigate(`/vendors/${item.vendor.id}`)}
-        emptyMessage="No vendors found. Add one to get started."
+        emptyState={
+          <EmptyState
+            icon={ShoppingBag}
+            title="No Vendors Found"
+            description="You haven't added any vendors yet. Start by creating your first vendor profile."
+            actionLabel={canUpdateVendor ? "Add Vendor" : undefined}
+            onAction={canUpdateVendor ? () => navigate('/vendors/new') : undefined}
+            variant="compact"
+          />
+        }
       />
 
       {totalPages > 1 && (

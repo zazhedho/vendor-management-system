@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { menusApi } from '../../api/menus';
 import { Menu } from '../../types';
-import { Plus, Search, Edit, Trash2 } from 'lucide-react';
-import { Button, Card, Table, Badge, ConfirmModal, ActionMenu } from '../../components/ui';
+import { Plus, Search, Edit, Trash2, LayoutGrid } from 'lucide-react';
+import { Button, Card, Table, Badge, ConfirmModal, ActionMenu, EmptyState } from '../../components/ui';
 
 export const MenuList: React.FC = () => {
   const navigate = useNavigate();
@@ -134,7 +134,16 @@ export const MenuList: React.FC = () => {
         keyField="id"
         isLoading={isLoading}
         onRowClick={(menu) => navigate(`/menus/${menu.id}/edit`)}
-        emptyMessage="No menus found."
+        emptyState={
+          <EmptyState
+            icon={LayoutGrid}
+            title="No Menus Found"
+            description="You haven't created any navigation menus yet. Start by creating your first menu item to organize application navigation."
+            actionLabel="Create Menu"
+            onAction={() => navigate('/menus/new')}
+            variant="compact"
+          />
+        }
       />
 
       {totalPages > 1 && (

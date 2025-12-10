@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { eventsApi } from '../../api/events';
 import { Event } from '../../types';
-import { Plus, Eye, Edit, Trash2, X } from 'lucide-react';
-import { Button, Card, Table, Badge, ConfirmModal, ActionMenu } from '../../components/ui';
+import { Plus, Eye, Edit, Trash2, X, Calendar } from 'lucide-react';
+import { Button, Card, Table, Badge, ConfirmModal, ActionMenu, EmptyState } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { usePagination, useDebounce } from '../../hooks';
 import { toast } from 'react-toastify';
@@ -197,7 +197,16 @@ export const EventList: React.FC = () => {
         keyField="id"
         isLoading={isLoading}
         onRowClick={(event) => navigate(`/events/${event.id}`)}
-        emptyMessage={canUpdate ? "No events found. Create one to get started." : "No events available at the moment."}
+        emptyState={
+          <EmptyState
+            icon={Calendar}
+            title={canCreate ? "No Events Found" : "No Events Available"}
+            description={canCreate ? "You haven't created any events yet. Start by creating your first event to engage vendors." : "There are no events available at the moment. Check back later for new opportunities."}
+            actionLabel={canCreate ? "Create Event" : undefined}
+            onAction={canCreate ? () => navigate('/events/new') : undefined}
+            variant="compact"
+          />
+        }
       />
 
       {totalPages > 1 && (

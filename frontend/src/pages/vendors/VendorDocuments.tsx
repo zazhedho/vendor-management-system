@@ -169,9 +169,8 @@ export const VendorDocuments: React.FC = () => {
 
   const canUpload = useMemo(() => {
     if (!profile?.id) return false;
-    if (isVendorRole) return hasPermission('vendor', 'update');
-    return false;
-  }, [profile?.id, isVendorRole, hasPermission]);
+    return hasPermission('vendor', 'update');
+  }, [profile?.id, hasPermission]);
 
   if (isLoading) {
     return (

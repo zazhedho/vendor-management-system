@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { evaluationsApi } from '../../api/evaluations';
 import { Evaluation } from '../../types';
-import { Plus, Search, Star, Image, Upload, Award, Eye, X } from 'lucide-react';
-import { Button, Card, Table, Badge, ActionMenu } from '../../components/ui';
+import { Plus, Search, Star, Image, Upload, Award, Eye, X, ClipboardList } from 'lucide-react';
+import { Button, Card, Table, Badge, ActionMenu, EmptyState } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 
 export const EvaluationList: React.FC = () => {
@@ -304,7 +304,16 @@ export const EvaluationList: React.FC = () => {
         keyField="id"
         isLoading={isLoading}
         onRowClick={(evaluation) => navigate(`/evaluations/${evaluation.id}`)}
-        emptyMessage="No evaluations found."
+        emptyState={
+          <EmptyState
+            icon={ClipboardList}
+            title="No Evaluations Found"
+            description={canCreate ? "You haven't created any evaluations yet. Start by evaluating vendor performance after event completion." : "There are no evaluation records available. Evaluations will appear here once created."}
+            actionLabel={canCreate ? "New Evaluation" : undefined}
+            onAction={canCreate ? () => navigate('/evaluations/new') : undefined}
+            variant="compact"
+          />
+        }
       />
 
       {totalPages > 1 && (
