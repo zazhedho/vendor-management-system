@@ -1,9 +1,14 @@
 import { apiClient } from './client';
 import { ApiResponse, PaginatedResponse, Vendor, VendorProfile, VendorProfileFile } from '../types';
 
+interface VendorWithProfile {
+  vendor: Vendor;
+  profile: VendorProfile | null;
+}
+
 export const vendorsApi = {
   getAll: async (params?: { page?: number; limit?: number; search?: string; [key: string]: any }) => {
-    const response = await apiClient.get<PaginatedResponse<Vendor>>('/vendors', { params });
+    const response = await apiClient.get<PaginatedResponse<VendorWithProfile>>('/vendors', { params });
     return response.data;
   },
 

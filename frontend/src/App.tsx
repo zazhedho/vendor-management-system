@@ -475,7 +475,7 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
-                    <VendorProfile />
+                    <VendorForm />
                   </Suspense>
                 </Layout>
               </ProtectedRoute>
@@ -499,7 +499,7 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
-                    <VendorProfile />
+                    <VendorForm />
                   </Suspense>
                 </Layout>
               </ProtectedRoute>
@@ -523,7 +523,7 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
-                    <VendorProfile />
+                    <VendorForm />
                   </Suspense>
                 </Layout>
               </ProtectedRoute>

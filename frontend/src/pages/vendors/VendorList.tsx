@@ -2,16 +2,23 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { vendorsApi } from '../../api/vendors';
-import { Vendor } from '../../types';
+import { Vendor, VendorProfile } from '../../types';
 import { Plus, Search, Eye, Edit, Trash2 } from 'lucide-react';
 import { Button, Card, Table, Badge, ConfirmModal, ActionMenu } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { usePagination, useDebounce } from '../../hooks';
 
+interface VendorListItem {
+  id: string;
+  vendor: Vendor;
+  profile: VendorProfile | null;
+}
+
 export const VendorList: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { hasPermission } = useAuth();
+  const canListVendors = hasPermission('vendor', 'list');
   const canUpdateVendor = hasPermission('vendor', 'update');
   const canDeleteVendor = hasPermission('vendor', 'delete');
 
@@ -23,6 +30,7 @@ export const VendorList: React.FC = () => {
   const { data: response, isLoading } = useQuery({
     queryKey: ['vendors', { page: currentPage, search: debouncedSearch }],
     queryFn: () => vendorsApi.getAll({ page: currentPage, limit: 10, search: debouncedSearch }),
+    enabled: canListVendors,
   });
 
   const deleteMutation = useMutation({
@@ -33,7 +41,24 @@ export const VendorList: React.FC = () => {
     },
   });
 
-  const vendors = response?.data || [];
+  // Show message if no permission
+  if (!canListVendors) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Card className="p-8 text-center">
+          <h2 className="text-xl font-semibold text-secondary-900 mb-2">Access Denied</h2>
+          <p className="text-secondary-600">You don't have permission to view vendors list.</p>
+        </Card>
+      </div>
+    );
+  }
+
+  const rawData: Array<{ vendor: Vendor; profile: VendorProfile | null }> = response?.data || [];
+  const vendorsData: VendorListItem[] = rawData.map((item) => ({
+    id: item.vendor.id,
+    vendor: item.vendor,
+    profile: item.profile,
+  }));
   const totalPages = response?.total_pages || 1;
 
   const getStatusVariant = (status: string) => {
@@ -49,53 +74,57 @@ export const VendorList: React.FC = () => {
 
   const columns = [
     {
-      header: 'Vendor ID',
-      accessor: (vendor: Vendor) => <span className="font-mono text-xs">{vendor.id.slice(0, 8)}...</span>
+      header: 'Vendor Name',
+      accessor: (item: VendorListItem) => (
+        <span className="font-semibold text-secondary-900">
+          {item.profile?.vendor_name || '-'}
+        </span>
+      )
     },
     {
       header: 'Vendor Code',
-      accessor: (vendor: Vendor) => vendor.vendor_code ? (
-        <span className="font-semibold text-secondary-900">{vendor.vendor_code}</span>
+      accessor: (item: VendorListItem) => item.vendor.vendor_code ? (
+        <span className="font-semibold text-secondary-900">{item.vendor.vendor_code}</span>
       ) : (
         <span className="text-secondary-500">-</span>
       )
     },
     {
       header: 'Type',
-      accessor: (vendor: Vendor) => vendor.vendor_type
+      accessor: (item: VendorListItem) => item.vendor.vendor_type
     },
     {
       header: 'Status',
-      accessor: (vendor: Vendor) => (
-        <Badge variant={getStatusVariant(vendor.status)} className="capitalize font-semibold px-3 py-1">
-          {vendor.status}
+      accessor: (item: VendorListItem) => (
+        <Badge variant={getStatusVariant(item.vendor.status)} className="capitalize font-semibold px-3 py-1">
+          {item.vendor.status}
         </Badge>
       )
     },
     {
       header: 'Created At',
-      accessor: (vendor: Vendor) => new Date(vendor.created_at).toLocaleDateString()
+      accessor: (item: VendorListItem) => new Date(item.vendor.created_at).toLocaleDateString()
     },
     {
       header: 'Actions',
-      accessor: (vendor: Vendor) => (
+      accessor: (item: VendorListItem) => (
         <ActionMenu
           items={[
             {
               label: 'View',
               icon: <Eye size={14} />,
-              onClick: () => navigate(`/vendors/${vendor.id}`),
+              onClick: () => navigate(`/vendors/${item.vendor.id}`),
             },
             {
               label: 'Edit',
               icon: <Edit size={14} />,
-              onClick: () => navigate(`/vendors/${vendor.id}/edit`),
+              onClick: () => navigate(`/vendors/${item.vendor.id}/edit`),
               hidden: !canUpdateVendor,
             },
             {
               label: 'Delete',
               icon: <Trash2 size={14} />,
-              onClick: () => setDeleteId(vendor.id),
+              onClick: () => setDeleteId(item.vendor.id),
               variant: 'danger',
               hidden: !canDeleteVendor,
             },
@@ -138,11 +167,11 @@ export const VendorList: React.FC = () => {
       </Card>
 
       <Table
-        data={vendors}
+        data={vendorsData}
         columns={columns}
         keyField="id"
         isLoading={isLoading}
-        onRowClick={(vendor) => navigate(`/vendors/${vendor.id}`)}
+        onRowClick={(item) => navigate(`/vendors/${item.vendor.id}`)}
         emptyMessage="No vendors found. Add one to get started."
       />
 

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { vendorsApi } from '../../api/vendors';
+import { locationApi, LocationItem } from '../../api/location';
+import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import { Save, X, Upload, FileText, Trash2, ArrowRight, ArrowLeft } from 'lucide-react';
 import { VendorProfile, VendorProfileFile } from '../../types';
@@ -25,8 +27,13 @@ const formatFileType = (type: string): string => {
 
 export const VendorForm: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams<{ id: string }>();
-  const isEditMode = !!id;
+  const { user } = useAuth();
+  
+  // Check if this is vendor editing their own profile (routes like /vendor/profile/edit or /vendor/profile/new)
+  const isVendorSelfEdit = location.pathname.startsWith('/vendor/profile');
+  const isEditMode = !!id || (isVendorSelfEdit && !location.pathname.endsWith('/new'));
 
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -83,8 +90,15 @@ export const VendorForm: React.FC = () => {
   const [deleteFileId, setDeleteFileId] = useState<string | null>(null);
   const [isDeletingFile, setIsDeletingFile] = useState(false);
 
-  const companyDocs = ['ktp', 'domisili', 'siup', 'nib', 'skt', 'npwp', 'sppkp', 'akta', 'bank_book', 'rekening'];
+  const companyDocs = ['ktp', 'domisili', 'siup', 'nib', 'skt', 'npwp', 'sppkp', 'akta', 'bank_book'];
   const individualDocs = ['ktp', 'npwp', 'bank_book'];
+
+  // Location states
+  const [provinces, setProvinces] = useState<LocationItem[]>([]);
+  const [cities, setCities] = useState<LocationItem[]>([]);
+  const [districts, setDistricts] = useState<LocationItem[]>([]);
+  const [selectedProvinceCode, setSelectedProvinceCode] = useState('');
+  const [selectedCityCode, setSelectedCityCode] = useState('');
 
   const steps = [
     { title: 'General Info', description: 'Basic vendor details' },
@@ -94,10 +108,100 @@ export const VendorForm: React.FC = () => {
   ];
 
   useEffect(() => {
-    if (isEditMode && id) {
-      fetchVendor(id);
+    fetchProvinces();
+    if (isEditMode) {
+      if (id) {
+        fetchVendor(id);
+      } else if (isVendorSelfEdit) {
+        fetchMyVendorProfile();
+      }
     }
-  }, [id, isEditMode]);
+  }, [id, isEditMode, isVendorSelfEdit]);
+
+  useEffect(() => {
+    if (selectedProvinceCode) {
+      fetchCities(selectedProvinceCode);
+      setCities([]);
+      setDistricts([]);
+      setSelectedCityCode('');
+    }
+  }, [selectedProvinceCode]);
+
+  useEffect(() => {
+    if (selectedProvinceCode && selectedCityCode) {
+      fetchDistricts(selectedProvinceCode, selectedCityCode);
+      setDistricts([]);
+    }
+  }, [selectedCityCode]);
+
+  const fetchProvinces = async () => {
+    try {
+      const response = await locationApi.getProvinces();
+      if (response.status && response.data) {
+        setProvinces(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch provinces:', error);
+    }
+  };
+
+  const fetchCities = async (provinceCode: string) => {
+    try {
+      const response = await locationApi.getCities(provinceCode);
+      if (response.status && response.data) {
+        setCities(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch cities:', error);
+    }
+  };
+
+  const fetchDistricts = async (provinceCode: string, cityCode: string) => {
+    try {
+      const response = await locationApi.getDistricts(provinceCode, cityCode);
+      if (response.status && response.data) {
+        setDistricts(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch districts:', error);
+    }
+  };
+
+  const fetchMyVendorProfile = async () => {
+    setIsInitialLoading(true);
+    try {
+      const response = await vendorsApi.getMyVendorProfile();
+      if (response.status && response.data) {
+        const data = response.data as any;
+        const vendor = data.vendor;
+        const profile = data.profile;
+
+        if (vendor) {
+          setVendorData({
+            user_id: vendor.user_id || user?.id || '',
+            vendor_type: vendor.vendor_type || '',
+            status: vendor.status || 'pending',
+          });
+        }
+
+        if (profile) {
+          setProfileData({ ...profile, vendor_type: vendor?.vendor_type });
+          if (profile.files) {
+            setProfileFiles(profile.files);
+          }
+          if (profile.province_id) setSelectedProvinceCode(profile.province_id);
+          if (profile.city_id) setSelectedCityCode(profile.city_id);
+        }
+      }
+    } catch (error: any) {
+      if (error.response?.status !== 404) {
+        console.error('Failed to fetch vendor profile:', error);
+        toast.error('Failed to load vendor profile');
+      }
+    } finally {
+      setIsInitialLoading(false);
+    }
+  };
 
   const fetchVendor = async (vendorId: string) => {
     setIsInitialLoading(true);
@@ -117,6 +221,8 @@ export const VendorForm: React.FC = () => {
           if (profileResponse.data.files) {
             setProfileFiles(profileResponse.data.files);
           }
+          if (profileResponse.data.province_id) setSelectedProvinceCode(profileResponse.data.province_id);
+          if (profileResponse.data.city_id) setSelectedCityCode(profileResponse.data.city_id);
         }
       }
     } catch (error) {
@@ -197,9 +303,14 @@ export const VendorForm: React.FC = () => {
       };
 
       let response;
-      if (profileData.id) {
+      if (isVendorSelfEdit) {
+        // Vendor editing own profile - use POST /vendor/profile (create or update)
+        response = await vendorsApi.createProfile(profileSubmitData);
+      } else if (profileData.id) {
+        // Admin editing existing vendor profile
         response = await vendorsApi.updateProfile(profileData.id, profileSubmitData);
       } else {
+        // Admin creating new vendor profile
         response = await vendorsApi.createProfile(profileSubmitData);
       }
 
@@ -221,7 +332,12 @@ export const VendorForm: React.FC = () => {
       }
 
       toast.success(isEditMode ? 'Vendor updated' : 'Vendor created');
-      navigate('/vendors');
+      // Redirect based on context
+      if (isVendorSelfEdit) {
+        navigate('/vendor/profile/detail');
+      } else {
+        navigate('/vendors');
+      }
     } catch (err: any) {
       toast.error(err.message || 'Failed to save vendor');
     } finally {
@@ -259,15 +375,17 @@ export const VendorForm: React.FC = () => {
           <Card className="animate-fade-in">
             <h2 className="text-xl font-semibold mb-6">General Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Input
-                label="User ID"
-                name="user_id"
-                value={vendorData.user_id}
-                onChange={handleVendorChange}
-                disabled={isEditMode}
-                required
-                placeholder="UUID"
-              />
+              {!isVendorSelfEdit && (
+                <Input
+                  label="User ID"
+                  name="user_id"
+                  value={vendorData.user_id}
+                  onChange={handleVendorChange}
+                  disabled={isEditMode}
+                  required
+                  placeholder="UUID"
+                />
+              )}
               <div>
                 <label className="block text-sm font-medium text-secondary-700 mb-1.5">
                   Vendor Type <span className="text-danger-500">*</span>
@@ -338,49 +456,91 @@ export const VendorForm: React.FC = () => {
         {currentStep === 1 && (
           <Card className="animate-fade-in">
             <h2 className="text-xl font-semibold mb-6">Address Details</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Input
-                label="Province ID"
-                name="province_id"
-                value={profileData.province_id}
-                onChange={handleProfileChange}
-                placeholder="e.g., 31"
-              />
-              <Input
-                label="Province Name"
-                name="province_name"
-                value={profileData.province_name}
-                onChange={handleProfileChange}
-                placeholder="e.g., DKI Jakarta"
-              />
-              <Input
-                label="City ID"
-                name="city_id"
-                value={profileData.city_id}
-                onChange={handleProfileChange}
-                placeholder="e.g., 3171"
-              />
-              <Input
-                label="City Name"
-                name="city_name"
-                value={profileData.city_name}
-                onChange={handleProfileChange}
-                placeholder="e.g., Jakarta Selatan"
-              />
-              <Input
-                label="District ID"
-                name="district_id"
-                value={profileData.district_id}
-                onChange={handleProfileChange}
-                placeholder="e.g., 317101"
-              />
-              <Input
-                label="District Name"
-                name="district_name"
-                value={profileData.district_name}
-                onChange={handleProfileChange}
-                placeholder="e.g., Kebayoran Baru"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-secondary-700 mb-1.5">
+                  Province <span className="text-danger-500">*</span>
+                </label>
+                <select
+                  value={selectedProvinceCode}
+                  onChange={(e) => {
+                    const code = e.target.value;
+                    const selected = provinces.find(p => p.code === code);
+                    setSelectedProvinceCode(code);
+                    setProfileData({
+                      ...profileData,
+                      province_id: code,
+                      province_name: selected?.name || '',
+                      city_id: '',
+                      city_name: '',
+                      district_id: '',
+                      district_name: '',
+                    });
+                  }}
+                  className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
+                  required
+                >
+                  <option value="">Select Province</option>
+                  {provinces.map((prov) => (
+                    <option key={prov.code} value={prov.code}>{prov.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-secondary-700 mb-1.5">
+                  City <span className="text-danger-500">*</span>
+                </label>
+                <select
+                  value={selectedCityCode}
+                  onChange={(e) => {
+                    const code = e.target.value;
+                    const selected = cities.find(c => c.code === code);
+                    setSelectedCityCode(code);
+                    setProfileData({
+                      ...profileData,
+                      city_id: code,
+                      city_name: selected?.name || '',
+                      district_id: '',
+                      district_name: '',
+                    });
+                  }}
+                  disabled={!selectedProvinceCode}
+                  className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none disabled:bg-secondary-50 disabled:cursor-not-allowed"
+                  required
+                >
+                  <option value="">Select City</option>
+                  {cities.map((city) => (
+                    <option key={city.code} value={city.code}>{city.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-secondary-700 mb-1.5">
+                  District <span className="text-danger-500">*</span>
+                </label>
+                <select
+                  value={profileData.district_id}
+                  onChange={(e) => {
+                    const code = e.target.value;
+                    const selected = districts.find(d => d.code === code);
+                    setProfileData({
+                      ...profileData,
+                      district_id: code,
+                      district_name: selected?.name || '',
+                    });
+                  }}
+                  disabled={!selectedCityCode}
+                  className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none disabled:bg-secondary-50 disabled:cursor-not-allowed"
+                  required
+                >
+                  <option value="">Select District</option>
+                  {districts.map((dist) => (
+                    <option key={dist.code} value={dist.code}>{dist.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
               <Input
                 label="Postal Code"
                 name="postal_code"
@@ -496,84 +656,107 @@ export const VendorForm: React.FC = () => {
               </div>
             )}
 
-            {/* Existing Files */}
-            {profileFiles.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-sm font-medium text-secondary-500 mb-3 uppercase tracking-wider">Uploaded Files</h3>
-                <div className="space-y-3">
-                  {profileFiles.map((file) => (
-                    <div key={file.id} className="flex items-center justify-between p-4 border border-secondary-200 rounded-lg bg-secondary-50">
-                      <div className="flex items-center gap-3">
-                        <FileText className="text-primary-600" size={20} />
-                        <div>
-                          <p className="font-medium text-secondary-900">{formatFileType(file.file_type)}</p>
-                          <a href={file.file_url} target="_blank" rel="noreferrer" className="text-xs text-primary-600 hover:underline">
-                            View Document
-                          </a>
-                        </div>
+            {/* Document Grid - show existing file OR upload slot for each type */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {(vendorData.vendor_type === 'individual' ? individualDocs : companyDocs).map((type) => {
+                const existingFile = profileFiles.find((f) => f.file_type === type);
+                const pendingFile = newFiles.find((f) => f.type === type);
+
+                // Show existing uploaded file
+                if (existingFile) {
+                  return (
+                    <div
+                      key={type}
+                      className={`flex items-center gap-3 p-4 border rounded-xl shadow-sm ${
+                        existingFile.status === 'rejected'
+                          ? 'border-danger-200 bg-danger-50/70'
+                          : existingFile.status === 'approved'
+                            ? 'border-success-200 bg-success-50/70'
+                            : 'border-secondary-200 bg-secondary-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/60 border border-white/70">
+                        <FileText size={18} className={
+                          existingFile.status === 'rejected'
+                            ? 'text-danger-500'
+                            : existingFile.status === 'approved'
+                              ? 'text-success-600'
+                              : 'text-primary-600'
+                        } />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-secondary-900 truncate">{formatFileType(existingFile.file_type)}</p>
+                        <p className="text-xs text-secondary-500 truncate capitalize">Status: {existingFile.status}</p>
+                        {existingFile.status === 'rejected' && existingFile.reject_reason && (
+                          <p className="text-[11px] text-danger-700 mt-1 whitespace-pre-line">Alasan: {existingFile.reject_reason}</p>
+                        )}
+                        <a href={existingFile.file_url} target="_blank" rel="noreferrer" className="text-xs text-primary-600 hover:underline">
+                          View
+                        </a>
                       </div>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDeleteExistingFileClick(file.id)}
-                        className="text-danger-600 hover:bg-danger-50 hover:text-danger-700"
+                        onClick={() => handleDeleteExistingFileClick(existingFile.id)}
+                        className="text-danger-600 hover:bg-danger-50 hover:text-danger-700 flex-shrink-0"
                       >
                         <Trash2 size={16} />
                       </Button>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                  );
+                }
 
-            {/* New Files List */}
-            {newFiles.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-sm font-medium text-secondary-500 mb-3 uppercase tracking-wider">Ready to Upload</h3>
-                <div className="space-y-3">
-                  {newFiles.map((file, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-4 border border-success-200 rounded-lg bg-success-50">
-                      <div className="flex items-center gap-3">
-                        <FileText className="text-success-600" size={20} />
-                        <div>
-                          <p className="font-medium text-success-900 capitalize">{file.type.replace('_', ' ')}</p>
-                          <p className="text-xs text-success-700">{file.file.name}</p>
-                        </div>
+                // Show pending file (ready to upload)
+                if (pendingFile) {
+                  const pendingIndex = newFiles.findIndex((f) => f.type === type);
+                  return (
+                    <div
+                      key={type}
+                      className="flex items-center gap-3 p-4 border border-warning-200 rounded-xl bg-warning-50/70 shadow-sm"
+                    >
+                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/60 border border-white/70">
+                        <FileText size={18} className="text-warning-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-secondary-900 truncate">{formatFileType(type)}</p>
+                        <p className="text-xs text-warning-700 truncate">{pendingFile.file.name}</p>
+                        <p className="text-[11px] text-warning-600">Ready to upload</p>
                       </div>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleRemoveNewFile(idx)}
-                        className="text-danger-600 hover:bg-danger-50 hover:text-danger-700"
+                        onClick={() => handleRemoveNewFile(pendingIndex)}
+                        className="text-danger-600 hover:bg-danger-50 hover:text-danger-700 flex-shrink-0"
                       >
                         <X size={16} />
                       </Button>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                  );
+                }
 
-            {/* Upload Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {(vendorData.vendor_type === 'individual' ? individualDocs : companyDocs).map((type) => (
-                <label
-                  key={type}
-                  className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-secondary-300 rounded-xl cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-all group"
-                >
-                  <Upload className="w-6 h-6 text-secondary-400 group-hover:text-primary-500 mb-2" />
-                  <span className="text-sm font-medium text-secondary-600 group-hover:text-primary-600 text-center px-2">
-                    {formatFileType(type)}
-                  </span>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept=".jpg,.jpeg,.png,.pdf"
-                    onChange={(e) => handleFileAdd(e, type)}
-                    disabled={!vendorData.vendor_type}
-                  />
-                </label>
-              ))}
+                // Show upload slot
+                return (
+                  <label
+                    key={type}
+                    className={`flex flex-col items-center justify-center h-32 border-2 border-dashed border-secondary-300 rounded-xl cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-all group ${
+                      !vendorData.vendor_type ? 'opacity-60 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    <Upload className="w-6 h-6 text-secondary-400 group-hover:text-primary-500 mb-2" />
+                    <span className="text-sm font-medium text-secondary-600 group-hover:text-primary-600 text-center px-2">
+                      {formatFileType(type)}
+                    </span>
+                    <p className="text-[11px] text-secondary-400 mt-1">PDF/JPG/PNG</p>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept=".jpg,.jpeg,.png,.pdf"
+                      onChange={(e) => handleFileAdd(e, type)}
+                      disabled={!vendorData.vendor_type}
+                    />
+                  </label>
+                );
+              })}
             </div>
           </Card>
         )}
