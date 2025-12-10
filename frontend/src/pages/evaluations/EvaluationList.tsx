@@ -15,7 +15,7 @@ export const EvaluationList: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  const canViewAll = hasPermission('evaluation', 'view');
+  const canListAll = hasPermission('evaluation', 'list');
   const canCreate = hasPermission('evaluation', 'create');
   const canUpdate = hasPermission('evaluation', 'update');
   const canDelete = hasPermission('evaluation', 'delete');
@@ -23,7 +23,6 @@ export const EvaluationList: React.FC = () => {
   const canReviewPhoto = hasPermission('evaluation', 'review_photo');
   const canManageEvaluations = canCreate || canUpdate || canDelete || canReviewPhoto;
   const isVendorView = canUploadPhoto && !canManageEvaluations;
-  const canListAll = canViewAll || canManageEvaluations;
 
   useEffect(() => {
     fetchEvaluations();

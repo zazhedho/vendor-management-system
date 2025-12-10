@@ -20,28 +20,28 @@ export const Dashboard: React.FC = () => {
   const { user, hasPermission } = useAuth();
 
   const canViewDashboard = hasPermission('dashboard', 'view');
-  const canViewEvents = hasPermission('event', 'view');
-  const canViewVendors = hasPermission('vendor', 'view');
-  const canViewPayments = hasPermission('payment', 'view');
+  const canListEvents = hasPermission('event', 'list');
+  const canListVendors = hasPermission('vendor', 'list');
+  const canListPayments = hasPermission('payment', 'list');
   const canManagePayments = hasPermission('payment', 'create') || hasPermission('payment', 'update') || hasPermission('payment', 'delete');
   const canViewMySubmissions = hasPermission('event', 'view_my_submissions') || hasPermission('event', 'submit_pitch');
 
   const { data: eventsRes, isLoading: eventsLoading } = useQuery({
     queryKey: ['events', { limit: 5 }],
     queryFn: () => eventsApi.getAll({ limit: 5 }),
-    enabled: !!user && canViewDashboard && canViewEvents,
+    enabled: !!user && canViewDashboard && canListEvents,
   });
 
   const { data: vendorsRes, isLoading: vendorsLoading } = useQuery({
     queryKey: ['vendors', { limit: 100 }],
     queryFn: () => vendorsApi.getAll({ limit: 100 }),
-    enabled: !!user && canViewDashboard && canViewVendors,
+    enabled: !!user && canViewDashboard && canListVendors,
   });
 
   const { data: paymentsRes, isLoading: paymentsLoading } = useQuery({
     queryKey: ['payments', { limit: 100, type: canManagePayments ? 'all' : 'my' }],
     queryFn: () => canManagePayments ? paymentsApi.getAll({ limit: 100 }) : paymentsApi.getMyPayments(),
-    enabled: !!user && canViewDashboard && canViewPayments,
+    enabled: !!user && canViewDashboard && canListPayments,
   });
 
   const { data: submissionsRes, isLoading: submissionsLoading } = useQuery({

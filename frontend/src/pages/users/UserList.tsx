@@ -9,7 +9,7 @@ import { Button, Card, Table, Badge, ConfirmModal, ActionMenu } from '../../comp
 export const UserList: React.FC = () => {
   const navigate = useNavigate();
   const { user: currentUser, hasPermission } = useAuth();
-  const canViewUsers = hasPermission('users', 'view');
+  const canListUsers = hasPermission('users', 'list');
   const canCreateUser = hasPermission('users', 'create');
   const canUpdateUser = hasPermission('users', 'update');
   const canDeleteUser = hasPermission('users', 'delete');
@@ -22,9 +22,9 @@ export const UserList: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    if (!canViewUsers) return;
+    if (!canListUsers) return;
     fetchUsers();
-  }, [currentPage, canViewUsers]);
+  }, [currentPage, canListUsers]);
 
   const handleSearch = () => {
     setCurrentPage(1);
@@ -41,7 +41,7 @@ export const UserList: React.FC = () => {
     setSearchTerm('');
     setCurrentPage(1);
     
-    if (!canViewUsers) return;
+    if (!canListUsers) return;
 
     // Fetch with empty search
     setIsLoading(true);
@@ -68,7 +68,7 @@ export const UserList: React.FC = () => {
   };
 
   const fetchUsers = async () => {
-    if (!canViewUsers) return;
+    if (!canListUsers) return;
 
     setIsLoading(true);
     try {
@@ -176,7 +176,7 @@ export const UserList: React.FC = () => {
     }
   ];
 
-  if (!canViewUsers) {
+  if (!canListUsers) {
     return (
       <Card className="text-center py-12">
         <Shield className="mx-auto text-secondary-400 mb-4" size={48} />

@@ -48,10 +48,10 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
         setIsSearching(true);
         try {
             const canSearchVendors =
-                hasPermission('vendor', 'view') &&
+                hasPermission('vendor', 'list') &&
                 (hasPermission('vendor', 'update_status') || hasPermission('event', 'select_winner'));
-            const canSearchEvents = hasPermission('event', 'view');
-            const canSearchPayments = hasPermission('payment', 'view');
+            const canSearchEvents = hasPermission('event', 'list');
+            const canSearchPayments = hasPermission('payment', 'list');
 
             const [vendorsRes, eventsRes, paymentsRes] = await Promise.all([
                 canSearchVendors ? vendorsApi.getAll({ search: query, limit: 5 }).catch(() => null) : Promise.resolve(null),
