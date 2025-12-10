@@ -102,7 +102,7 @@ function App() {
           <Route
             path="/events"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="event" action="list">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <EventList />
@@ -114,7 +114,7 @@ function App() {
           <Route
             path="/events/new"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="event" action="create">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <EventForm />
@@ -126,7 +126,7 @@ function App() {
           <Route
             path="/events/:id"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="event" action="view">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <EventDetail />
@@ -138,7 +138,7 @@ function App() {
           <Route
             path="/events/:id/edit"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="event" action="update">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <EventForm />
@@ -151,7 +151,7 @@ function App() {
           <Route
             path="/vendors"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="vendor" action="list">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <VendorList />
@@ -163,7 +163,7 @@ function App() {
           <Route
             path="/vendors/new"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="vendor" action="update">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <VendorForm />
@@ -175,7 +175,7 @@ function App() {
           <Route
             path="/vendors/:id"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="vendor" action="view">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <VendorDetail />
@@ -187,7 +187,7 @@ function App() {
           <Route
             path="/vendors/:id/edit"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="vendor" action="update">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <VendorForm />
@@ -200,7 +200,7 @@ function App() {
           <Route
             path="/payments"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="payment" action="list">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <PaymentList />
@@ -212,7 +212,7 @@ function App() {
           <Route
             path="/payments/new"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="payment" action="create">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <PaymentForm />
@@ -224,7 +224,7 @@ function App() {
           <Route
             path="/payments/:id"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="payment" action="view">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <PaymentDetail />
@@ -236,7 +236,7 @@ function App() {
           <Route
             path="/payments/:id/edit"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="payment" action="update">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <PaymentForm />
@@ -249,7 +249,7 @@ function App() {
           <Route
             path="/evaluations"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="evaluation" action="list">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <EvaluationList />
@@ -261,7 +261,7 @@ function App() {
           <Route
             path="/evaluations/new"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="evaluation" action="create">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <EvaluationForm />
@@ -273,7 +273,7 @@ function App() {
           <Route
             path="/evaluations/:id"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="evaluation" action="view">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <EvaluationDetail />
@@ -285,7 +285,7 @@ function App() {
           <Route
             path="/evaluations/:id/edit"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="evaluation" action="update">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <EvaluationForm />
@@ -297,7 +297,7 @@ function App() {
           <Route
             path="/evaluations/:id/upload"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="evaluation" action="upload_photo">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <VendorPhotoUpload />
@@ -310,7 +310,7 @@ function App() {
           <Route
             path="/users"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="users" action="list">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <UserList />
@@ -322,7 +322,7 @@ function App() {
           <Route
             path="/users/new"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="users" action="create">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <UserForm />
@@ -334,7 +334,7 @@ function App() {
           <Route
             path="/users/:id/edit"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="users" action="update">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <UserForm />
@@ -347,7 +347,7 @@ function App() {
           <Route
             path="/roles"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="roles" action="list">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <RoleList />
@@ -359,7 +359,7 @@ function App() {
           <Route
             path="/roles/new"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="roles" action="create">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <RoleForm />
@@ -371,7 +371,7 @@ function App() {
           <Route
             path="/roles/:id/edit"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="roles" action="update">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <RoleForm />
@@ -384,7 +384,7 @@ function App() {
           <Route
             path="/menus"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="menus" action="list">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <MenuList />
@@ -396,7 +396,7 @@ function App() {
           <Route
             path="/menus/new"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="menus" action="create">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <MenuForm />
@@ -408,7 +408,7 @@ function App() {
           <Route
             path="/menus/:id/edit"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="menus" action="update">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <MenuForm />
@@ -496,7 +496,7 @@ function App() {
           <Route
             path="/vendor/profile/new"
             element={
-              <ProtectedRoute resource="vendor" action="create">
+              <ProtectedRoute resource="vendor" action="update">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <VendorForm />
@@ -534,7 +534,7 @@ function App() {
           <Route
             path="/submissions"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="event" action="list_submissions">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <SubmissionList />
@@ -546,7 +546,7 @@ function App() {
           <Route
             path="/vendor/submissions"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute resource="event" action="view_my_submissions">
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <SubmissionList />
