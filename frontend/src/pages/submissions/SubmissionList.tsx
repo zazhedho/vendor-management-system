@@ -25,7 +25,8 @@ export const SubmissionList: React.FC = () => {
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
 
   const canSubmit = hasPermission('event', 'submit_pitch');
-  const canViewEventSubmissions = hasPermission('event', 'view_submissions');
+  const canListSubmissions = hasPermission('event', 'list_submissions');
+  const canViewEventSubmissions = hasPermission('event', 'view_submissions') || canListSubmissions;
   const canViewMySubmissions = hasPermission('event', 'view_my_submissions') || canSubmit;
   const canViewVendorSubmissions = hasPermission('vendor', 'view_submissions');
   const canViewSubmissions = canViewEventSubmissions || canViewVendorSubmissions || canViewMySubmissions;

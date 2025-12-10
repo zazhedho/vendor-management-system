@@ -60,7 +60,7 @@ export const getFallbackMenus = (
     { path: '/vendors', label: 'Vendors', icon: 'ShoppingBag', name: 'vendors', children: [], resource: 'vendor', action: 'view' },
     { path: '/payments', label: 'Payments', icon: 'CreditCard', name: 'payments', children: [], resource: 'payment', action: 'view' },
     { path: '/evaluations', label: 'Evaluations', icon: 'Star', name: 'evaluations', children: [], resource: 'evaluation', action: 'view' },
-    { path: '/submissions', label: 'Submissions', icon: 'Inbox', name: 'submissions', children: [], resource: 'event', action: 'view_submissions' },
+    { path: '/submissions', label: 'Submissions', icon: 'Inbox', name: 'submissions', children: [], resource: 'event', action: 'list_submissions' },
     { path: '/users', label: 'Users', icon: 'Users', name: 'users', children: [], resource: 'users', action: 'view' },
     { path: '/roles', label: 'Roles', icon: 'Shield', name: 'roles', children: [], resource: 'roles', action: 'view' },
     { path: '/menus', label: 'Menus', icon: 'List', name: 'menus', children: [], resource: 'roles', action: 'assign_menus' },

@@ -68,6 +68,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, menuItems, is
         // Exact match
         if (currentPath === item.path) return true;
 
+        // Check if current path starts with menu path (for nested routes like /vendor/profile/edit)
+        if (item.path && currentPath.startsWith(item.path + '/')) return true;
+
+        // Special case: Vendor Profile menu should be active for both /vendor/profile/* and /vendors/*
+        if (item.path === '/vendor/profile' || item.name === 'vendor_profile') {
+            if (currentPath.startsWith('/vendors') || currentPath.startsWith('/vendor/profile')) {
+                return true;
+            }
+        }
+
         // Check if any child is active
         if (item.children && item.children.length > 0) {
             return item.children.some(child =>
@@ -75,10 +85,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, menuItems, is
             );
         }
 
-        // For parent routes with UUID patterns
+        // For parent routes with UUID patterns (e.g., /vendors, /events)
         if (item.path) {
-            const baseRoute = item.path.split('/')[1];
-            if (baseRoute) {
+            const pathParts = item.path.split('/').filter(Boolean);
+            const baseRoute = pathParts[0];
+            if (baseRoute && pathParts.length === 1) {
+                // Only for single-segment paths like /vendors, /events
                 return currentPath === `/${baseRoute}/new` ||
                     currentPath.match(new RegExp(`^/${baseRoute}/[a-f0-9-]{36}`)) !== null;
             }

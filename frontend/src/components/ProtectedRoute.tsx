@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   resource?: string;
-  action?: string;
+  action?: string | string[];
   redirectTo?: string;
 }
 
@@ -30,8 +30,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // Check permission if resource and action are provided
-  if (resource && action && !hasPermission(resource, action)) {
-    return <Navigate to={redirectTo} replace />;
+  if (resource && action) {
+    const actions = Array.isArray(action) ? action : [action];
+    const hasPerm = actions.some(a => hasPermission(resource, a));
+    if (!hasPerm) {
+      return <Navigate to={redirectTo} replace />;
+    }
   }
 
   return <>{children}</>;

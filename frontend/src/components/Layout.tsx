@@ -37,6 +37,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         if (name === 'submissions') {
           return (
+            hasPermission('event', 'list_submissions') ||
             hasPermission('event', 'view_submissions') ||
             hasPermission('vendor', 'view_submissions') ||
             hasPermission('event', 'submit_pitch')

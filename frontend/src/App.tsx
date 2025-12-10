@@ -546,7 +546,7 @@ function App() {
           <Route
             path="/vendor/submissions"
             element={
-              <ProtectedRoute resource="event" action="view_my_submissions">
+              <ProtectedRoute resource="event" action={['view_my_submissions', 'list_submissions', 'view_submissions']}>
                 <Layout>
                   <Suspense fallback={<PageLoader />}>
                     <SubmissionList />
