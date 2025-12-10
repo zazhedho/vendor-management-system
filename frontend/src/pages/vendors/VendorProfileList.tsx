@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, X } from 'lucide-react';
 import { Button, Card, ConfirmModal } from '../../components/ui';
-import { VendorListTable } from '../../components/vendor';
+import { VendorListTable } from '../../components/vendors';
 import { vendorsApi } from '../../api/vendors';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
