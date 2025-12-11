@@ -74,7 +74,7 @@ export const VendorProfile: React.FC = () => {
   const [vendorCodeInput, setVendorCodeInput] = useState('');
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [rejectReasonInput, setRejectReasonInput] = useState('');
-  const [fileStatusModal, setFileStatusModal] = useState<{ fileId: string; status: 'approved' | 'rejected'; reason: string }>({
+  const [fileStatusModal, setFileStatusModal] = useState<{ fileId: string; status: 'approved' | 'revision'; reason: string }>({
     fileId: '',
     status: 'approved',
     reason: '',
@@ -193,7 +193,7 @@ export const VendorProfile: React.FC = () => {
     }
   };
 
-  const handleFileStatusChange = (fileId: string, status: 'approved' | 'rejected') => {
+  const handleFileStatusChange = (fileId: string, status: 'approved' | 'revision') => {
     if (!canVerifyDocs) return;
     if (status === 'approved') {
       return handleFileStatusConfirm(fileId, status, '');
@@ -202,12 +202,12 @@ export const VendorProfile: React.FC = () => {
     setShowFileStatusModal(true);
   };
 
-  const handleFileStatusConfirm = async (fileId: string, status: 'approved' | 'rejected', reason?: string) => {
+  const handleFileStatusConfirm = async (fileId: string, status: 'approved' | 'revision', reason?: string) => {
     setIsUpdatingFileStatus(true);
     try {
       const response = await vendorsApi.updateFileStatus(fileId, status, reason);
       if (response.status) {
-        toast.success(`File ${status === 'approved' ? 'approved' : 'rejected'}`);
+        toast.success(`File ${status === 'approved' ? 'approved' : 'revision'}`);
         await fetchVendorProfile(id);
       } else {
         toast.error('Failed to update file status');
@@ -224,7 +224,7 @@ export const VendorProfile: React.FC = () => {
 
   const handleFileStatusModalConfirm = () => {
     if (!fileStatusModal.fileId) return;
-    if (fileStatusModal.status === 'rejected' && !fileStatusModal.reason.trim()) {
+    if (fileStatusModal.status === 'revision' && !fileStatusModal.reason.trim()) {
       toast.error('Alasan penolakan dokumen wajib diisi');
       return;
     }
@@ -253,7 +253,7 @@ export const VendorProfile: React.FC = () => {
       return;
     }
 
-    if (newStatus === 'rejected') {
+    if (newStatus === 'revision') {
       setPendingStatus(newStatus);
       setRejectReasonInput(vendor.reject_reason || '');
       setShowRejectReasonModal(true);
@@ -372,7 +372,7 @@ export const VendorProfile: React.FC = () => {
       case 'active': return 'success';
       case 'verify': return 'info';
       case 'suspended': return 'danger';
-      case 'rejected': return 'danger';
+      case 'revision': return 'danger';
       case 'pending': return 'warning';
       default: return 'secondary';
     }
@@ -386,7 +386,7 @@ export const VendorProfile: React.FC = () => {
     );
   }
 
-  const vendorStatuses = ['pending', 'verify', 'active', 'suspended', 'rejected'];
+  const vendorStatuses = ['pending', 'verify', 'active', 'suspended', 'revision'];
 
   const handleBack = () => navigate('/vendor/profile');
 
@@ -643,11 +643,11 @@ export const VendorProfile: React.FC = () => {
                               rel="noreferrer"
                               className="flex items-center gap-3 flex-1 min-w-0"
                             >
-                              <FileText size={18} className={`flex-shrink-0 ${file.status === 'rejected' ? 'text-danger-500' :
+                              <FileText size={18} className={`flex-shrink-0 ${file.status === 'revision' ? 'text-danger-500' :
                                 file.status === 'approved' ? 'text-success-500' : 'text-secondary-400'
                                 }`} />
                               <span className="text-sm font-medium text-secondary-900 truncate">{formatFileType(file.file_type)}</span>
-                              <span className={`text-xs capitalize ${file.status === 'rejected' ? 'text-danger-600' :
+                              <span className={`text-xs capitalize ${file.status === 'revision' ? 'text-danger-600' :
                                 file.status === 'approved' ? 'text-success-600' : 'text-warning-600'
                                 }`}>({file.status})</span>
                             </a>
@@ -666,7 +666,7 @@ export const VendorProfile: React.FC = () => {
                                   type="button"
                                   variant="danger"
                                   size="sm"
-                                  onClick={() => handleFileStatusChange(file.id, 'rejected')}
+                                  onClick={() => handleFileStatusChange(file.id, 'revision')}
                                   disabled={isUpdatingFileStatus}
                                 >
                                   Reject
@@ -674,7 +674,7 @@ export const VendorProfile: React.FC = () => {
                               </div>
                             )}
                           </div>
-                          {file.status === 'rejected' && file.reject_reason && (
+                          {file.status === 'revision' && file.reject_reason && (
                             <div className="mt-2 pt-2 border-t border-danger-200 bg-danger-50 rounded-md px-3 py-2">
                               <p className="text-xs text-secondary-900 font-semibold">Rejection Reason</p>
                               <p className="text-xs text-danger-800 mt-1 whitespace-pre-line">
@@ -707,7 +707,7 @@ export const VendorProfile: React.FC = () => {
                       {vendor.status}
                     </Badge>
                   </div>
-                  {vendor.status === 'rejected' && vendor.reject_reason && (
+                  {vendor.status === 'revision' && vendor.reject_reason && (
                     <div className="p-3 rounded-lg border border-danger-200 bg-danger-50">
                       <p className="text-xs text-danger-700 font-semibold">Reject Reason</p>
                       <p className="text-sm text-danger-800 mt-1 whitespace-pre-line">{vendor.reject_reason}</p>
@@ -890,7 +890,7 @@ export const VendorProfile: React.FC = () => {
                   <X size={18} />
                 </button>
               </div>
-              {fileStatusModal.status === 'rejected' && (
+              {fileStatusModal.status === 'revision' && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-secondary-700">Reject Reason</label>
                   <textarea

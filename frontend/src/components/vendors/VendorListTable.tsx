@@ -22,7 +22,7 @@ const getStatusVariant = (status?: string) => {
   switch (status?.toLowerCase()) {
     case 'active': return 'success';
     case 'pending': return 'warning';
-    case 'rejected': return 'danger';
+    case 'revision': return 'danger';
     case 'suspended': return 'danger';
     default: return 'secondary';
   }

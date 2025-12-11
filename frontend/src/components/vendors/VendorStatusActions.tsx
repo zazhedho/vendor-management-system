@@ -31,14 +31,14 @@ export const VendorStatusActions: React.FC<VendorStatusActionsProps> = ({
           Approve Vendor
         </Button>
       )}
-      {status !== 'rejected' && (
+      {status !== 'revision' && (
         <Button
           variant="danger"
           onClick={onReject}
           isLoading={isUpdatingStatus}
           leftIcon={<XCircle size={18} />}
         >
-          Reject Vendor
+          Request Revision
         </Button>
       )}
     </div>

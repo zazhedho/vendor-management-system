@@ -14,7 +14,7 @@ type Vendor struct {
 	Id         string `json:"id" gorm:"column:id;primaryKey"`
 	UserId     string `json:"user_id" gorm:"column:user_id"`
 	VendorType string `json:"vendor_type" gorm:"column:vendor_type;default:company"`
-	Status     string `json:"status" gorm:"column:status"` // pending, verified, rejected, active, suspended
+	Status     string `json:"status" gorm:"column:status"` // pending, verify, revision, active, suspended
 	VendorCode string `json:"vendor_code,omitempty" gorm:"column:vendor_code"`
 
 	Profile *VendorProfile `json:"profile,omitempty" gorm:"foreignKey:VendorId;references:Id"`
@@ -103,7 +103,7 @@ type VendorProfileFile struct {
 	IssuedAt  *time.Time `json:"issued_at,omitempty" gorm:"column:issued_at"`
 	ExpiredAt *time.Time `json:"expired_at,omitempty" gorm:"column:expired_at"`
 
-	Status       string  `json:"status" gorm:"column:status"` // pending | approved | rejected
+	Status       string  `json:"status" gorm:"column:status"` // pending | approved | revision
 	RejectReason *string `json:"reject_reason,omitempty" gorm:"column:reject_reason"`
 
 	VerifiedAt *time.Time `json:"verified_at,omitempty" gorm:"column:verified_at"`

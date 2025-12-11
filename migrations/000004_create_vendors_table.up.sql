@@ -9,7 +9,7 @@ BEGIN
 CREATE TYPE vendor_status AS ENUM (
             'pending',
             'verify',
-            'rejected',
+            'revision',
             'active',
             'suspended'
         );

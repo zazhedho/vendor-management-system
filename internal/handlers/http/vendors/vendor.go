@@ -194,9 +194,9 @@ func (h *HandlerVendor) UpdateVendorStatus(ctx *gin.Context) {
 		return
 	}
 
-	if req.Status == utils.VendorReject && strings.TrimSpace(req.RejectReason) == "" {
+	if req.Status == utils.VendorRevision && strings.TrimSpace(req.RejectReason) == "" {
 		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = "reject_reason is required when rejecting vendor"
+		res.Error = "reject_reason is required when setting vendor to revision"
 		ctx.JSON(http.StatusBadRequest, res)
 		return
 	}

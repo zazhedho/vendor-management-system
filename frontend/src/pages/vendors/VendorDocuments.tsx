@@ -150,9 +150,9 @@ export const VendorDocuments: React.FC = () => {
     }
   };
 
-  const handleFileStatusChange = async (fileId: string, status: 'approved' | 'rejected') => {
+  const handleFileStatusChange = async (fileId: string, status: 'approved' | 'revision') => {
     if (!profile?.id) return;
-    const reason = status === 'rejected' ? window.prompt('Alasan penolakan dokumen?') || '' : undefined;
+    const reason = status === 'revision' ? window.prompt('Alasan penolakan dokumen?') || '' : undefined;
     setIsUpdatingFileStatus(true);
     try {
       const response = await vendorsApi.updateFileStatus(fileId, status, reason);
@@ -243,7 +243,7 @@ export const VendorDocuments: React.FC = () => {
               return (
                 <div
                   key={type}
-                  className={`flex items-center gap-3 p-3 border rounded-xl shadow-sm ${existing.status === 'rejected'
+                  className={`flex items-center gap-3 p-3 border rounded-xl shadow-sm ${existing.status === 'revision'
                     ? 'border-danger-200 bg-danger-50/70'
                     : existing.status === 'approved'
                       ? 'border-success-200 bg-success-50/70'
@@ -251,7 +251,7 @@ export const VendorDocuments: React.FC = () => {
                     }`}
                 >
                   <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/60 border border-white/70">
-                    <FileText size={18} className={existing.status === 'rejected'
+                    <FileText size={18} className={existing.status === 'revision'
                       ? 'text-danger-500'
                       : existing.status === 'approved'
                         ? 'text-success-600'
@@ -261,7 +261,7 @@ export const VendorDocuments: React.FC = () => {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-secondary-900 truncate">{formatFileType(existing.file_type)}</p>
                     <p className="text-xs text-secondary-500 truncate capitalize">Status: {existing.status}</p>
-                    {existing.status === 'rejected' && existing.reject_reason && (
+                    {existing.status === 'revision' && existing.reject_reason && (
                       <p className="text-[11px] text-danger-700 mt-1 whitespace-pre-line">Alasan: {existing.reject_reason}</p>
                     )}
                   </div>
@@ -293,7 +293,7 @@ export const VendorDocuments: React.FC = () => {
                           type="button"
                           variant="danger"
                           size="sm"
-                          onClick={() => handleFileStatusChange(existing.id, 'rejected')}
+                          onClick={() => handleFileStatusChange(existing.id, 'revision')}
                           disabled={isUpdatingFileStatus}
                         >
                           Reject
@@ -339,7 +339,7 @@ export const VendorDocuments: React.FC = () => {
             {docs.map((file) => (
               <div key={file.id} className="py-2.5 flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <FileText size={18} className={file.status === 'rejected'
+                  <FileText size={18} className={file.status === 'revision'
                     ? 'text-danger-500'
                     : file.status === 'approved'
                       ? 'text-success-600'
@@ -350,7 +350,7 @@ export const VendorDocuments: React.FC = () => {
                       {formatFileType(file.file_type)}
                     </a>
                     <p className="text-xs text-secondary-500">Status: {file.status}</p>
-                    {file.status === 'rejected' && file.reject_reason && (
+                    {file.status === 'revision' && file.reject_reason && (
                       <p className="text-xs text-danger-700 mt-1 whitespace-pre-line">Alasan: {file.reject_reason}</p>
                     )}
                   </div>
@@ -383,7 +383,7 @@ export const VendorDocuments: React.FC = () => {
                         type="button"
                         variant="danger"
                         size="sm"
-                        onClick={() => handleFileStatusChange(file.id, 'rejected')}
+                        onClick={() => handleFileStatusChange(file.id, 'revision')}
                         disabled={isUpdatingFileStatus}
                       >
                         Reject

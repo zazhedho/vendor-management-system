@@ -334,8 +334,8 @@ func (s *ServiceVendor) CreateOrUpdateVendorProfile(userId string, req dto.Vendo
 		}
 	}
 
-	// When a rejected vendor updates their profile, move back to review state and clear reject reason
-	if vendor.Status == utils.VendorReject {
+	// When a revision vendor updates their profile, move back to review state and clear reject reason
+	if vendor.Status == utils.VendorRevision {
 		vendor.Status = utils.VendorVerify
 		vendor.RejectReason = nil
 		vendor.UpdatedAt = now
@@ -401,8 +401,8 @@ func (s *ServiceVendor) UpdateVendorStatus(vendorId string, status string, vendo
 		}
 	}
 
-	if status == utils.VendorReject && strings.TrimSpace(rejectReason) == "" {
-		return domainvendors.Vendor{}, errors.New("reject_reason is required when rejecting vendor")
+	if status == utils.VendorRevision && strings.TrimSpace(rejectReason) == "" {
+		return domainvendors.Vendor{}, errors.New("reject_reason is required when setting vendor to revision")
 	}
 
 	vendor.Status = status
@@ -410,7 +410,7 @@ func (s *ServiceVendor) UpdateVendorStatus(vendorId string, status string, vendo
 		vendor.VendorCode = vendorCode
 	}
 
-	if status == utils.VendorReject {
+	if status == utils.VendorRevision {
 		vendor.RejectReason = &rejectReason
 	} else {
 		vendor.RejectReason = nil
@@ -530,10 +530,10 @@ func (s *ServiceVendor) UpdateVendorProfileFileStatus(fileId string, req dto.Upd
 	validStatuses := map[string]bool{
 		utils.VendorDocPending:  true,
 		utils.VendorDocApproved: true,
-		utils.VendorDocReject:   true,
+		utils.VendorDocRevision: true,
 	}
 	if !validStatuses[req.Status] {
-		return domainvendors.VendorProfileFile{}, fmt.Errorf("invalid status: %s. Valid statuses: pending, approved, rejected", req.Status)
+		return domainvendors.VendorProfileFile{}, fmt.Errorf("invalid status: %s. Valid statuses: pending, approved, revision", req.Status)
 	}
 
 	// Get file record
@@ -547,7 +547,7 @@ func (s *ServiceVendor) UpdateVendorProfileFileStatus(fileId string, req dto.Upd
 	vendorFile.Status = req.Status
 	vendorFile.VerifiedAt = &now
 	vendorFile.VerifiedBy = &userId
-	if vendorFile.Status == utils.VendorDocReject {
+	if vendorFile.Status == utils.VendorDocRevision {
 		vendorFile.RejectReason = &req.Reason
 	}
 

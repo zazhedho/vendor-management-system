@@ -123,11 +123,11 @@ export const vendorsApi = {
     return response.data;
   },
 
-  // Admin: Update file status (approve/reject)
-  updateFileStatus: async (fileId: string, status: 'approved' | 'rejected', reason?: string) => {
-    const response = await apiClient.put<ApiResponse<VendorProfileFile>>(`/vendors/files/${fileId}/status`, { 
+  // Admin: Update file status (approve/revision)
+  updateFileStatus: async (fileId: string, status: 'approved' | 'revision', reason?: string) => {
+    const response = await apiClient.put<ApiResponse<VendorProfileFile>>(`/vendors/files/${fileId}/status`, {
       status,
-      reason 
+      reason
     });
     return response.data;
   },

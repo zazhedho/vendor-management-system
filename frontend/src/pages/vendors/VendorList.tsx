@@ -66,7 +66,7 @@ export const VendorList: React.FC = () => {
       case 'active': return 'success';
       case 'verify': return 'info';
       case 'suspended': return 'danger';
-      case 'rejected': return 'danger';
+      case 'revision': return 'danger';
       case 'pending': return 'warning';
       default: return 'secondary';
     }

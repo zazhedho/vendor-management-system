@@ -52,7 +52,7 @@ export interface Vendor {
   vendor_type: string;
   vendor_name?: string;
   vendor_code?: string;
-  status: string; // pending, verified, rejected, active, suspended
+  status: string; // pending, verify, revision, active, suspended
   verified_at?: string;
   verified_by?: string;
   deactivate_at?: string;
@@ -145,7 +145,7 @@ export interface VendorProfileFile {
   file_url: string;
   file_order?: number;
   caption?: string;
-  status: string; // pending, approved, rejected
+  status: string; // pending, approved, revision
   reject_reason?: string;
   verified_at?: string;
   verified_by?: string;

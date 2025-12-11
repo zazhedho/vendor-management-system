@@ -156,7 +156,7 @@ export const Dashboard: React.FC = () => {
       case 'in_progress':
         return 'warning';
       case 'cancelled':
-      case 'rejected':
+      case 'revision':
         return 'danger';
       case 'draft':
         return 'secondary';

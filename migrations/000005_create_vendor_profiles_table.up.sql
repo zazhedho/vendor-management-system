@@ -6,7 +6,7 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_type WHERE typname = 'file_status'
     ) THEN
-        CREATE TYPE file_status AS ENUM ('pending', 'approved', 'rejected');
+        CREATE TYPE file_status AS ENUM ('pending', 'approved', 'revision');
     END IF;
 END$$;
 
@@ -136,7 +136,7 @@ CREATE TABLE IF NOT EXISTS vendor_profile_files (
 -- Column comments
 -- ================================
 COMMENT ON COLUMN vendor_profile_files.file_type IS 'ktp, npwp, bank_book, nib, siup, akta, dll';
-COMMENT ON COLUMN vendor_profile_files.status IS 'pending, approved, rejected';
+COMMENT ON COLUMN vendor_profile_files.status IS 'pending, approved, revision';
 
 
 -- ================================

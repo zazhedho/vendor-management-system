@@ -9,7 +9,7 @@ type CreateVendorRequest struct {
 
 type UpdateVendorRequest struct {
 	VendorType string `json:"vendor_type" binding:"omitempty,oneof=company individual"`
-	Status     string `json:"status" binding:"omitempty,oneof=pending verified rejected active suspended"`
+	Status     string `json:"status" binding:"omitempty,oneof=pending verified revision active suspended"`
 }
 
 type VendorProfileRequest struct {
@@ -70,13 +70,13 @@ type UploadVendorProfileFileRequest struct {
 }
 
 type UpdateVendorStatusRequest struct {
-	Status       string `json:"status" binding:"required,oneof=pending verify rejected active suspended"`
+	Status       string `json:"status" binding:"required,oneof=pending verify revision active suspended"`
 	VendorCode   string `json:"vendor_code" binding:"omitempty,max=100"`
 	RejectReason string `json:"reject_reason" binding:"omitempty,min=3"`
 }
 
 type UpdateVendorProfileFileStatusRequest struct {
-	Status string `json:"status" binding:"required,oneof=pending approved rejected"`
+	Status string `json:"status" binding:"required,oneof=pending approved revision"`
 	Reason string `json:"reason" binding:"omitempty"`
 }
 
@@ -85,8 +85,8 @@ type RejectVendorRequest struct {
 }
 
 type VerifyProfileFileRequest struct {
-	Status string `json:"status" binding:"required,oneof=approved rejected"`
-	Reason string `json:"reason" binding:"omitempty"` // Required if status is rejected
+	Status string `json:"status" binding:"required,oneof=approved revision"`
+	Reason string `json:"reason" binding:"omitempty"` // Required if status is revision
 }
 
 type AddVendorProfileFile struct {

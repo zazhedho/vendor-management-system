@@ -677,7 +677,7 @@ export const VendorForm: React.FC = () => {
                     <div
                       key={type}
                       className={`flex items-center gap-3 p-4 border rounded-xl shadow-sm ${
-                        existingFile.status === 'rejected'
+                        existingFile.status === 'revision'
                           ? 'border-danger-200 bg-danger-50/70'
                           : existingFile.status === 'approved'
                             ? 'border-success-200 bg-success-50/70'
@@ -686,7 +686,7 @@ export const VendorForm: React.FC = () => {
                     >
                       <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/60 border border-white/70">
                         <FileText size={18} className={
-                          existingFile.status === 'rejected'
+                          existingFile.status === 'revision'
                             ? 'text-danger-500'
                             : existingFile.status === 'approved'
                               ? 'text-success-600'
@@ -696,7 +696,7 @@ export const VendorForm: React.FC = () => {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-secondary-900 truncate">{formatFileType(existingFile.file_type)}</p>
                         <p className="text-xs text-secondary-500 truncate capitalize">Status: {existingFile.status}</p>
-                        {existingFile.status === 'rejected' && existingFile.reject_reason && (
+                        {existingFile.status === 'revision' && existingFile.reject_reason && (
                           <p className="text-[11px] text-danger-700 mt-1 whitespace-pre-line">Alasan: {existingFile.reject_reason}</p>
                         )}
                         <a href={existingFile.file_url} target="_blank" rel="noreferrer" className="text-xs text-primary-600 hover:underline">
