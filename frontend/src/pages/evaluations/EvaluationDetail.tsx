@@ -2,18 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { evaluationsApi } from '../../api/evaluations';
 import { Evaluation, EvaluationPhoto } from '../../types';
-import { 
-  ArrowLeft, Star, MessageSquare, Image, Trash2, X, Send, 
+import {
+  ArrowLeft, Star, MessageSquare, Image, Trash2, X, Send,
   Calendar, User, Building2, Award, CheckCircle, Clock, Camera
 } from 'lucide-react';
 import { Button, Card, Spinner, ConfirmModal, Badge } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 export const EvaluationDetail: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { hasPermission } = useAuth();
+  const { handleSilentError } = useErrorHandler();
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [deletePhotoId, setDeletePhotoId] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export const EvaluationDetail: React.FC = () => {
         setEvaluation(response.data);
       }
     } catch (error) {
-      console.error('Failed to fetch evaluation:', error);
+      handleSilentError(error, `Fetching evaluation ID ${id}`);
       toast.error('Failed to load evaluation');
     } finally {
       setIsLoading(false);
@@ -56,7 +58,7 @@ export const EvaluationDetail: React.FC = () => {
       toast.success('Photo deleted successfully');
       fetchEvaluation(id);
     } catch (error) {
-      console.error('Failed to delete photo:', error);
+      handleSilentError(error, `Deleting photo ${deletePhotoId}`);
       toast.error('Failed to delete photo');
     } finally {
       setIsDeletingPhoto(false);
@@ -94,7 +96,7 @@ export const EvaluationDetail: React.FC = () => {
         fetchEvaluation(id);
       }
     } catch (error: any) {
-      console.error('Failed to submit review:', error);
+      handleSilentError(error, `Submitting review for photo ${reviewingPhoto?.id}`);
       toast.error(error?.response?.data?.error || 'Failed to submit review');
     } finally {
       setIsSubmittingReview(false);

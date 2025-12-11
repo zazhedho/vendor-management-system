@@ -6,11 +6,13 @@ import { toast } from 'react-toastify';
 import { Save, X, Award, Calendar, Trophy, Search, Loader2 } from 'lucide-react';
 import { Button, Card, Spinner, Badge, Input } from '../../components/ui';
 import { Event } from '../../types';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 export const EvaluationForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditMode = !!id;
+  const { handleSilentError } = useErrorHandler();
 
   const [formData, setFormData] = useState({
     event_id: '',
@@ -70,7 +72,7 @@ export const EvaluationForm: React.FC = () => {
         setCurrentPage(page);
       }
     } catch (error) {
-      console.error('Failed to fetch events:', error);
+      handleSilentError(error, 'Fetching completed events');
       toast.error('Failed to load events');
     } finally {
       setIsFetchingEvents(false);
@@ -93,7 +95,7 @@ export const EvaluationForm: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error('Failed to fetch evaluation:', error);
+      handleSilentError(error, `Fetching evaluation ID ${id}`);
       toast.error('Failed to load evaluation data');
     }
   };
@@ -132,7 +134,7 @@ export const EvaluationForm: React.FC = () => {
 
       navigate('/evaluations');
     } catch (error: any) {
-      console.error('Failed to save evaluation:', error);
+      handleSilentError(error, `Saving evaluation (mode: ${isEditMode ? 'update' : 'create'})`);
       toast.error(error?.response?.data?.error || error.message || 'Failed to save evaluation');
     } finally {
       setIsLoading(false);

@@ -5,11 +5,13 @@ import { toast } from 'react-toastify';
 import { Save, X, Upload, FileText, Trash2, Calendar } from 'lucide-react';
 import { EventFile } from '../../types';
 import { Button, Input, Card, ConfirmModal } from '../../components/ui';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 export const EventForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditMode = !!id;
+  const { handleSilentError } = useErrorHandler();
 
   const [formData, setFormData] = useState({
     title: '',
@@ -51,7 +53,7 @@ export const EventForm: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error('Failed to fetch event:', error);
+      handleSilentError(error, `Fetching event ID ${id}`);
       toast.error('Failed to load event data');
     }
   };
@@ -160,7 +162,7 @@ export const EventForm: React.FC = () => {
           try {
             const response = await eventsApi.uploadFile(eventId, fileData.file, fileData.type, fileData.caption);
             if (response.status) uploadedCount++;
-          } catch (e) { console.error(e); }
+          } catch (e) { handleSilentError(e, `Uploading file: ${fileData.type}`); }
         }
         if (uploadedCount > 0) toast.success(`${uploadedCount} files uploaded`);
       }

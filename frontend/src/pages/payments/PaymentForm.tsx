@@ -6,11 +6,13 @@ import { toast } from 'react-toastify';
 import { Save, X, Upload, FileText, Trash2, Download, Search, Loader2 } from 'lucide-react';
 import { Button, Input, Card, Spinner, ConfirmModal } from '../../components/ui';
 import { PaymentFile, Vendor, VendorProfile } from '../../types';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 export const PaymentForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditMode = !!id;
+  const { handleSilentError } = useErrorHandler();
 
   const [formData, setFormData] = useState({
     invoice_number: '',
@@ -74,7 +76,7 @@ export const PaymentForm: React.FC = () => {
         setVendorPage(page);
       }
     } catch (error) {
-      console.error('Failed to fetch vendors:', error);
+      handleSilentError(error, `Fetching vendors (page ${page}, search: "${search}")`);
       toast.error('Failed to load vendors');
     } finally {
       setIsFetchingVendors(false);
@@ -99,7 +101,7 @@ export const PaymentForm: React.FC = () => {
         setExistingFiles(payment.files || []);
       }
     } catch (error) {
-      console.error('Failed to fetch payment:', error);
+      handleSilentError(error, `Fetching payment ID ${id}`);
       toast.error('Failed to load payment data');
     }
   };
@@ -112,7 +114,7 @@ export const PaymentForm: React.FC = () => {
       toast.success('File deleted successfully');
       setExistingFiles(existingFiles.filter(f => f.id !== deleteFileId));
     } catch (error: any) {
-      console.error('Failed to delete file:', error);
+      handleSilentError(error, `Deleting file ${deleteFileId}`);
       toast.error(error?.response?.data?.error || 'Failed to delete file');
     } finally {
       setIsDeletingFile(false);
@@ -217,7 +219,7 @@ export const PaymentForm: React.FC = () => {
             );
             if (response.status) uploadedCount++;
           } catch (e) {
-            console.error('Failed to upload file:', e);
+            handleSilentError(e, `Uploading file type ${fileData.file_type}`);
           }
         }
         if (uploadedCount > 0) toast.success(`${uploadedCount} files uploaded`);
@@ -226,7 +228,7 @@ export const PaymentForm: React.FC = () => {
       toast.success(isEditMode ? 'Payment updated successfully' : 'Payment created successfully');
       navigate('/payments');
     } catch (error: any) {
-      console.error('Failed to save payment:', error);
+      handleSilentError(error, `Saving payment (mode: ${isEditMode ? 'update' : 'create'})`);
       toast.error(error.message || 'Failed to save payment');
     } finally {
       setIsLoading(false);

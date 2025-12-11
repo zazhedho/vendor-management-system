@@ -7,11 +7,13 @@ import { Role } from '../../types';
 import { Save, X, User as UserIcon } from 'lucide-react';
 import { Button, Input, Card, Spinner } from '../../components/ui';
 import { toast } from 'react-toastify';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 export const UserForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { user: currentUser } = useAuth();
+  const { handleSilentError } = useErrorHandler();
   const isEditMode = !!id;
 
   const [formData, setFormData] = useState({
@@ -65,7 +67,7 @@ export const UserForm: React.FC = () => {
         setAvailableRoles(roles);
       }
     } catch (error) {
-      console.error('Failed to fetch roles');
+      handleSilentError(error, 'Fetching roles');
     }
   };
 

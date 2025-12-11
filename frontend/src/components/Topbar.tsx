@@ -7,6 +7,7 @@ import { vendorsApi } from '../api/vendors';
 import { paymentsApi } from '../api/payments';
 import { notificationsApi } from '../api/notifications';
 import { toast } from 'react-toastify';
+import { useErrorHandler } from '../hooks/useErrorHandler';
 
 interface TopbarProps {
     onMenuClick: () => void;
@@ -15,6 +16,7 @@ interface TopbarProps {
 export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
     const { user, logout, hasPermission } = useAuth();
     const navigate = useNavigate();
+    const { handleSilentError } = useErrorHandler();
     const [showUserMenu, setShowUserMenu] = useState(false);
     const menuRef = useRef<HTMLDivElement | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -94,7 +96,7 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
             setSearchResults(results);
             setShowSearchDropdown(true);
         } catch (error) {
-            console.error('Global search failed:', error);
+            handleSilentError(error, `Global search for "${query}"`);
             toast.error('Search failed');
             setSearchResults([]);
         } finally {
@@ -136,7 +138,7 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
                 setUnreadCount(res.total_data || 0);
             }
         } catch (error) {
-            console.error('Failed to load notifications', error);
+            handleSilentError(error, 'Loading notifications');
         } finally {
             setIsLoadingNotif(false);
         }
@@ -156,7 +158,7 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
             setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
             setUnreadCount(0);
         } catch (error) {
-            console.error('Failed to mark notifications read', error);
+            handleSilentError(error, 'Marking all notifications as read');
         }
     };
 
@@ -168,7 +170,7 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
                 setUnreadCount((c) => Math.max(0, c - 1));
             }
         } catch (error) {
-            console.error('Failed to mark notification as read', error);
+            handleSilentError(error, `Marking notification ${notif.id} as read`);
         }
         setShowNotifDropdown(false);
         if (notif.reference_type === 'event' && notif.reference_id) {

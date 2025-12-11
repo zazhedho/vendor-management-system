@@ -378,3 +378,6 @@ export interface RoleMenu {
   menu_id: string;
   menu?: Menu;
 }
+
+// Re-export error types
+export * from './error';

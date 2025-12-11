@@ -7,6 +7,7 @@ import { toast } from 'react-toastify';
 import { Save, X, Upload, FileText, Trash2, ArrowRight, ArrowLeft } from 'lucide-react';
 import { VendorProfile, VendorProfileFile } from '../../types';
 import { Button, Input, Card, Stepper, Spinner, ConfirmModal } from '../../components/ui';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 // Helper to format file type with proper capitalization
 const formatFileType = (type: string): string => {
@@ -30,7 +31,8 @@ export const VendorForm: React.FC = () => {
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  
+  const { handleSilentError } = useErrorHandler();
+
   // Check if this is vendor editing their own profile (routes like /vendor/profile/edit or /vendor/profile/new)
   const isVendorSelfEdit = location.pathname.startsWith('/vendor/profile');
   const isEditMode = !!id || (isVendorSelfEdit && !location.pathname.endsWith('/new'));
@@ -141,7 +143,7 @@ export const VendorForm: React.FC = () => {
         setProvinces(response.data);
       }
     } catch (error) {
-      console.error('Failed to fetch provinces:', error);
+      handleSilentError(error, 'Fetching provinces');
     }
   };
 
@@ -152,7 +154,7 @@ export const VendorForm: React.FC = () => {
         setCities(response.data);
       }
     } catch (error) {
-      console.error('Failed to fetch cities:', error);
+      handleSilentError(error, `Fetching cities for province ${provinceCode}`);
     }
   };
 
@@ -163,7 +165,7 @@ export const VendorForm: React.FC = () => {
         setDistricts(response.data);
       }
     } catch (error) {
-      console.error('Failed to fetch districts:', error);
+      handleSilentError(error, `Fetching districts for province ${provinceCode}, city ${cityCode}`);
     }
   };
 
@@ -195,7 +197,7 @@ export const VendorForm: React.FC = () => {
       }
     } catch (error: any) {
       if (error.response?.status !== 404) {
-        console.error('Failed to fetch vendor profile:', error);
+        handleSilentError(error, 'Fetching vendor profile');
         toast.error('Failed to load vendor profile');
       }
     } finally {
@@ -226,7 +228,7 @@ export const VendorForm: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error('Failed to fetch vendor:', error);
+      handleSilentError(error, `Fetching vendor data for ID ${id}`);
       toast.error('Failed to load vendor data');
     } finally {
       setIsInitialLoading(false);
@@ -326,7 +328,7 @@ export const VendorForm: React.FC = () => {
           try {
             const fileResponse = await vendorsApi.uploadProfileFile(savedProfile.id, fileData.file, fileData.type);
             if (fileResponse.status) uploadedCount++;
-          } catch (e) { console.error(e); }
+          } catch (e) { handleSilentError(e, `Uploading file: ${fileData.type}`); }
         }
         if (uploadedCount > 0) toast.success(`${uploadedCount} files uploaded`);
       }

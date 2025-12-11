@@ -3,6 +3,7 @@ import { User, Menu, Permission } from '../types';
 import { authApi } from '../api/auth';
 import { menusApi } from '../api/menus';
 import { permissionsApi } from '../api/permissions';
+import { parseError } from '../utils/errorParser';
 
 interface AuthContextType {
   user: User | null;
@@ -103,10 +104,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 localStorage.setItem('user', JSON.stringify(profileResponse.data));
               }
             } catch (error) {
-              console.error('Failed to fetch user permissions:', error);
+              if (import.meta.env.DEV) {
+                const parsed = parseError(error);
+                console.group('🔴 Auth Error - Failed to fetch permissions');
+                console.error('Type:', parsed.type);
+                console.error('Message:', parsed.message);
+                console.groupEnd();
+              }
             }
           } catch (error) {
-            console.error('Failed to fetch user data:', error);
+            if (import.meta.env.DEV) {
+              const parsed = parseError(error);
+              console.group('🔴 Auth Error - Failed to fetch user data');
+              console.error('Type:', parsed.type);
+              console.error('Message:', parsed.message);
+              console.groupEnd();
+            }
           }
 
           return { success: true, user: profileResponse.data };
@@ -130,7 +143,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       await authApi.logout();
     } catch (error) {
-      console.error('Logout error:', error);
+      if (import.meta.env.DEV) {
+        const parsed = parseError(error);
+        console.group('🔴 Auth Error - Logout failed');
+        console.error('Type:', parsed.type);
+        console.error('Message:', parsed.message);
+        console.groupEnd();
+      }
     } finally {
       setUser(null);
       setToken(null);
