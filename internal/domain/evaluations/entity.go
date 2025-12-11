@@ -21,6 +21,7 @@ type Evaluation struct {
 	EvaluatorUserID string   `json:"evaluator_user_id" gorm:"column:evaluator_user_id"` // Client user ID who will review
 	OverallRating   *float64 `json:"overall_rating,omitempty" gorm:"column:overall_rating"`
 	Comments        string   `json:"comments,omitempty" gorm:"column:comments"`
+	GoogleDriveUrl  string   `json:"google_drive_url,omitempty" gorm:"column:google_drive_url"`
 
 	// Relationships
 	Event     domainevents.Event   `json:"event,omitempty" gorm:"foreignKey:EventID;references:Id"`

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { evaluationsApi } from '../../api/evaluations';
 import { Evaluation, EvaluationPhoto } from '../../types';
-import { ArrowLeft, Star, Send, CheckCircle, XCircle, Calendar, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Star, Send, CheckCircle, XCircle, Calendar, MessageSquare, Link as LinkIcon, ExternalLink } from 'lucide-react';
 import { Button, Card } from '../../components/ui';
 import { toast } from 'react-toastify';
 
@@ -188,6 +188,29 @@ export const ClientEvaluationReview = () => {
               <p className="text-secondary-900 bg-secondary-50 rounded-xl p-4 whitespace-pre-wrap">
                 {evaluation.comments}
               </p>
+            </div>
+          )}
+
+          {/* Google Drive Link */}
+          {evaluation.google_drive_url && (
+            <div className="md:col-span-3">
+              <label className="block text-sm font-medium text-secondary-700 mb-2 flex items-center gap-2">
+                <LinkIcon className="w-4 h-4" />
+                Additional Photos (Google Drive)
+              </label>
+              <div className="bg-gradient-to-r from-primary-50 to-blue-50 rounded-xl p-4 border border-primary-200">
+                <p className="text-sm text-secondary-600 mb-3">
+                  The vendor has shared additional photos via Google Drive link
+                </p>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => window.open(evaluation.google_drive_url, '_blank')}
+                  leftIcon={<ExternalLink className="w-4 h-4" />}
+                >
+                  View Additional Photos
+                </Button>
+              </div>
             </div>
           )}
         </div>

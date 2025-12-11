@@ -10,6 +10,11 @@ type UpdateEvaluationRequest struct {
 	Comments string `json:"comments" binding:"omitempty,max=200"`
 }
 
+// UpdateDriveUrlRequest - Vendor updates Google Drive link
+type UpdateDriveUrlRequest struct {
+	GoogleDriveUrl string `json:"google_drive_url" binding:"omitempty,url,max=500"`
+}
+
 // UploadEvaluationPhotoRequest - Vendor uploads photo with caption only
 type UploadEvaluationPhotoRequest struct {
 	Caption string `json:"caption" binding:"omitempty,max=100"`

@@ -291,6 +291,7 @@ export interface Evaluation {
   evaluator_user_id: string;
   overall_rating?: number;
   comments?: string;
+  google_drive_url?: string;
 
   // Relationships
   event?: Event;

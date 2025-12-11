@@ -191,6 +191,46 @@ func (h *HandlerEvaluation) UpdateEvaluation(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, res)
 }
 
+// UpdateDriveUrl - Vendor updates Google Drive link for their evaluation
+func (h *HandlerEvaluation) UpdateDriveUrl(ctx *gin.Context) {
+	var req dto.UpdateDriveUrlRequest
+	authData := utils.GetAuthData(ctx)
+	userId := utils.InterfaceString(authData["user_id"])
+	logId := utils.GenerateLogId(ctx)
+	logPrefix := fmt.Sprintf("[%s][EvaluationHandler][UpdateDriveUrl]", logId)
+
+	id, err := utils.ValidateUUID(ctx, logId)
+	if err != nil {
+		return
+	}
+
+	if err := ctx.BindJSON(&req); err != nil {
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; BindJSON ERROR: %s;", logPrefix, err.Error()))
+		res := response.Response(http.StatusBadRequest, messages.InvalidRequest, logId, nil)
+		res.Error = utils.ValidateError(err, reflect.TypeOf(req), "json")
+		ctx.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	data, err := h.Service.UpdateDriveUrl(userId, id, req)
+	if err != nil {
+		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.UpdateDriveUrl; ERROR: %s;", logPrefix, err))
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			res := response.Response(http.StatusNotFound, messages.MsgNotFound, logId, nil)
+			res.Error = response.Errors{Code: http.StatusNotFound, Message: "evaluation not found"}
+			ctx.JSON(http.StatusNotFound, res)
+			return
+		}
+		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
+		res.Error = err.Error()
+		ctx.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	res := response.Response(http.StatusOK, "Google Drive link updated successfully", logId, data)
+	ctx.JSON(http.StatusOK, res)
+}
+
 func (h *HandlerEvaluation) DeleteEvaluation(ctx *gin.Context) {
 	logId := utils.GenerateLogId(ctx)
 	logPrefix := fmt.Sprintf("[%s][EvaluationHandler][DeleteEvaluation]", logId)

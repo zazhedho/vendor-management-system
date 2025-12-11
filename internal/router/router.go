@@ -394,6 +394,9 @@ func (r *Routes) EvaluationRoutes() {
 	// Vendor can upload photos for their evaluations
 	r.App.POST("/api/evaluation/:id/photo", mdw.AuthMiddleware(), mdw.PermissionMiddleware("evaluation", "upload_photo"), h.UploadPhoto)
 
+	// Vendor can update Google Drive link for their evaluation
+	r.App.PUT("/api/vendor/evaluation/:id/drive-link", mdw.AuthMiddleware(), mdw.PermissionMiddleware("evaluation", "update_link"), h.UpdateDriveUrl)
+
 	// Client creates evaluation for winner vendor
 	evalClient := r.App.Group("/api/evaluation").Use(mdw.AuthMiddleware())
 	{

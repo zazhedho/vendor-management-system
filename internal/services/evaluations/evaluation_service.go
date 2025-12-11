@@ -126,6 +126,35 @@ func (s *ServiceEvaluation) UpdateEvaluation(id string, req dto.UpdateEvaluation
 	return s.EvaluationRepo.GetEvaluationWithPhotos(id)
 }
 
+// UpdateDriveUrl - Vendor updates Google Drive link for their evaluation
+func (s *ServiceEvaluation) UpdateDriveUrl(vendorUserId string, evaluationId string, req dto.UpdateDriveUrlRequest) (domainevaluations.Evaluation, error) {
+	// Get evaluation
+	evaluation, err := s.EvaluationRepo.GetEvaluationByID(evaluationId)
+	if err != nil {
+		return domainevaluations.Evaluation{}, errors.New("evaluation not found")
+	}
+
+	// Verify vendor owns this evaluation
+	vendor, err := s.VendorRepo.GetVendorByUserID(vendorUserId)
+	if err != nil {
+		return domainevaluations.Evaluation{}, errors.New("vendor profile not found")
+	}
+
+	if evaluation.VendorID != vendor.Id {
+		return domainevaluations.Evaluation{}, errors.New("unauthorized: you can only update your own evaluation")
+	}
+
+	// Update Google Drive URL (can be set or cleared)
+	evaluation.GoogleDriveUrl = req.GoogleDriveUrl
+	evaluation.UpdatedAt = time.Now()
+
+	if err := s.EvaluationRepo.UpdateEvaluation(evaluation); err != nil {
+		return domainevaluations.Evaluation{}, err
+	}
+
+	return s.EvaluationRepo.GetEvaluationWithPhotos(evaluationId)
+}
+
 func (s *ServiceEvaluation) DeleteEvaluation(id string) error {
 	_, err := s.EvaluationRepo.GetEvaluationByID(id)
 	if err != nil {

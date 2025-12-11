@@ -178,6 +178,7 @@ INSERT INTO permissions (id, name, display_name, resource, action) VALUES
     (gen_random_uuid(), 'delete_evaluation', 'Delete Evaluation', 'evaluation', 'delete'),
     (gen_random_uuid(), 'upload_evaluation_photo', 'Upload Evaluation Photo', 'evaluation', 'upload_photo'),
     (gen_random_uuid(), 'review_photo', 'Review Evaluation Photo', 'evaluation', 'review_photo'),
+    (gen_random_uuid(), 'update_evaluation_link', 'Update Evaluation Drive Link', 'evaluation', 'update_link'),
 
     -- Payment permissions
     (gen_random_uuid(), 'list_payments', 'List Payments', 'payment', 'list'),
@@ -231,7 +232,7 @@ AND p.name IN (
     'view_vendor_profile', 'update_vendor_profile', 'view_vendor_submissions', 'create_vendor_submission',
     'list_events', 'view_events', 'submit_pitch', 'view_my_submissions',
     'view_payments',
-    'upload_evaluation_photo', 'list_evaluations', 'view_evaluations'
+    'upload_evaluation_photo', 'list_evaluations', 'view_evaluations', 'update_evaluation_link'
 )
 ON CONFLICT DO NOTHING;
 

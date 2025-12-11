@@ -30,6 +30,15 @@ export const evaluationsApi = {
     return response.data;
   },
 
+  // Vendor updates Google Drive link
+  updateGoogleDriveUrl: async (id: string, google_drive_url: string) => {
+    const response = await apiClient.put<ApiResponse<Evaluation>>(
+      `/vendor/evaluation/${id}/drive-link`,
+      { google_drive_url }
+    );
+    return response.data;
+  },
+
   delete: async (id: string) => {
     const response = await apiClient.delete<ApiResponse>(`/evaluation/${id}`);
     return response.data;

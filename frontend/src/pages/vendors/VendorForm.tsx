@@ -601,6 +601,13 @@ export const VendorForm: React.FC = () => {
                   onChange={handleProfileChange}
                   placeholder="Full name as on NPWP"
                 />
+                <Input
+                  label="NPWP Address"
+                  name="npwp_address"
+                  value={profileData.npwp_address}
+                  onChange={handleProfileChange}
+                  placeholder="Address as registered on NPWP"
+                />
                 {vendorData.vendor_type === 'company' && (
                   <Input
                     label="NIB Number"

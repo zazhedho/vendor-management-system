@@ -18,6 +18,7 @@ type ServiceEvaluationInterface interface {
 	GetMyEvaluations(vendorUserId string, params filter.BaseParams) ([]domainevaluations.Evaluation, int64, error)
 	GetAllEvaluations(params filter.BaseParams) ([]domainevaluations.Evaluation, int64, error)
 	UpdateEvaluation(id string, req dto.UpdateEvaluationRequest) (domainevaluations.Evaluation, error)
+	UpdateDriveUrl(vendorUserId string, evaluationId string, req dto.UpdateDriveUrlRequest) (domainevaluations.Evaluation, error)
 	DeleteEvaluation(id string) error
 
 	// Photo operations - Vendor uploads, Client reviews

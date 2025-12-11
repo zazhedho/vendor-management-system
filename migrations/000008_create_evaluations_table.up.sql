@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS evaluations (
     evaluator_user_id UUID NOT NULL,  -- Client user ID (event creator) who will review
     overall_rating DECIMAL(3,2) NULL,  -- Auto-calculated average from photo ratings (1-5 stars)
     comments TEXT NULL,  -- Vendor's comments about the event
+    google_drive_url VARCHAR(500) NULL,
 
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(36) NOT NULL,  -- Vendor user ID
@@ -125,6 +126,7 @@ COMMENT ON TABLE evaluations IS 'Evaluations created by vendors for events they 
 COMMENT ON COLUMN evaluations.evaluator_user_id IS 'Client user ID (event creator) who will review the evaluation photos';
 COMMENT ON COLUMN evaluations.overall_rating IS 'Auto-calculated average from all photo ratings (1-5 stars)';
 COMMENT ON COLUMN evaluations.comments IS 'Vendor comments about their work on the event';
+COMMENT ON COLUMN evaluations.google_drive_url IS 'Optional Google Drive link for additional photos beyond the photo limit';
 
 COMMENT ON TABLE evaluation_photos IS 'Photos uploaded by vendors with captions. Clients review and rate each photo individually.';
 COMMENT ON COLUMN evaluation_photos.caption IS 'Vendor caption describing the photo';

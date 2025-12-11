@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { evaluationsApi } from '../../api/evaluations';
 import { Evaluation } from '../../types';
-import { ArrowLeft, Upload, Image as ImageIcon, Trash2, Star, X } from 'lucide-react';
+import { ArrowLeft, Upload, Image as ImageIcon, Trash2, Star, X, Link as LinkIcon } from 'lucide-react';
 import { Button, Card, Input, Spinner, ConfirmModal } from '../../components/ui';
 import { toast } from 'react-toastify';
 
@@ -15,6 +15,8 @@ export const VendorPhotoUpload: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [deletePhotoId, setDeletePhotoId] = useState<string | null>(null);
   const [isDeletingPhoto, setIsDeletingPhoto] = useState(false);
+  const [googleDriveUrl, setGoogleDriveUrl] = useState('');
+  const [isSavingUrl, setIsSavingUrl] = useState(false);
 
   useEffect(() => {
     if (id) fetchEvaluation();
@@ -27,6 +29,7 @@ export const VendorPhotoUpload: React.FC = () => {
       const response = await evaluationsApi.getById(id);
       if (response.status && response.data) {
         setEvaluation(response.data);
+        setGoogleDriveUrl(response.data.google_drive_url || '');
       }
     } catch (error) {
       console.error('Failed to fetch evaluation:', error);
@@ -123,6 +126,30 @@ export const VendorPhotoUpload: React.FC = () => {
     } finally {
       setIsDeletingPhoto(false);
       setDeletePhotoId(null);
+    }
+  };
+
+  const handleSaveGoogleDriveUrl = async () => {
+    if (!id) return;
+
+    // Validate URL format if provided
+    if (googleDriveUrl && !googleDriveUrl.match(/^https?:\/\/.+/)) {
+      toast.error('Please enter a valid URL starting with http:// or https://');
+      return;
+    }
+
+    setIsSavingUrl(true);
+    try {
+      const response = await evaluationsApi.updateGoogleDriveUrl(id, googleDriveUrl);
+      if (response.status) {
+        toast.success('Google Drive link saved successfully');
+        fetchEvaluation();
+      }
+    } catch (error: any) {
+      console.error('Failed to save Google Drive URL:', error);
+      toast.error(error?.response?.data?.error || 'Failed to save Google Drive link');
+    } finally {
+      setIsSavingUrl(false);
     }
   };
 
@@ -310,6 +337,51 @@ export const VendorPhotoUpload: React.FC = () => {
             </p>
           </div>
         )}
+      </Card>
+
+      {/* Google Drive Link Section */}
+      <Card>
+        <div className="flex items-start gap-3 mb-4">
+          <LinkIcon className="w-5 h-5 text-primary-600 mt-1 flex-shrink-0" />
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-secondary-900 mb-1">
+              Additional Photos (Google Drive)
+            </h3>
+            <p className="text-sm text-secondary-600">
+              Have more than 5 photos? Share a Google Drive link so the client can view additional photos of your work.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <Input
+            label="Google Drive Link (Optional)"
+            placeholder="https://drive.google.com/..."
+            value={googleDriveUrl}
+            onChange={(e) => setGoogleDriveUrl(e.target.value)}
+            leftIcon={<LinkIcon size={16} />}
+          />
+
+          <div className="flex justify-end gap-3">
+            {evaluation?.google_drive_url && (
+              <Button
+                variant="ghost"
+                onClick={() => window.open(evaluation.google_drive_url, '_blank')}
+                leftIcon={<LinkIcon size={16} />}
+              >
+                View Current Link
+              </Button>
+            )}
+            <Button
+              variant="primary"
+              onClick={handleSaveGoogleDriveUrl}
+              isLoading={isSavingUrl}
+              disabled={googleDriveUrl === (evaluation?.google_drive_url || '')}
+            >
+              Save Link
+            </Button>
+          </div>
+        </div>
       </Card>
 
       <ConfirmModal

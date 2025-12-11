@@ -4,7 +4,8 @@ import { evaluationsApi } from '../../api/evaluations';
 import { Evaluation, EvaluationPhoto } from '../../types';
 import {
   ArrowLeft, Star, MessageSquare, Image, Trash2, X, Send,
-  Calendar, User, Building2, Award, CheckCircle, Clock, Camera
+  Calendar, User, Building2, Award, CheckCircle, Clock, Camera,
+  Link as LinkIcon, ExternalLink
 } from 'lucide-react';
 import { Button, Card, Spinner, ConfirmModal, Badge } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
@@ -284,6 +285,29 @@ export const EvaluationDetail: React.FC = () => {
           <p className="text-secondary-700 whitespace-pre-wrap bg-secondary-50 rounded-lg p-4">
             {evaluation.comments}
           </p>
+        </Card>
+      )}
+
+      {/* Google Drive Link Card */}
+      {evaluation.google_drive_url && (
+        <Card className="p-6">
+          <div className="flex items-start gap-3">
+            <LinkIcon className="w-5 h-5 text-primary-600 mt-1 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-secondary-900 mb-2">Additional Photos (Google Drive)</h3>
+              <p className="text-sm text-secondary-600 mb-4">
+                The vendor has shared additional photos via Google Drive link
+              </p>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => window.open(evaluation.google_drive_url, '_blank')}
+                leftIcon={<ExternalLink className="w-4 h-4" />}
+              >
+                View Additional Photos
+              </Button>
+            </div>
+          </div>
         </Card>
       )}
 
