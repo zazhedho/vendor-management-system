@@ -42,6 +42,7 @@ export const EvaluationList: React.FC = () => {
       });
     },
     enabled: isVendorView || canListAll,
+    placeholderData: (previousData) => previousData,
   });
 
   const evaluations = response?.data || [];

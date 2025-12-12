@@ -25,6 +25,7 @@ export const MenuList: React.FC = () => {
       limit: 10,
       search: debouncedSearch,
     }),
+    placeholderData: (previousData) => previousData,
   });
 
   const deleteMutation = useMutation({

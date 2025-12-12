@@ -47,6 +47,7 @@ export const SubmissionList: React.FC = () => {
       order_direction: 'desc'
     }),
     enabled: hasSubmissionAccess && isVendorView,
+    placeholderData: (previousData) => previousData,
   });
 
   // Grouped submissions query (admin view)
@@ -60,6 +61,7 @@ export const SubmissionList: React.FC = () => {
       submission_limit: 10
     }),
     enabled: hasSubmissionAccess && !isVendorView && canViewEventSubmissions,
+    placeholderData: (previousData) => previousData,
   });
 
   // Shortlist mutation

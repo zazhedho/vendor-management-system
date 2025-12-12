@@ -41,6 +41,7 @@ export const UserList: React.FC = () => {
       }
       return data;
     },
+    placeholderData: (previousData) => previousData,
   });
 
   const deleteMutation = useMutation({

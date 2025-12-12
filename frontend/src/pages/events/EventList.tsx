@@ -18,13 +18,27 @@ export const EventList: React.FC = () => {
   const canDelete = hasPermission('event', 'delete');
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
   const { currentPage, setCurrentPage, goToNextPage, goToPrevPage, canGoNext, canGoPrev } = usePagination(1);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data: response, isLoading } = useQuery({
-    queryKey: ['events', { page: currentPage, search: debouncedSearch }],
-    queryFn: () => eventsApi.getAll({ page: currentPage, limit: 10, search: debouncedSearch }),
+    queryKey: ['events', { page: currentPage, search: debouncedSearch, status: statusFilter }],
+    queryFn: () => {
+      const params: any = {
+        page: currentPage,
+        limit: 10,
+        search: debouncedSearch,
+      };
+
+      if (statusFilter) {
+        params['filters[status]'] = statusFilter;
+      }
+
+      return eventsApi.getAll(params);
+    },
+    placeholderData: (previousData) => previousData,
   });
 
   const deleteMutation = useMutation({
@@ -55,8 +69,11 @@ export const EventList: React.FC = () => {
 
   const handleReset = () => {
     setSearchTerm('');
+    setStatusFilter('');
     setCurrentPage(1);
   };
+
+  const hasActiveFilters = searchTerm || statusFilter;
 
   const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -173,21 +190,42 @@ export const EventList: React.FC = () => {
       </div>
 
       <Card className="p-4">
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <input
-              type="text"
-              placeholder="Search events..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 rounded-lg border border-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-            />
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap gap-4">
+            <div className="flex-1 min-w-[200px]">
+              <input
+                type="text"
+                placeholder="Search events..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              />
+            </div>
+            <div className="w-full sm:w-auto sm:min-w-[180px]">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-secondary-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              >
+                <option value="">All Status</option>
+                <option value="draft">Draft</option>
+                <option value="open">Open</option>
+                <option value="closed">Closed</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+            {hasActiveFilters && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleReset}
+                leftIcon={<X size={16} />}
+              >
+                Reset
+              </Button>
+            )}
           </div>
-          {searchTerm && (
-            <Button onClick={handleReset} variant="secondary" leftIcon={<X size={20} />}>
-              Reset
-            </Button>
-          )}
         </div>
       </Card>
 

@@ -60,11 +60,25 @@ func (r *repo) GetAllVendors(params filter.BaseParams) (ret []domainvendors.Vend
 			if v == "" {
 				continue
 			}
-			query = query.Where(fmt.Sprintf("vendors.%s = ?", key), v)
+			// Special handling for business_field which is in vendor_profiles table
+			if key == "business_field" {
+				query = query.Where("vendor_profiles.business_field = ?", v)
+			} else {
+				query = query.Where(fmt.Sprintf("vendors.%s = ?", key), v)
+			}
 		case []string, []int:
-			query = query.Where(fmt.Sprintf("vendors.%s IN ?", key), v)
+			// Special handling for business_field which is in vendor_profiles table
+			if key == "business_field" {
+				query = query.Where("vendor_profiles.business_field IN ?", v)
+			} else {
+				query = query.Where(fmt.Sprintf("vendors.%s IN ?", key), v)
+			}
 		default:
-			query = query.Where(fmt.Sprintf("vendors.%s = ?", key), v)
+			if key == "business_field" {
+				query = query.Where("vendor_profiles.business_field = ?", v)
+			} else {
+				query = query.Where(fmt.Sprintf("vendors.%s = ?", key), v)
+			}
 		}
 	}
 

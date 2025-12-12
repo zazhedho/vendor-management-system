@@ -294,6 +294,13 @@ export const VendorForm: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    // Validate required fields
+    if (!profileData.business_field || profileData.business_field.trim() === '') {
+      toast.error('Business Field is required');
+      setCurrentStep(0); // Go back to step 1 where business field is
+      return;
+    }
+
     setIsLoading(true);
     try {
       // Create/Update Profile (akan auto create vendor jika belum ada)
@@ -442,14 +449,37 @@ export const VendorForm: React.FC = () => {
                 onChange={handleProfileChange}
                 placeholder="021-87654321"
               />
-              <Input
-                label="Business Field"
-                name="business_field"
-                value={profileData.business_field}
-                onChange={handleProfileChange}
-                placeholder="e.g., Catering Services, Event Management"
-                className="md:col-span-2"
-              />
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-secondary-700 mb-1.5">
+                  Business Field <span className="text-danger-500">*</span>
+                </label>
+                <select
+                  name="business_field"
+                  value={profileData.business_field || ''}
+                  onChange={(e) => setProfileData({ ...profileData, business_field: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
+                  required
+                >
+                  <option value="" disabled>Select Business Field</option>
+                  <option value="Event Organizer">Event Organizer</option>
+                  <option value="Rent Car">Rent Car</option>
+                  <option value="Penyewaan">Penyewaan</option>
+                  <option value="Jasa Pemasangan/Modifikasi">Jasa Pemasangan/Modifikasi</option>
+                  <option value="Food & Beverage">Food & Beverage</option>
+                  <option value="Kesehatan">Kesehatan</option>
+                  <option value="Pendidikan">Pendidikan</option>
+                  <option value="Kreatif & Media">Kreatif & Media</option>
+                  <option value="Teknologi & IT">Teknologi & IT</option>
+                  <option value="Jasa & Pariwisata">Jasa & Pariwisata</option>
+                  <option value="Narasumber/Pembicara">Narasumber/Pembicara</option>
+                  <option value="Dokter/Perawat">Dokter/Perawat</option>
+                  <option value="Driver">Driver</option>
+                  <option value="Man Power">Man Power</option>
+                  <option value="Distributor">Distributor</option>
+                  <option value="Pengiriman">Pengiriman</option>
+                  <option value="Perdagangan Barang">Perdagangan Barang</option>
+                </select>
+              </div>
             </div>
           </Card>
         )}

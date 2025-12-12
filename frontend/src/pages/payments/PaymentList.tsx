@@ -31,6 +31,7 @@ export const PaymentList: React.FC = () => {
       if (statusFilter) params['filters[status]'] = statusFilter;
       return isSelfService ? paymentsApi.getMyPayments(params) : paymentsApi.getAll(params);
     },
+    placeholderData: (previousData) => previousData,
   });
 
   const deleteMutation = useMutation({
@@ -162,8 +163,8 @@ export const PaymentList: React.FC = () => {
       </div>
 
       <Card className="p-4">
-        <div className="flex gap-4">
-          <div className="flex-1">
+        <div className="flex flex-wrap gap-4">
+          <div className="flex-1 min-w-[200px]">
             <input
               type="text"
               placeholder="Search by invoice number or vendor name..."
@@ -172,21 +173,23 @@ export const PaymentList: React.FC = () => {
               className="w-full px-4 py-2 rounded-lg border border-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
             />
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="px-4 py-2 rounded-lg border border-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-          >
-            <option value="">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="paid">Paid</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+          <div className="w-full sm:w-auto sm:min-w-[160px]">
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full px-4 py-2 rounded-lg border border-secondary-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            >
+              <option value="">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="paid">Paid</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
           {(searchTerm || statusFilter) && (
-            <Button onClick={handleReset} variant="secondary" leftIcon={<X size={20} />}>
+            <Button onClick={handleReset} variant="secondary" size="sm" leftIcon={<X size={16} />}>
               Reset
             </Button>
           )}
