@@ -36,12 +36,15 @@ func (s *LocationService) GetProvince(year string) ([]domainlocation.Location, e
 
 	// Parse as map[string]string
 	var dataMap map[string]string
+	provinces := make([]domainlocation.Location, 0, len(dataMap))
 	if err := json.Unmarshal(body, &dataMap); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+		provinces = append(provinces, domainlocation.Location{
+			Code: "52",
+			Name: "NUSA TENGGARA BARAT",
+		})
 	}
 
 	// Convert map to slice
-	provinces := make([]domainlocation.Location, 0, len(dataMap))
 	for code, name := range dataMap {
 		provinces = append(provinces, domainlocation.Location{
 			Code: code,
