@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     label?: string;
@@ -9,7 +10,15 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-    ({ className = '', label, error, helperText, leftIcon, rightIcon, ...props }, ref) => {
+    ({ className = '', label, error, helperText, leftIcon, rightIcon, type, ...props }, ref) => {
+        const [showPassword, setShowPassword] = useState(false);
+        const isPasswordField = type === 'password';
+        const inputType = isPasswordField && showPassword ? 'text' : type;
+
+        const togglePasswordVisibility = () => {
+            setShowPassword(!showPassword);
+        };
+
         return (
             <div className="w-full">
                 {label && (
@@ -26,13 +35,14 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
                     )}
                     <input
                         ref={ref}
+                        type={inputType}
                         className={`
               w-full rounded-xl border bg-white text-secondary-900 placeholder:text-secondary-400
               focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500
               disabled:bg-secondary-50 disabled:text-secondary-500 disabled:cursor-not-allowed
               transition-all duration-200 shadow-sm hover:shadow
-              ${leftIcon ? 'pl-10 pr-4' : 'px-4'}
-              ${rightIcon ? 'pr-10' : ''}
+              ${leftIcon ? 'pl-10' : 'px-4'}
+              ${isPasswordField || rightIcon ? 'pr-10' : 'pr-4'}
               ${error
                                 ? 'border-danger-400 focus:border-danger-500 focus:ring-danger-500/30 bg-danger-50/30'
                                 : 'border-secondary-200 hover:border-secondary-300'
@@ -42,7 +52,20 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             `}
                         {...props}
                     />
-                    {rightIcon && (
+                    {isPasswordField && (
+                        <button
+                            type="button"
+                            onClick={togglePasswordVisibility}
+                            className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-secondary-400 hover:text-secondary-600 transition-colors"
+                        >
+                            {showPassword ? (
+                                <EyeOff className="w-5 h-5" />
+                            ) : (
+                                <Eye className="w-5 h-5" />
+                            )}
+                        </button>
+                    )}
+                    {!isPasswordField && rightIcon && (
                         <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-secondary-400">
                             {rightIcon}
                         </div>
