@@ -660,6 +660,13 @@ export const VendorForm: React.FC = () => {
                     placeholder="e.g., BCA, Mandiri"
                   />
                   <Input
+                    label="Bank Branch"
+                    name="bank_branch"
+                    value={profileData.bank_branch}
+                    onChange={handleProfileChange}
+                    placeholder="e.g., KCP Jakarta Pusat"
+                  />
+                  <Input
                     label="Account Number"
                     name="account_number"
                     value={profileData.account_number}
