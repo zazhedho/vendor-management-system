@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"time"
+	"vendor-management-system/utils"
 )
 
 const (
@@ -33,7 +34,7 @@ func WriteLog(level int, msg ...any) {
 		return
 	}
 
-	if logLevel, _ := strconv.Atoi(os.Getenv("LOG_LEVEL")); logLevel < level {
+	if logLevel, _ := strconv.Atoi(utils.GetEnv("LOG_LEVEL", "5").(string)); logLevel < level {
 		return
 	}
 
