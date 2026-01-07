@@ -22,6 +22,7 @@ export const EventForm: React.FC = () => {
     terms_file_path: '',
     status: 'draft',
   });
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [files, setFiles] = useState<EventFile[]>([]);
   const [newFiles, setNewFiles] = useState<{ file: File; type: string; caption: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -58,8 +59,40 @@ export const EventForm: React.FC = () => {
     }
   };
 
+  const validateField = (name: string, value: string) => {
+    const errors: Record<string, string> = {};
+    
+    switch (name) {
+      case 'title':
+        if (value.length < 3) errors.title = 'Title must be at least 3 characters';
+        if (value.length > 100) errors.title = 'Title must not exceed 100 characters';
+        break;
+      case 'description':
+        if (value.length > 255) errors.description = 'Description must not exceed 255 characters';
+        break;
+      case 'category':
+        if (value.length > 100) errors.category = 'Category must not exceed 100 characters';
+        break;
+    }
+    
+    return errors;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    
+    // Clear existing error for this field
+    const newErrors = { ...validationErrors };
+    delete newErrors[name];
+    
+    // Validate and set new error if any
+    const fieldErrors = validateField(name, value);
+    if (fieldErrors[name]) {
+      newErrors[name] = fieldErrors[name];
+    }
+    
+    setValidationErrors(newErrors);
   };
 
   const handleFileAdd = (e: React.ChangeEvent<HTMLInputElement>, fileType: string) => {
@@ -129,6 +162,25 @@ export const EventForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate all fields before submission
+    const allErrors: Record<string, string> = {};
+    Object.keys(formData).forEach(key => {
+      const fieldErrors = validateField(key, formData[key as keyof typeof formData]);
+      Object.assign(allErrors, fieldErrors);
+    });
+    
+    // Check required fields
+    if (!formData.title.trim()) {
+      allErrors.title = 'Title is required';
+    }
+    
+    if (Object.keys(allErrors).length > 0) {
+      setValidationErrors(allErrors);
+      toast.error('Please fix the validation errors before submitting');
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
@@ -190,25 +242,39 @@ export const EventForm: React.FC = () => {
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
           <div className="space-y-6">
-            <Input
-              label="Event Title"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              placeholder="e.g., Annual Tech Conference 2025"
-              required
-              minLength={3}
-              maxLength={255}
-            />
+            <div>
+              <Input
+                label="Event Title"
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
+                placeholder="e.g., Annual Tech Conference 2025"
+                required
+                error={validationErrors.title}
+              />
+              <div className="flex justify-between text-xs text-secondary-500 mt-1">
+                <span>Min 3 characters required</span>
+                <span className={formData.title.length > 100 ? 'text-danger-500' : ''}>
+                  {formData.title.length}/100
+                </span>
+              </div>
+            </div>
 
-            <Input
-              label="Category"
-              name="category"
-              value={formData.category}
-              onChange={handleChange}
-              placeholder="e.g., Catering, Decoration"
-              maxLength={100}
-            />
+            <div>
+              <Input
+                label="Category"
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                placeholder="e.g., Catering, Decoration"
+                error={validationErrors.category}
+              />
+              <div className="flex justify-end text-xs text-secondary-500 mt-1">
+                <span className={formData.category.length > 100 ? 'text-danger-500' : ''}>
+                  {formData.category.length}/100
+                </span>
+              </div>
+            </div>
 
             <div>
               <label className="block text-sm font-medium text-secondary-700 mb-1.5">Description</label>
@@ -216,10 +282,22 @@ export const EventForm: React.FC = () => {
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
-                className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none min-h-32"
+                className={`w-full px-4 py-2.5 rounded-lg border bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none min-h-32 ${
+                  validationErrors.description 
+                    ? 'border-danger-400 focus:border-danger-500 focus:ring-danger-500/30' 
+                    : 'border-secondary-200'
+                }`}
                 placeholder="Describe the event requirements..."
                 rows={4}
               />
+              {validationErrors.description && (
+                <p className="mt-1 text-sm text-danger-600">{validationErrors.description}</p>
+              )}
+              <div className="flex justify-end text-xs text-secondary-500 mt-1">
+                <span className={formData.description.length > 255 ? 'text-danger-500' : ''}>
+                  {formData.description.length}/255
+                </span>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -2,7 +2,7 @@ package dto
 
 type CreateEventRequest struct {
 	Title         string `json:"title" binding:"required,min=3,max=100"`
-	Description   string `json:"description" binding:"omitempty,max=100"`
+	Description   string `json:"description" binding:"omitempty,max=255"`
 	Category      string `json:"category" binding:"omitempty,max=100"`
 	StartDate     string `json:"start_date" binding:"omitempty"`
 	EndDate       string `json:"end_date" binding:"omitempty"`

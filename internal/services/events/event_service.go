@@ -87,11 +87,11 @@ func (s *ServiceEvent) GetAllEvents(params filter.BaseParams) ([]domainevents.Ev
 	now := time.Now()
 	for i := range events {
 		// If end_date passed and status is still open/pending, change to closed
-		if events[i].EndDate.Before(now) && (events[i].Status == utils.EventOpen || events[i].Status == utils.EventPending) {
-			events[i].Status = utils.EventClosed
-			events[i].UpdatedAt = now
-			_ = s.EventRepo.UpdateEvent(events[i])
-		}
+		//if events[i].EndDate.Before(now) && (events[i].Status == utils.EventOpen || events[i].Status == utils.EventPending) {
+		//	events[i].Status = utils.EventClosed
+		//	events[i].UpdatedAt = now
+		//	_ = s.EventRepo.UpdateEvent(events[i])
+		//}
 		// If has winner, change to completed
 		if events[i].WinnerVendorID != nil && *events[i].WinnerVendorID != "" && events[i].Status != utils.EventCompleted && events[i].Status != utils.EventCancelled {
 			events[i].Status = utils.EventCompleted
