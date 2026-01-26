@@ -309,10 +309,6 @@ export const VendorForm: React.FC = () => {
     }
   };
 
-  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setProfileData({ ...profileData, [e.target.name]: e.target.value });
-  };
-
   const handleFileAdd = (e: React.ChangeEvent<HTMLInputElement>, fileType: string) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
