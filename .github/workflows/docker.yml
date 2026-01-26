@@ -75,3 +75,26 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/vendor-frontend:latest
             ghcr.io/${{ github.repository_owner }}/vendor-frontend:${{ github.sha }}
+
+  deploy:
+    needs:
+      - detect-changes
+      - build-backend
+      - build-frontend
+    if: |
+      needs.detect-changes.outputs.backend == 'true' ||
+      needs.detect-changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    environment: Production
+
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /opt/apps/vms
+            docker compose pull
+            docker compose up -d
