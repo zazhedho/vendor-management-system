@@ -19,7 +19,7 @@ type VendorProfileRequest struct {
 	Telephone     string `json:"telephone" binding:"omitempty,max=20"`
 	Fax           string `json:"fax" binding:"omitempty,max=20"`
 	Phone         string `json:"phone" binding:"omitempty,max=20"`
-	Address       string `json:"address" binding:"omitempty,max=100"`
+	Address       string `json:"address" binding:"omitempty,max=255"`
 	DistrictId    string `json:"district_id" binding:"required"`
 	DistrictName  string `json:"district_name" binding:"required"`
 	CityId        string `json:"city_id" binding:"required"`

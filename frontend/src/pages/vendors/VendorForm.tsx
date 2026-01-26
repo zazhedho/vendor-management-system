@@ -91,6 +91,7 @@ export const VendorForm: React.FC = () => {
   const [newFiles, setNewFiles] = useState<{ file: File; type: string }[]>([]);
   const [deleteFileId, setDeleteFileId] = useState<string | null>(null);
   const [isDeletingFile, setIsDeletingFile] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const companyDocs = ['ktp', 'domisili', 'siup', 'nib', 'skt', 'npwp', 'sppkp', 'akta', 'bank_book'];
   const individualDocs = ['ktp', 'npwp', 'bank_book'];
@@ -108,6 +109,71 @@ export const VendorForm: React.FC = () => {
     { title: 'Legal & Bank', description: 'Documents & Finance' },
     { title: 'Documents', description: 'Upload files' },
   ];
+
+  const validateField = (name: string, value: string) => {
+    const errors: Record<string, string> = {};
+    
+    switch (name) {
+      case 'vendor_name':
+        if (value.length < 3) errors.vendor_name = 'Vendor name must be at least 3 characters';
+        if (value.length > 100) errors.vendor_name = 'Vendor name must not exceed 100 characters';
+        break;
+      case 'address':
+        if (value.length > 255) errors.address = 'Address must not exceed 255 characters';
+        break;
+      case 'business_field':
+        if (value.length > 255) errors.business_field = 'Business field must not exceed 255 characters';
+        break;
+      case 'ktp_name':
+      case 'npwp_name':
+      case 'bank_name':
+      case 'bank_branch':
+      case 'account_holder_name':
+      case 'transaction_type':
+      case 'purch_group':
+      case 'region_or_so':
+      case 'contact_person':
+        if (value.length > 100) errors[name] = `${name.replace(/_/g, ' ')} must not exceed 100 characters`;
+        break;
+      case 'npwp_address':
+        if (value.length > 100) errors.npwp_address = 'NPWP address must not exceed 100 characters';
+        break;
+      case 'telephone':
+      case 'fax':
+      case 'phone':
+      case 'ktp_number':
+      case 'npwp_number':
+      case 'account_number':
+      case 'contact_phone':
+        if (value.length > 20) errors[name] = `${name.replace(/_/g, ' ')} must not exceed 20 characters`;
+        break;
+      case 'postal_code':
+        if (value.length > 10) errors.postal_code = 'Postal code must not exceed 10 characters';
+        break;
+      case 'nib_number':
+        if (value.length > 50) errors.nib_number = 'NIB number must not exceed 50 characters';
+        break;
+    }
+    
+    return errors;
+  };
+
+  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setProfileData({ ...profileData, [name]: value });
+    
+    // Clear existing error for this field
+    const newErrors = { ...validationErrors };
+    delete newErrors[name];
+    
+    // Validate and set new error if any
+    const fieldErrors = validateField(name, value);
+    if (fieldErrors[name]) {
+      newErrors[name] = fieldErrors[name];
+    }
+    
+    setValidationErrors(newErrors);
+  };
 
   useEffect(() => {
     fetchProvinces();
@@ -411,14 +477,23 @@ export const VendorForm: React.FC = () => {
                   <option value="individual">Individual</option>
                 </select>
               </div>
-              <Input
-                label="Vendor Name"
-                name="vendor_name"
-                value={profileData.vendor_name}
-                onChange={handleProfileChange}
-                placeholder="Enter vendor company name"
-                required
-              />
+              <div>
+                <Input
+                  label="Vendor Name"
+                  name="vendor_name"
+                  value={profileData.vendor_name}
+                  onChange={handleProfileChange}
+                  placeholder="Enter vendor company name"
+                  required
+                  error={validationErrors.vendor_name}
+                />
+                <div className="flex justify-between text-xs text-secondary-500 mt-1">
+                  <span>Min 3 characters required</span>
+                  <span className={profileData.vendor_name && profileData.vendor_name.length > 100 ? 'text-danger-500' : ''}>
+                    {profileData.vendor_name?.length || 0}/100
+                  </span>
+                </div>
+              </div>
               <Input
                 label="Email"
                 type="email"
@@ -588,8 +663,20 @@ export const VendorForm: React.FC = () => {
                   onChange={handleProfileChange}
                   rows={4}
                   placeholder="Enter complete address including street name, building number, etc."
-                  className="w-full px-4 py-2.5 rounded-lg border border-secondary-200 bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
+                  className={`w-full px-4 py-2.5 rounded-lg border bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none ${
+                    validationErrors.address 
+                      ? 'border-danger-400 focus:border-danger-500 focus:ring-danger-500/30' 
+                      : 'border-secondary-200'
+                  }`}
                 />
+                {validationErrors.address && (
+                  <p className="mt-1 text-sm text-danger-600">{validationErrors.address}</p>
+                )}
+                <div className="flex justify-end text-xs text-secondary-500 mt-1">
+                  <span className={profileData.address && profileData.address.length > 255 ? 'text-danger-500' : ''}>
+                    {profileData.address?.length || 0}/255
+                  </span>
+                </div>
               </div>
             </div>
           </Card>
