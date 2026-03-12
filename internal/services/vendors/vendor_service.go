@@ -461,8 +461,11 @@ func (s *ServiceVendor) UploadVendorProfileFile(ctx context.Context, profileId s
 	}
 	defer file.Close()
 
+	// Group vendor documents under a dedicated folder per vendor.
+	folder := fmt.Sprintf("vendor-profile-files/%s", profile.VendorId)
+
 	// Upload to storage provider (MinIO or R2)
-	fileUrl, err := s.StorageProvider.UploadFile(ctx, file, fileHeader, "vendor-profile-files")
+	fileUrl, err := s.StorageProvider.UploadFile(ctx, file, fileHeader, folder)
 	if err != nil {
 		return domainvendors.VendorProfileFile{}, fmt.Errorf("failed to upload file %s to storage: %w", fileHeader.Filename, err)
 	}
