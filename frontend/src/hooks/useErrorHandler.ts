@@ -3,6 +3,12 @@ import { toast } from 'react-toastify';
 import { parseError, getErrorMessage } from '../utils/errorParser';
 import { ErrorHandlerOptions, ErrorType } from '../types/error';
 
+const formatFieldLabel = (field: string) =>
+  field
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
 /**
  * Custom hook for centralized error handling
  *
@@ -59,7 +65,7 @@ export const useErrorHandler = () => {
           if (parsedError.details) {
             Object.entries(parsedError.details).forEach(([field, messages]) => {
               messages.forEach(msg => {
-                toast.error(`${field}: ${msg}`);
+                toast.error(`${formatFieldLabel(field)}: ${msg}`);
               });
             });
           } else {

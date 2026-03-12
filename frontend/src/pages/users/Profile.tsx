@@ -3,9 +3,11 @@ import { useAuth } from '../../context/AuthContext';
 import { User, Mail, Phone, Shield, Calendar, Save } from 'lucide-react';
 import { Card, Button, Input, Spinner } from '../../components/ui';
 import { toast } from 'react-toastify';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 export const Profile: React.FC = () => {
   const { user, updateProfile } = useAuth();
+  const { getError, handleSilentError } = useErrorHandler();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -26,7 +28,8 @@ export const Profile: React.FC = () => {
         toast.error(result.error || 'Failed to update profile');
       }
     } catch (error) {
-      toast.error('Failed to update profile');
+      handleSilentError(error, 'Updating profile');
+      toast.error(getError(error, 'Failed to update profile'));
     } finally {
       setIsLoading(false);
     }

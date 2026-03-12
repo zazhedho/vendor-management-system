@@ -7,10 +7,12 @@ import { Plus, Edit, Trash2, LayoutGrid } from 'lucide-react';
 import { Button, Card, Table, Badge, ConfirmModal, ActionMenu, EmptyState } from '../../components/ui';
 import { useDebounce } from '../../hooks';
 import { toast } from 'react-toastify';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 export const MenuList: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { getError, handleSilentError } = useErrorHandler();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -35,8 +37,9 @@ export const MenuList: React.FC = () => {
       setDeleteId(null);
       toast.success('Menu deleted successfully');
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.error || 'Failed to delete menu');
+    onError: (error) => {
+      handleSilentError(error, `Deleting menu ${deleteId}`);
+      toast.error(getError(error, 'Failed to delete menu'));
     },
   });
 

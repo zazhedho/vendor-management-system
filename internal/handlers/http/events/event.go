@@ -52,9 +52,7 @@ func (h *HandlerEvent) CreateEvent(ctx *gin.Context) {
 	data, err := h.Service.CreateEvent(userId, req)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.CreateEvent; ERROR: %s;", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -83,9 +81,7 @@ func (h *HandlerEvent) GetEventByID(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, res)
 			return
 		}
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -113,9 +109,7 @@ func (h *HandlerEvent) GetAllEvents(ctx *gin.Context) {
 	events, totalData, err := h.Service.GetAllEvents(params)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; GetAllEvents; ERROR: %+v;", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -162,9 +156,7 @@ func (h *HandlerEvent) UpdateEvent(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, res)
 			return
 		}
-		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 		return
 	}
 
@@ -189,9 +181,7 @@ func (h *HandlerEvent) DeleteEvent(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, res)
 			return
 		}
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -260,9 +250,7 @@ func (h *HandlerEvent) SubmitPitch(ctx *gin.Context) {
 	data, err := h.Service.SubmitPitchWithFile(ctx.Request.Context(), eventId, vendor.Id, req, file, fileType, caption)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.SubmitPitchWithFile; ERROR: %s;", logPrefix, err))
-		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 		return
 	}
 
@@ -287,9 +275,7 @@ func (h *HandlerEvent) GetSubmissionsByEventID(ctx *gin.Context) {
 	data, totalData, err := h.Service.GetSubmissionsByEventIDPaginated(eventId, params)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetSubmissionsByEventID; ERROR: %s;", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -307,9 +293,7 @@ func (h *HandlerEvent) GetAllSubmissions(ctx *gin.Context) {
 	data, totalData, err := h.Service.GetAllSubmissions(params)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetAllSubmissions; ERROR: %s;", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -340,9 +324,7 @@ func (h *HandlerEvent) GetGroupedSubmissions(ctx *gin.Context) {
 	data, err := h.Service.GetGroupedSubmissions(params, submissionPage, submissionLimit)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetGroupedSubmissions; ERROR: %s;", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -371,9 +353,7 @@ func (h *HandlerEvent) GetMySubmissions(ctx *gin.Context) {
 	data, totalData, err := h.Service.GetMySubmissions(vendor.Id, params)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetMySubmissions; ERROR: %s;", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -408,9 +388,7 @@ func (h *HandlerEvent) ScoreSubmission(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, res)
 			return
 		}
-		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 		return
 	}
 
@@ -445,9 +423,7 @@ func (h *HandlerEvent) ShortlistSubmission(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, res)
 			return
 		}
-		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 		return
 	}
 
@@ -482,9 +458,7 @@ func (h *HandlerEvent) SelectWinner(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, res)
 			return
 		}
-		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 		return
 	}
 
@@ -521,9 +495,7 @@ func (h *HandlerEvent) GetEventResult(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, res)
 			return
 		}
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -549,9 +521,7 @@ func (h *HandlerEvent) GetEventResultForAdmin(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, res)
 			return
 		}
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -596,9 +566,7 @@ func (h *HandlerEvent) UploadEventFile(ctx *gin.Context) {
 	data, err := h.Service.UploadEventFile(ctx.Request.Context(), eventId, userId, file, req)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.UploadEventFile; ERROR: %s;", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -627,9 +595,7 @@ func (h *HandlerEvent) DeleteEventFile(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, res)
 			return
 		}
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 

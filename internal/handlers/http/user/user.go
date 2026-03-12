@@ -64,9 +64,7 @@ func (h *HandlerUser) Register(ctx *gin.Context) {
 			return
 		}
 
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -103,15 +101,11 @@ func (h *HandlerUser) AdminCreateUser(ctx *gin.Context) {
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.AdminCreateUser; Error: %+v", logPrefix, err))
 		if errors.Is(err, gorm.ErrDuplicatedKey) || strings.Contains(err.Error(), "already exists") {
-			res := response.Response(http.StatusBadRequest, messages.MsgExists, logId, nil)
-			res.Error = response.Errors{Code: http.StatusBadRequest, Message: err.Error()}
-			ctx.JSON(http.StatusBadRequest, res)
+			response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 			return
 		}
 
-		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 		return
 	}
 
@@ -169,9 +163,7 @@ func (h *HandlerUser) Login(ctx *gin.Context) {
 			return
 		}
 
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -246,9 +238,7 @@ func (h *HandlerUser) Logout(ctx *gin.Context) {
 	// Blacklist the token (existing behavior)
 	if err := h.Service.LogoutUser(token.(string)); err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.LogoutUser; Error: %+v", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -276,9 +266,7 @@ func (h *HandlerUser) GetUserById(ctx *gin.Context) {
 			return
 		}
 
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -303,9 +291,7 @@ func (h *HandlerUser) GetUserByAuth(ctx *gin.Context) {
 			return
 		}
 
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -327,9 +313,7 @@ func (h *HandlerUser) GetAllUsers(ctx *gin.Context) {
 	users, totalData, err := h.Service.GetAllUsers(params, currentUserRole)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; GetAllUsers; ERROR: %+v;", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -365,9 +349,7 @@ func (h *HandlerUser) Update(ctx *gin.Context) {
 			return
 		}
 
-		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 		return
 	}
 
@@ -408,9 +390,7 @@ func (h *HandlerUser) UpdateUserById(ctx *gin.Context) {
 			return
 		}
 
-		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 		return
 	}
 
@@ -452,9 +432,7 @@ func (h *HandlerUser) ChangePassword(ctx *gin.Context) {
 			return
 		}
 
-		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 		return
 	}
 
@@ -479,9 +457,7 @@ func (h *HandlerUser) ForgotPassword(ctx *gin.Context) {
 	token, err := h.Service.ForgotPassword(req)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.ForgotPassword; ERROR: %s;", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -506,9 +482,7 @@ func (h *HandlerUser) ResetPassword(ctx *gin.Context) {
 
 	if err := h.Service.ResetPassword(req); err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.ResetPassword; ERROR: %s;", logPrefix, err))
-		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 		return
 	}
 
@@ -531,9 +505,7 @@ func (h *HandlerUser) Delete(ctx *gin.Context) {
 			return
 		}
 
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -560,9 +532,7 @@ func (h *HandlerUser) DeleteUserById(ctx *gin.Context) {
 			return
 		}
 
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 

@@ -5,9 +5,11 @@ import { Evaluation } from '../../types';
 import { Star, Image as ImageIcon, Calendar, MessageSquare, Award, AlertCircle } from 'lucide-react';
 import { Card, Badge } from '../../components/ui';
 import { toast } from 'react-toastify';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 export const VendorEvaluationList = () => {
   const navigate = useNavigate();
+  const { getError, handleSilentError } = useErrorHandler();
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -22,9 +24,9 @@ export const VendorEvaluationList = () => {
       if (response.status) {
         setEvaluations(response.data || []);
       }
-    } catch (error: any) {
-      console.error('Failed to fetch evaluations:', error);
-      toast.error(error?.response?.data?.error || 'Failed to load evaluations');
+    } catch (error) {
+      handleSilentError(error, 'Fetching vendor evaluations');
+      toast.error(getError(error, 'Failed to load evaluations'));
     } finally {
       setIsLoading(false);
     }

@@ -16,7 +16,7 @@ export const EvaluationDetail: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { hasPermission } = useAuth();
-  const { handleSilentError } = useErrorHandler();
+  const { getError, handleSilentError } = useErrorHandler();
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [deletePhotoId, setDeletePhotoId] = useState<string | null>(null);
@@ -40,7 +40,7 @@ export const EvaluationDetail: React.FC = () => {
       }
     } catch (error) {
       handleSilentError(error, `Fetching evaluation ID ${id}`);
-      toast.error('Failed to load evaluation');
+      toast.error(getError(error, 'Failed to load evaluation'));
     } finally {
       setIsLoading(false);
     }
@@ -60,7 +60,7 @@ export const EvaluationDetail: React.FC = () => {
       fetchEvaluation(id);
     } catch (error) {
       handleSilentError(error, `Deleting photo ${deletePhotoId}`);
-      toast.error('Failed to delete photo');
+      toast.error(getError(error, 'Failed to delete photo'));
     } finally {
       setIsDeletingPhoto(false);
       setDeletePhotoId(null);
@@ -96,9 +96,9 @@ export const EvaluationDetail: React.FC = () => {
         setReviewingPhoto(null);
         fetchEvaluation(id);
       }
-    } catch (error: any) {
+    } catch (error) {
       handleSilentError(error, `Submitting review for photo ${reviewingPhoto?.id}`);
-      toast.error(error?.response?.data?.error || 'Failed to submit review');
+      toast.error(getError(error, 'Failed to submit review'));
     } finally {
       setIsSubmittingReview(false);
     }

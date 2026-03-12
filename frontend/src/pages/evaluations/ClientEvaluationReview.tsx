@@ -5,10 +5,12 @@ import { Evaluation, EvaluationPhoto } from '../../types';
 import { ArrowLeft, Star, Send, CheckCircle, XCircle, Calendar, MessageSquare, Link as LinkIcon, ExternalLink } from 'lucide-react';
 import { Button, Card } from '../../components/ui';
 import { toast } from 'react-toastify';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 export const ClientEvaluationReview = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const { getError, handleSilentError } = useErrorHandler();
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [reviewingPhoto, setReviewingPhoto] = useState<EvaluationPhoto | null>(null);
@@ -27,9 +29,9 @@ export const ClientEvaluationReview = () => {
       if (response.status && response.data) {
         setEvaluation(response.data);
       }
-    } catch (error: any) {
-      console.error('Failed to fetch evaluation:', error);
-      toast.error(error?.response?.data?.error || 'Failed to load evaluation');
+    } catch (error) {
+      handleSilentError(error, `Fetching evaluation ${id}`);
+      toast.error(getError(error, 'Failed to load evaluation'));
     } finally {
       setIsLoading(false);
     }
@@ -70,9 +72,9 @@ export const ClientEvaluationReview = () => {
         setReviewForm({ review: '', rating: 3 });
         fetchEvaluation();
       }
-    } catch (error: any) {
-      console.error('Failed to submit review:', error);
-      toast.error(error?.response?.data?.error || 'Failed to submit review');
+    } catch (error) {
+      handleSilentError(error, `Submitting client review for photo ${reviewingPhoto.id}`);
+      toast.error(getError(error, 'Failed to submit review'));
     } finally {
       setIsSubmitting(false);
     }

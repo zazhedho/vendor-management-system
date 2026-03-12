@@ -31,7 +31,7 @@ export const VendorForm: React.FC = () => {
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const { handleSilentError } = useErrorHandler();
+  const { getError, handleSilentError } = useErrorHandler();
 
   // Check if this is vendor editing their own profile (routes like /vendor/profile/edit or /vendor/profile/new)
   const isVendorSelfEdit = location.pathname.startsWith('/vendor/profile');
@@ -264,7 +264,7 @@ export const VendorForm: React.FC = () => {
     } catch (error: any) {
       if (error.response?.status !== 404) {
         handleSilentError(error, 'Fetching vendor profile');
-        toast.error('Failed to load vendor profile');
+        toast.error(getError(error, 'Failed to load vendor profile'));
       }
     } finally {
       setIsInitialLoading(false);
@@ -295,7 +295,7 @@ export const VendorForm: React.FC = () => {
       }
     } catch (error) {
       handleSilentError(error, `Fetching vendor data for ID ${id}`);
-      toast.error('Failed to load vendor data');
+      toast.error(getError(error, 'Failed to load vendor data'));
     } finally {
       setIsInitialLoading(false);
     }
@@ -348,7 +348,7 @@ export const VendorForm: React.FC = () => {
         toast.success('File deleted');
       }
     } catch (error) {
-      toast.error('Failed to delete file');
+      toast.error(getError(error, 'Failed to delete file'));
     } finally {
       setIsDeletingFile(false);
       setDeleteFileId(null);
@@ -409,8 +409,8 @@ export const VendorForm: React.FC = () => {
       } else {
         navigate('/vendors');
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to save vendor');
+    } catch (error) {
+      toast.error(getError(error, 'Failed to save vendor'));
     } finally {
       setIsLoading(false);
     }

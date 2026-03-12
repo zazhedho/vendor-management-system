@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Button, Card, Badge, Spinner, Input, ConfirmModal, EmptyState } from '../../components/ui';
 import { toast } from 'react-toastify';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 // Helper to format file type with proper capitalization
 const formatFileType = (type: string): string => {
@@ -40,6 +41,7 @@ export const VendorProfile: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { user, hasPermission, isLoading: authLoading } = useAuth();
+  const { getError, handleSilentError } = useErrorHandler();
 
   // Determine view mode based on permissions and ownership
   const isVendorRole = useMemo(() => user?.role === 'vendor', [user?.role]);
@@ -133,8 +135,8 @@ export const VendorProfile: React.FC = () => {
       URL.revokeObjectURL(url);
       toast.success('Berhasil mengekspor profil vendor');
     } catch (error) {
-      console.error('Failed to export vendor profile:', error);
-      toast.error('Gagal mengekspor profil vendor');
+      handleSilentError(error, `Exporting vendor profile ${activeVendorId}`);
+      toast.error(getError(error, 'Gagal mengekspor profil vendor'));
     } finally {
       setIsExporting(false);
     }
@@ -161,13 +163,13 @@ export const VendorProfile: React.FC = () => {
         setProfile(profileData);
       }
     } catch (error: any) {
-      console.error('Failed to fetch vendor profile:', error);
+      handleSilentError(error, `Fetching vendor profile ${vendorId || 'current user'}`);
       // 404 is expected when vendor profile doesn't exist yet
       // 403 means user is not a vendor
       if (error.response?.status === 403) {
-        toast.error('You are not authorized to view vendor profile. Only vendors can access this page.');
+        toast.error(getError(error, 'You are not authorized to view vendor profile.'));
       } else if (error.response?.status !== 404) {
-        toast.error('Failed to load vendor profile');
+        toast.error(getError(error, 'Failed to load vendor profile'));
       }
     } finally {
       setIsLoading(false);
@@ -183,10 +185,11 @@ export const VendorProfile: React.FC = () => {
         toast.success('File deleted successfully');
         await fetchVendorProfile();
       } else {
-        toast.error('Failed to delete file');
+        toast.error(response.message || 'Failed to delete file');
       }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to delete file');
+    } catch (error) {
+      handleSilentError(error, `Deleting vendor profile file ${deleteFileId}`);
+      toast.error(getError(error, 'Failed to delete file'));
     } finally {
       setIsDeletingFile(false);
       setDeleteFileId(null);
@@ -210,11 +213,11 @@ export const VendorProfile: React.FC = () => {
         toast.success(`File ${status === 'approved' ? 'approved' : 'revision'}`);
         await fetchVendorProfile(id);
       } else {
-        toast.error('Failed to update file status');
+        toast.error(response.message || 'Failed to update file status');
       }
-    } catch (error: any) {
-      console.error('Failed to update file status:', error);
-      toast.error(error?.response?.data?.message || 'Failed to update file status');
+    } catch (error) {
+      handleSilentError(error, `Updating vendor file status for ${fileId}`);
+      toast.error(getError(error, 'Failed to update file status'));
     } finally {
       setIsUpdatingFileStatus(false);
       setShowFileStatusModal(false);
@@ -274,9 +277,9 @@ export const VendorProfile: React.FC = () => {
         setVendor({ ...vendor, status: newStatus, reject_reason: undefined });
       }
       toast.success(`Vendor status updated to ${newStatus}`);
-    } catch (error: any) {
-      console.error('Failed to update vendor status:', error);
-      toast.error(error?.response?.data?.message || 'Failed to update status');
+    } catch (error) {
+      handleSilentError(error, `Updating vendor status to ${newStatus}`);
+      toast.error(getError(error, 'Failed to update status'));
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -291,10 +294,11 @@ export const VendorProfile: React.FC = () => {
         toast.success('Vendor deleted successfully');
         navigate('/vendor/profile');
       } else {
-        toast.error('Failed to delete vendor');
+        toast.error(response.message || 'Failed to delete vendor');
       }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to delete vendor');
+    } catch (error) {
+      handleSilentError(error, `Deleting vendor ${deleteVendorId}`);
+      toast.error(getError(error, 'Failed to delete vendor'));
     } finally {
       setIsDeletingVendor(false);
       setDeleteVendorId(null);
@@ -316,9 +320,9 @@ export const VendorProfile: React.FC = () => {
         setVendor({ ...vendor, status: pendingStatus, vendor_code: vendorCodeInput.trim() });
       }
       toast.success(`Vendor status updated to ${pendingStatus}`);
-    } catch (error: any) {
-      console.error('Failed to update vendor status:', error);
-      toast.error(error?.response?.data?.message || 'Failed to update status');
+    } catch (error) {
+      handleSilentError(error, `Activating vendor ${vendor.id}`);
+      toast.error(getError(error, 'Failed to update status'));
     } finally {
       setIsUpdatingStatus(false);
       setShowVendorCodeModal(false);
@@ -345,9 +349,9 @@ export const VendorProfile: React.FC = () => {
         setVendor({ ...vendor, status: pendingStatus, reject_reason: rejectReasonInput.trim() });
       }
       toast.success(`Vendor status updated to ${pendingStatus}`);
-    } catch (error: any) {
-      console.error('Failed to update vendor status:', error);
-      toast.error(error?.response?.data?.message || 'Failed to update status');
+    } catch (error) {
+      handleSilentError(error, `Updating vendor ${vendor.id} to revision`);
+      toast.error(getError(error, 'Failed to update status'));
     } finally {
       setIsUpdatingStatus(false);
       setShowRejectReasonModal(false);

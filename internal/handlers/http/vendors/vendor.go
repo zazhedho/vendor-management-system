@@ -44,9 +44,7 @@ func (h *HandlerVendor) GetVendorProfile(ctx *gin.Context) {
 			return
 		}
 
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -75,9 +73,7 @@ func (h *HandlerVendor) CreateOrUpdateVendorProfile(ctx *gin.Context) {
 	data, err := h.Service.CreateOrUpdateVendorProfile(userId, req)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.CreateOrUpdateVendorProfile; ERROR: %s;", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -96,9 +92,7 @@ func (h *HandlerVendor) GetAllVendors(ctx *gin.Context) {
 	vendors, totalData, err := h.Service.GetAllVendors(params)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; GetAllVendors; ERROR: %+v;", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -126,9 +120,7 @@ func (h *HandlerVendor) GetVendorDetail(ctx *gin.Context) {
 			return
 		}
 
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -156,9 +148,7 @@ func (h *HandlerVendor) ExportVendorProfile(ctx *gin.Context) {
 			return
 		}
 
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -211,9 +201,7 @@ func (h *HandlerVendor) UpdateVendorStatus(ctx *gin.Context) {
 			return
 		}
 
-		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 		return
 	}
 
@@ -240,9 +228,7 @@ func (h *HandlerVendor) DeleteVendor(ctx *gin.Context) {
 			return
 		}
 
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -288,9 +274,7 @@ func (h *HandlerVendor) UploadVendorProfileFile(ctx *gin.Context) {
 	data, err := h.Service.UploadVendorProfileFile(ctx.Request.Context(), profileId, userId, file, req)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.UploadVendorProfileFile; ERROR: %s;", logPrefix, err))
-		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 		return
 	}
 
@@ -319,9 +303,7 @@ func (h *HandlerVendor) DeleteVendorProfileFile(ctx *gin.Context) {
 			return
 		}
 
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -363,9 +345,7 @@ func (h *HandlerVendor) UpdateVendorProfileFileStatus(ctx *gin.Context) {
 			return
 		}
 
-		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 		return
 	}
 

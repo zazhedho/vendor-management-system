@@ -51,9 +51,7 @@ func (h *HandlerEvaluation) CreateEvaluation(ctx *gin.Context) {
 	data, err := h.Service.CreateEvaluation(userId, req)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.CreateEvaluation; ERROR: %s;", logPrefix, err))
-		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 		return
 	}
 
@@ -80,9 +78,7 @@ func (h *HandlerEvaluation) GetEvaluationByID(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, res)
 			return
 		}
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -100,9 +96,7 @@ func (h *HandlerEvaluation) GetAllEvaluations(ctx *gin.Context) {
 	evaluations, totalData, err := h.Service.GetAllEvaluations(params)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; GetAllEvaluations; ERROR: %+v;", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -122,9 +116,7 @@ func (h *HandlerEvaluation) GetEvaluationsByEventID(ctx *gin.Context) {
 	data, err := h.Service.GetEvaluationsByEventID(eventId)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetEvaluationsByEventID; ERROR: %s;", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -144,9 +136,7 @@ func (h *HandlerEvaluation) GetMyEvaluations(ctx *gin.Context) {
 	data, totalData, err := h.Service.GetMyEvaluations(userId, params)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetMyEvaluations; ERROR: %s;", logPrefix, err))
-		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 		return
 	}
 
@@ -181,9 +171,7 @@ func (h *HandlerEvaluation) UpdateEvaluation(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, res)
 			return
 		}
-		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 		return
 	}
 
@@ -221,9 +209,7 @@ func (h *HandlerEvaluation) UpdateDriveUrl(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, res)
 			return
 		}
-		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 		return
 	}
 
@@ -248,9 +234,7 @@ func (h *HandlerEvaluation) DeleteEvaluation(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, res)
 			return
 		}
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -284,9 +268,7 @@ func (h *HandlerEvaluation) UploadPhoto(ctx *gin.Context) {
 	data, err := h.Service.UploadPhoto(ctx.Request.Context(), userId, evaluationId, file, caption)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.UploadPhoto; ERROR: %s;", logPrefix, err))
-		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 		return
 	}
 
@@ -324,9 +306,7 @@ func (h *HandlerEvaluation) ReviewPhoto(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, res)
 			return
 		}
-		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 		return
 	}
 
@@ -352,9 +332,7 @@ func (h *HandlerEvaluation) DeletePhoto(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, res)
 			return
 		}
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 

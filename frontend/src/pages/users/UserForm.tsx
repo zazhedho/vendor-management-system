@@ -13,7 +13,7 @@ export const UserForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { user: currentUser } = useAuth();
-  const { handleSilentError } = useErrorHandler();
+  const { getError, handleSilentError } = useErrorHandler();
   const isEditMode = !!id;
 
   const [formData, setFormData] = useState({
@@ -50,7 +50,8 @@ export const UserForm: React.FC = () => {
         });
       }
     } catch (error) {
-      toast.error('Failed to load user data');
+      handleSilentError(error, `Fetching user ID ${userId}`);
+      toast.error(getError(error, 'Failed to load user data'));
     } finally {
       setIsFetching(false);
     }
@@ -114,8 +115,8 @@ export const UserForm: React.FC = () => {
         toast.success('User created successfully');
       }
       navigate('/users');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to save user');
+    } catch (error) {
+      toast.error(getError(error, 'Failed to save user'));
     } finally {
       setIsLoading(false);
     }

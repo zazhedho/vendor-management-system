@@ -16,6 +16,7 @@ import (
 	"vendor-management-system/utils"
 
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 type ServiceUser struct {
@@ -106,6 +107,15 @@ func (s *ServiceUser) RegisterUser(req dto.UserRegister) (domainuser.Users, erro
 	}
 
 	if err = s.UserRepo.Store(data); err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			if existingUser, findErr := s.UserRepo.GetByEmail(req.Email); findErr == nil && existingUser.Id != "" {
+				return domainuser.Users{}, errors.New("email already exists")
+			}
+			if existingPhone, findErr := s.UserRepo.GetByPhone(phone); findErr == nil && existingPhone.Id != "" {
+				return domainuser.Users{}, errors.New("phone number already exists")
+			}
+			return domainuser.Users{}, errors.New("email or phone number already exists")
+		}
 		return domainuser.Users{}, err
 	}
 
@@ -170,6 +180,17 @@ func (s *ServiceUser) AdminCreateUser(req dto.AdminCreateUser, creatorRole strin
 	}
 
 	if err = s.UserRepo.Store(data); err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			if existingUser, findErr := s.UserRepo.GetByEmail(req.Email); findErr == nil && existingUser.Id != "" {
+				return domainuser.Users{}, errors.New("email already exists")
+			}
+			if phone != "" {
+				if existingPhone, findErr := s.UserRepo.GetByPhone(phone); findErr == nil && existingPhone.Id != "" {
+					return domainuser.Users{}, errors.New("phone number already exists")
+				}
+			}
+			return domainuser.Users{}, errors.New("email or phone number already exists")
+		}
 		return domainuser.Users{}, err
 	}
 

@@ -3,6 +3,7 @@ import { eventsApi } from '../../api/events';
 import { toast } from 'react-toastify';
 import { X, Upload, FileText, Trash2, Send } from 'lucide-react';
 import { Button, Input, Card } from '../../components/ui';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 interface SubmitPitchModalProps {
   eventId: string;
@@ -17,6 +18,7 @@ export const SubmitPitchModal: React.FC<SubmitPitchModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { getError, handleSilentError } = useErrorHandler();
   const [proposalDetails, setProposalDetails] = useState('');
   const [files, setFiles] = useState<{ file: File; file_type: string; caption: string }[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -104,9 +106,9 @@ export const SubmitPitchModal: React.FC<SubmitPitchModalProps> = ({
       } else {
         throw new Error(response.message || 'Failed to submit pitch');
       }
-    } catch (error: any) {
-      console.error('Failed to submit pitch:', error);
-      toast.error(error.message || 'Failed to submit pitch');
+    } catch (error) {
+      handleSilentError(error, `Submitting pitch for event ${eventId}`);
+      toast.error(getError(error, 'Failed to submit pitch'));
     } finally {
       setIsSubmitting(false);
     }

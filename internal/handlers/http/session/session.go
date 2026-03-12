@@ -44,9 +44,7 @@ func (h *HandlerSession) GetActiveSessions(ctx *gin.Context) {
 	sessions, err := h.Service.GetUserSessions(context.Background(), userID.(string), currentSessionID)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetUserSessions; Error: %+v", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -97,9 +95,7 @@ func (h *HandlerSession) RevokeSession(ctx *gin.Context) {
 
 	if err := h.Service.DestroySession(context.Background(), sessionID); err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.DestroySession; Error: %+v", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -132,9 +128,7 @@ func (h *HandlerSession) RevokeAllOtherSessions(ctx *gin.Context) {
 
 	if err := h.Service.DestroyOtherSessions(context.Background(), userID.(string), currentSession.SessionID); err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.DestroyOtherSessions; Error: %+v", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 

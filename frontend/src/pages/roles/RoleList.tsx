@@ -7,10 +7,12 @@ import { Plus, Shield, Edit, Trash2, Lock, UserCheck } from 'lucide-react';
 import { Button, Card, Table, Badge, ConfirmModal, ActionMenu, EmptyState } from '../../components/ui';
 import { useDebounce } from '../../hooks';
 import { toast } from 'react-toastify';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 export const RoleList: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { getError, handleSilentError } = useErrorHandler();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -35,8 +37,9 @@ export const RoleList: React.FC = () => {
       setDeleteId(null);
       toast.success('Role deleted successfully');
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.error || 'Failed to delete role');
+    onError: (error) => {
+      handleSilentError(error, `Deleting role ${deleteId}`);
+      toast.error(getError(error, 'Failed to delete role'));
     },
   });
 

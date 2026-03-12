@@ -7,11 +7,13 @@ import { Permission, Menu } from '../../types';
 import { Save, X, Shield, List, Lock } from 'lucide-react';
 import { Button, Input, Card } from '../../components/ui';
 import { toast } from 'react-toastify';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 export const RoleForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditMode = !!id;
+  const { getError, handleSilentError } = useErrorHandler();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -56,8 +58,8 @@ export const RoleForm: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error('Failed to fetch role:', error);
-      toast.error('Failed to load role data');
+      handleSilentError(error, `Fetching role ID ${roleId}`);
+      toast.error(getError(error, 'Failed to load role data'));
     }
   };
 
@@ -68,7 +70,7 @@ export const RoleForm: React.FC = () => {
         setAvailablePermissions(response.data || []);
       }
     } catch (error) {
-      console.error('Failed to fetch permissions:', error);
+      handleSilentError(error, 'Fetching permissions');
     }
   };
 
@@ -79,7 +81,7 @@ export const RoleForm: React.FC = () => {
         setAvailableMenus(response.data || []);
       }
     } catch (error) {
-      console.error('Failed to fetch menus:', error);
+      handleSilentError(error, 'Fetching menus');
     }
   };
 
@@ -131,8 +133,8 @@ export const RoleForm: React.FC = () => {
 
       toast.success(isEditMode ? 'Role updated successfully' : 'Role created successfully');
       navigate('/roles');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to save role');
+    } catch (error) {
+      toast.error(getError(error, 'Failed to save role'));
     } finally {
       setIsLoading(false);
     }

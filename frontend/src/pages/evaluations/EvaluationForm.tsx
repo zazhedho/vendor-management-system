@@ -12,7 +12,7 @@ export const EvaluationForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditMode = !!id;
-  const { handleSilentError } = useErrorHandler();
+  const { getError, handleSilentError } = useErrorHandler();
 
   const [formData, setFormData] = useState({
     event_id: '',
@@ -73,7 +73,7 @@ export const EvaluationForm: React.FC = () => {
       }
     } catch (error) {
       handleSilentError(error, 'Fetching completed events');
-      toast.error('Failed to load events');
+      toast.error(getError(error, 'Failed to load events'));
     } finally {
       setIsFetchingEvents(false);
       setIsLoadingData(false);
@@ -96,7 +96,7 @@ export const EvaluationForm: React.FC = () => {
       }
     } catch (error) {
       handleSilentError(error, `Fetching evaluation ID ${id}`);
-      toast.error('Failed to load evaluation data');
+      toast.error(getError(error, 'Failed to load evaluation data'));
     }
   };
 
@@ -133,9 +133,9 @@ export const EvaluationForm: React.FC = () => {
       }
 
       navigate('/evaluations');
-    } catch (error: any) {
+    } catch (error) {
       handleSilentError(error, `Saving evaluation (mode: ${isEditMode ? 'update' : 'create'})`);
-      toast.error(error?.response?.data?.error || error.message || 'Failed to save evaluation');
+      toast.error(getError(error, 'Failed to save evaluation'));
     } finally {
       setIsLoading(false);
     }

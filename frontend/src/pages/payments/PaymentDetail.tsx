@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { paymentsApi } from '../../api/payments';
@@ -10,22 +10,31 @@ import {
 import { Button, Card, Badge, Spinner, ConfirmModal } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 export const PaymentDetail: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const { hasPermission } = useAuth();
+  const { getError, handleSilentError } = useErrorHandler();
   const canUpdate = hasPermission('payment', 'update');
   const canDelete = hasPermission('payment', 'delete');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  const { data: payment, isLoading } = useQuery({
+  const { data: payment, isLoading, error, isError } = useQuery({
     queryKey: ['payment', id],
     queryFn: () => (canUpdate || canDelete) ? paymentsApi.getById(id!) : paymentsApi.getMyPaymentById(id!),
     enabled: !!id,
     select: (response) => response.data,
   });
+
+  useEffect(() => {
+    if (isError && error) {
+      handleSilentError(error, `Fetching payment ${id}`);
+      toast.error(getError(error, 'Failed to load payment details'));
+    }
+  }, [error, getError, handleSilentError, id, isError]);
 
   const deleteMutation = useMutation({
     mutationFn: () => paymentsApi.delete(id!),
@@ -33,8 +42,9 @@ export const PaymentDetail: React.FC = () => {
       toast.success('Payment deleted successfully');
       navigate('/payments');
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.error || 'Failed to delete payment');
+    onError: (error) => {
+      handleSilentError(error, `Deleting payment ${id}`);
+      toast.error(getError(error, 'Failed to delete payment'));
     },
   });
 
@@ -44,8 +54,9 @@ export const PaymentDetail: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['payment', id] });
       toast.success('Payment status updated');
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.error || 'Failed to update status');
+    onError: (error) => {
+      handleSilentError(error, `Updating payment status for ${id}`);
+      toast.error(getError(error, 'Failed to update status'));
     },
   });
 

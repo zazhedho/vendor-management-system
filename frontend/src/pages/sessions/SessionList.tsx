@@ -4,8 +4,10 @@ import { Monitor, Smartphone, Tablet, Laptop, Globe, Trash2, LogOut, CheckCircle
 import { Button, Card, Badge, Spinner } from '../../components/ui';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { toast } from 'react-toastify';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 export const SessionList: React.FC = () => {
+  const { getError, handleSilentError } = useErrorHandler();
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [revokeModal, setRevokeModal] = useState<{ isOpen: boolean; sessionId: string | null; isCurrent: boolean }>({
@@ -28,8 +30,8 @@ export const SessionList: React.FC = () => {
         setSessions(response.data.sessions || []);
       }
     } catch (error) {
-      console.error('Failed to fetch sessions:', error);
-      toast.error('Failed to load sessions');
+      handleSilentError(error, 'Fetching active sessions');
+      toast.error(getError(error, 'Failed to load sessions'));
     } finally {
       setIsLoading(false);
     }
@@ -52,8 +54,8 @@ export const SessionList: React.FC = () => {
         toast.error(response.message || 'Failed to revoke session');
       }
     } catch (error) {
-      console.error('Failed to revoke session:', error);
-      toast.error('Failed to revoke session');
+      handleSilentError(error, `Revoking session ${revokeModal.sessionId}`);
+      toast.error(getError(error, 'Failed to revoke session'));
     } finally {
       setIsRevoking(false);
       setRevokeModal({ isOpen: false, sessionId: null, isCurrent: false });
@@ -71,8 +73,8 @@ export const SessionList: React.FC = () => {
         toast.error(response.message || 'Failed to revoke sessions');
       }
     } catch (error) {
-      console.error('Failed to revoke other sessions:', error);
-      toast.error('Failed to revoke sessions');
+      handleSilentError(error, 'Revoking all other sessions');
+      toast.error(getError(error, 'Failed to revoke sessions'));
     } finally {
       setIsRevoking(false);
       setRevokeAllModal(false);

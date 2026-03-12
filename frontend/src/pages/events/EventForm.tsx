@@ -11,7 +11,7 @@ export const EventForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditMode = !!id;
-  const { handleSilentError } = useErrorHandler();
+  const { getError, handleSilentError } = useErrorHandler();
 
   const [formData, setFormData] = useState({
     title: '',
@@ -55,7 +55,7 @@ export const EventForm: React.FC = () => {
       }
     } catch (error) {
       handleSilentError(error, `Fetching event ID ${id}`);
-      toast.error('Failed to load event data');
+      toast.error(getError(error, 'Failed to load event data'));
     }
   };
 
@@ -147,7 +147,7 @@ export const EventForm: React.FC = () => {
         toast.success('File deleted');
       }
     } catch (error) {
-      toast.error('Failed to delete file');
+      toast.error(getError(error, 'Failed to delete file'));
     } finally {
       setIsDeletingFile(false);
       setDeleteFileId(null);
@@ -221,8 +221,8 @@ export const EventForm: React.FC = () => {
 
       toast.success(isEditMode ? 'Event updated' : 'Event created');
       navigate('/events');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to save event');
+    } catch (error) {
+      toast.error(getError(error, 'Failed to save event'));
     } finally {
       setIsLoading(false);
     }

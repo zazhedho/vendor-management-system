@@ -41,9 +41,7 @@ func (h *RoleHandler) Create(ctx *gin.Context) {
 	data, err := h.Service.Create(req)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.Create; Error: %+v", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, err.Error(), logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -60,9 +58,7 @@ func (h *RoleHandler) GetByID(ctx *gin.Context) {
 	data, err := h.Service.GetByIDWithDetails(id)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetByIDWithDetails; Error: %+v", logPrefix, err))
-		res := response.Response(http.StatusNotFound, "Role not found", logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusNotFound, res)
+		response.WriteError(ctx, logId, err, http.StatusNotFound, "Role not found.")
 		return
 	}
 
@@ -81,18 +77,14 @@ func (h *RoleHandler) GetAll(ctx *gin.Context) {
 	params, err := filter.GetBaseParams(ctx, "name", "asc", 10)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; GetBaseParams; Error: %+v", logPrefix, err))
-		res := response.Response(http.StatusBadRequest, messages.InvalidRequest, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, messages.InvalidRequest)
 		return
 	}
 
 	data, total, err := h.Service.GetAll(params, currentUserRole)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetAll; Error: %+v", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -122,9 +114,7 @@ func (h *RoleHandler) Update(ctx *gin.Context) {
 	data, err := h.Service.Update(id, currentUserRole, req)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.Update; Error: %+v", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, err.Error(), logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -140,9 +130,7 @@ func (h *RoleHandler) Delete(ctx *gin.Context) {
 
 	if err := h.Service.Delete(id); err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.Delete; Error: %+v", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, err.Error(), logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -176,9 +164,7 @@ func (h *RoleHandler) AssignPermissions(ctx *gin.Context) {
 		if err.Error() == "access denied: cannot modify superadmin role" || err.Error() == "access denied: only superadmin and admin can modify system roles" {
 			statusCode = http.StatusForbidden
 		}
-		res := response.Response(statusCode, err.Error(), logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(statusCode, res)
+		response.WriteError(ctx, logId, err, statusCode, "")
 		return
 	}
 
@@ -212,9 +198,7 @@ func (h *RoleHandler) AssignMenus(ctx *gin.Context) {
 		if err.Error() == "access denied: cannot modify superadmin role" || err.Error() == "access denied: only superadmin and admin can modify system roles" {
 			statusCode = http.StatusForbidden
 		}
-		res := response.Response(statusCode, err.Error(), logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(statusCode, res)
+		response.WriteError(ctx, logId, err, statusCode, "")
 		return
 	}
 

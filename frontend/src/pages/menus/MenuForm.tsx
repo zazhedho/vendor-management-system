@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Button, Input, Card, Spinner } from '../../components/ui';
 import { toast } from 'react-toastify';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 const ICON_LIST: { value: string; label: string; icon: LucideIcon }[] = [
   { value: 'bi-speedometer2', label: 'Dashboard', icon: LayoutDashboard },
@@ -69,6 +70,7 @@ export const MenuForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditMode = !!id;
+  const { getError, handleSilentError } = useErrorHandler();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -107,8 +109,8 @@ export const MenuForm: React.FC = () => {
         });
       }
     } catch (error) {
-      console.error('Failed to fetch menu:', error);
-      toast.error('Failed to load menu data');
+      handleSilentError(error, `Fetching menu ID ${menuId}`);
+      toast.error(getError(error, 'Failed to load menu data'));
     } finally {
       setIsFetching(false);
     }
@@ -138,8 +140,8 @@ export const MenuForm: React.FC = () => {
         toast.success('Menu created successfully');
       }
       navigate('/menus');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to save menu');
+    } catch (error) {
+      toast.error(getError(error, 'Failed to save menu'));
     } finally {
       setIsLoading(false);
     }

@@ -8,10 +8,12 @@ import { Plus, Edit, Trash2, Shield, X, Users } from 'lucide-react';
 import { Button, Card, Table, Badge, ConfirmModal, ActionMenu, EmptyState } from '../../components/ui';
 import { useDebounce } from '../../hooks';
 import { toast } from 'react-toastify';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 export const UserList: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { getError, handleSilentError } = useErrorHandler();
   const { user: currentUser, hasPermission } = useAuth();
   const canListUsers = hasPermission('users', 'list');
   const canCreateUser = hasPermission('users', 'create');
@@ -51,8 +53,9 @@ export const UserList: React.FC = () => {
       setDeleteId(null);
       toast.success('User deleted successfully');
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.error || 'Failed to delete user');
+    onError: (error) => {
+      handleSilentError(error, `Deleting user ${deleteId}`);
+      toast.error(getError(error, 'Failed to delete user'));
     },
   });
 

@@ -5,7 +5,6 @@ import (
 	"net/http"
 	interfacelocation "vendor-management-system/internal/interfaces/location"
 	"vendor-management-system/pkg/logger"
-	"vendor-management-system/pkg/messages"
 	"vendor-management-system/pkg/response"
 	"vendor-management-system/utils"
 
@@ -42,9 +41,7 @@ func (h *LocationHandler) GetProvince(ctx *gin.Context) {
 	data, err := h.Service.GetProvince(year)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetProvince; Error: %+v", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -86,9 +83,7 @@ func (h *LocationHandler) GetCity(ctx *gin.Context) {
 	data, err := h.Service.GetCity(year, lvl, pro)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetCity; Error: %+v", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -139,9 +134,7 @@ func (h *LocationHandler) GetDistrict(ctx *gin.Context) {
 	data, err := h.Service.GetDistrict(year, lvl, pro, kab)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetDistrict; Error: %+v", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 

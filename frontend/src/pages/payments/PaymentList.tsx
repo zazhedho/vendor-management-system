@@ -8,10 +8,12 @@ import { Button, Card, Table, Badge, ConfirmModal, ActionMenu, EmptyState } from
 import { useAuth } from '../../context/AuthContext';
 import { usePagination, useDebounce } from '../../hooks';
 import { toast } from 'react-toastify';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 export const PaymentList: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { getError, handleSilentError } = useErrorHandler();
   const { hasPermission } = useAuth();
   const canCreate = hasPermission('payment', 'create');
   const canUpdate = hasPermission('payment', 'update');
@@ -41,8 +43,9 @@ export const PaymentList: React.FC = () => {
       setDeletePaymentId(null);
       toast.success('Payment deleted successfully');
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.error || 'Failed to delete payment');
+    onError: (error) => {
+      handleSilentError(error, `Deleting payment ${deletePaymentId}`);
+      toast.error(getError(error, 'Failed to delete payment'));
     },
   });
 

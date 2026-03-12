@@ -3,6 +3,7 @@ import { eventsApi } from '../../api/events';
 import { toast } from 'react-toastify';
 import { X, Star, Save } from 'lucide-react';
 import { Button, Input, Card } from '../../components/ui';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 interface ScoreSubmissionModalProps {
   submissionId: string;
@@ -17,6 +18,7 @@ export const ScoreSubmissionModal: React.FC<ScoreSubmissionModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { getError, handleSilentError } = useErrorHandler();
   const [score, setScore] = useState(currentScore?.toString() || '');
   const [comments, setComments] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,9 +48,9 @@ export const ScoreSubmissionModal: React.FC<ScoreSubmissionModalProps> = ({
       } else {
         throw new Error(response.message || 'Failed to submit score');
       }
-    } catch (error: any) {
-      console.error('Failed to submit score:', error);
-      toast.error(error.message || 'Failed to submit score');
+    } catch (error) {
+      handleSilentError(error, `Scoring submission ${submissionId}`);
+      toast.error(getError(error, 'Failed to submit score'));
     } finally {
       setIsSubmitting(false);
     }

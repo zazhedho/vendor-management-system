@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { Mail, Lock, ArrowRight, Shield } from 'lucide-react';
 import { AuthLayout } from '../../components/AuthLayout';
 import { Button, Input, Card } from '../../components/ui';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -12,6 +13,7 @@ export const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { getError, handleSilentError } = useErrorHandler();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,8 +27,9 @@ export const Login: React.FC = () => {
       } else {
         toast.error(result.error || 'Login failed');
       }
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || err.message || 'Login failed');
+    } catch (error) {
+      handleSilentError(error, 'Logging in');
+      toast.error(getError(error, 'Login failed'));
     } finally {
       setIsLoading(false);
     }

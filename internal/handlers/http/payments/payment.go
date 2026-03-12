@@ -48,9 +48,7 @@ func (h *HandlerPayment) CreatePayment(ctx *gin.Context) {
 	data, err := h.Service.CreatePayment(req)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.CreatePayment; ERROR: %s;", logPrefix, err))
-		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 		return
 	}
 
@@ -77,9 +75,7 @@ func (h *HandlerPayment) GetPaymentByID(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, res)
 			return
 		}
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -97,9 +93,7 @@ func (h *HandlerPayment) GetAllPayments(ctx *gin.Context) {
 	payments, totalData, err := h.Service.GetAllPayments(params)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; GetAllPayments; ERROR: %+v;", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -129,9 +123,7 @@ func (h *HandlerPayment) GetMyPayments(ctx *gin.Context) {
 	data, totalData, err := h.Service.GetAllPayments(params)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetAllPayments; ERROR: %s;", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -170,9 +162,7 @@ func (h *HandlerPayment) GetMyPaymentByID(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, res)
 			return
 		}
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -215,9 +205,7 @@ func (h *HandlerPayment) UpdatePayment(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, res)
 			return
 		}
-		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 		return
 	}
 
@@ -252,9 +240,7 @@ func (h *HandlerPayment) UpdatePaymentStatus(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, res)
 			return
 		}
-		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 		return
 	}
 
@@ -279,9 +265,7 @@ func (h *HandlerPayment) DeletePayment(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, res)
 			return
 		}
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -329,9 +313,7 @@ func (h *HandlerPayment) UploadPaymentFile(ctx *gin.Context) {
 	data, err := h.Service.UploadPaymentFile(ctx.Request.Context(), paymentId, userId, file, req)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.UploadPaymentFile; ERROR: %s;", logPrefix, err))
-		res := response.Response(http.StatusBadRequest, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, "")
 		return
 	}
 
@@ -359,9 +341,7 @@ func (h *HandlerPayment) DeletePaymentFile(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, res)
 			return
 		}
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 

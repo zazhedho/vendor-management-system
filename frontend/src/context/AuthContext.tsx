@@ -3,7 +3,7 @@ import { User, Menu, Permission } from '../types';
 import { authApi } from '../api/auth';
 import { menusApi } from '../api/menus';
 import { permissionsApi } from '../api/permissions';
-import { parseError } from '../utils/errorParser';
+import { getErrorMessage, parseError } from '../utils/errorParser';
 
 interface AuthContextType {
   user: User | null;
@@ -72,6 +72,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(false);
   }, []);
 
+  const resolveErrorMessage = (error: unknown, fallback: string) => {
+    return getErrorMessage(error, fallback);
+  };
+
   const login = async (email: string, password: string) => {
     try {
       const response = await authApi.login({ email, password });
@@ -128,14 +132,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const errorMessage = response.message || 'Login failed';
       return { success: false, error: errorMessage };
-    } catch (error: any) {
-      let errorMessage = 'Login failed';
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (Array.isArray(error.response?.data?.error) && error.response.data.error.length > 0) {
-        errorMessage = error.response.data.error.map((err: any) => err.message).join(', ');
-      }
-      return { success: false, error: errorMessage };
+    } catch (error) {
+      return { success: false, error: resolveErrorMessage(error, 'Login failed') };
     }
   };
 
@@ -182,14 +180,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const response = await authApi.register(userData);
       return { success: true, data: response };
-    } catch (error: any) {
-      let errorMessage = 'Registration failed';
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (Array.isArray(error.response?.data?.error) && error.response.data.error.length > 0) {
-        errorMessage = error.response.data.error.map((err: any) => err.message).join(', ');
-      }
-      return { success: false, error: errorMessage };
+    } catch (error) {
+      return { success: false, error: resolveErrorMessage(error, 'Registration failed') };
     }
   };
 
@@ -202,14 +194,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return { success: true, data: response };
       }
       return { success: false, error: response.message || 'Update failed' };
-    } catch (error: any) {
-      let errorMessage = 'Update failed';
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (Array.isArray(error.response?.data?.error) && error.response.data.error.length > 0) {
-        errorMessage = error.response.data.error.map((err: any) => err.message).join(', ');
-      }
-      return { success: false, error: errorMessage };
+    } catch (error) {
+      return { success: false, error: resolveErrorMessage(error, 'Update failed') };
     }
   };
 
@@ -218,14 +204,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await authApi.changePassword(passwordData.currentPassword, passwordData.newPassword);
       await logout();
       return { success: true };
-    } catch (error: any) {
-      let errorMessage = 'Password update failed';
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (Array.isArray(error.response?.data?.error) && error.response.data.error.length > 0) {
-        errorMessage = error.response.data.error.map((err: any) => err.message).join(', ');
-      }
-      return { success: false, error: errorMessage };
+    } catch (error) {
+      return { success: false, error: resolveErrorMessage(error, 'Password update failed') };
     }
   };
 
@@ -233,14 +213,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const response = await authApi.forgotPassword(email);
       return { success: true, data: response };
-    } catch (error: any) {
-      let errorMessage = 'Failed to send reset email';
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (Array.isArray(error.response?.data?.error) && error.response.data.error.length > 0) {
-        errorMessage = error.response.data.error.map((err: any) => err.message).join(', ');
-      }
-      return { success: false, error: errorMessage };
+    } catch (error) {
+      return { success: false, error: resolveErrorMessage(error, 'Failed to send reset email') };
     }
   };
 
@@ -248,14 +222,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const response = await authApi.resetPassword(token, newPassword);
       return { success: true, data: response };
-    } catch (error: any) {
-      let errorMessage = 'Failed to reset password';
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (Array.isArray(error.response?.data?.error) && error.response.data.error.length > 0) {
-        errorMessage = error.response.data.error.map((err: any) => err.message).join(', ');
-      }
-      return { success: false, error: errorMessage };
+    } catch (error) {
+      return { success: false, error: resolveErrorMessage(error, 'Failed to reset password') };
     }
   };
 
@@ -264,14 +232,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await authApi.deleteUser();
       await logout();
       return { success: true };
-    } catch (error: any) {
-      let errorMessage = 'Failed to delete account';
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (Array.isArray(error.response?.data?.error) && error.response.data.error.length > 0) {
-        errorMessage = error.response.data.error.map((err: any) => err.message).join(', ');
-      }
-      return { success: false, error: errorMessage };
+    } catch (error) {
+      return { success: false, error: resolveErrorMessage(error, 'Failed to delete account') };
     }
   };
 

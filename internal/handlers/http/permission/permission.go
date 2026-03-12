@@ -41,9 +41,7 @@ func (h *PermissionHandler) Create(ctx *gin.Context) {
 	data, err := h.Service.Create(req)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.Create; Error: %+v", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, err.Error(), logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -60,9 +58,7 @@ func (h *PermissionHandler) GetByID(ctx *gin.Context) {
 	data, err := h.Service.GetByID(id)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetByID; Error: %+v", logPrefix, err))
-		res := response.Response(http.StatusNotFound, "Permission not found", logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusNotFound, res)
+		response.WriteError(ctx, logId, err, http.StatusNotFound, "Permission not found.")
 		return
 	}
 
@@ -78,18 +74,14 @@ func (h *PermissionHandler) GetAll(ctx *gin.Context) {
 	params, err := filter.GetBaseParams(ctx, "resource", "asc", 10)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; GetBaseParams; Error: %+v", logPrefix, err))
-		res := response.Response(http.StatusBadRequest, messages.InvalidRequest, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, messages.InvalidRequest)
 		return
 	}
 
 	data, total, err := h.Service.GetAll(params)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetAll; Error: %+v", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -117,9 +109,7 @@ func (h *PermissionHandler) Update(ctx *gin.Context) {
 	data, err := h.Service.Update(id, req)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.Update; Error: %+v", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, err.Error(), logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -135,9 +125,7 @@ func (h *PermissionHandler) Delete(ctx *gin.Context) {
 
 	if err := h.Service.Delete(id); err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.Delete; Error: %+v", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, err.Error(), logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -173,9 +161,7 @@ func (h *PermissionHandler) GetUserPermissions(ctx *gin.Context) {
 	data, err := h.Service.GetUserPermissions(userId.(string))
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetUserPermissions; Error: %+v", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 

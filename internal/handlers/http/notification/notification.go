@@ -47,9 +47,7 @@ func (h *HandlerNotification) GetNotifications(ctx *gin.Context) {
 	data, total, err := h.Service.GetUserNotifications(userId, params, isRead)
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.GetUserNotifications ERROR: %s;", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 
@@ -67,9 +65,7 @@ func (h *HandlerNotification) MarkRead(ctx *gin.Context) {
 	var req dto.MarkNotificationsReadRequest
 	if err := ctx.BindJSON(&req); err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; BindJSON ERROR: %s;", logPrefix, err.Error()))
-		res := response.Response(http.StatusBadRequest, messages.InvalidRequest, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusBadRequest, res)
+		response.WriteError(ctx, logId, err, http.StatusBadRequest, messages.InvalidRequest)
 		return
 	}
 
@@ -82,9 +78,7 @@ func (h *HandlerNotification) MarkRead(ctx *gin.Context) {
 
 	if err != nil {
 		logger.WriteLog(logger.LogLevelError, fmt.Sprintf("%s; Service.MarkRead ERROR: %s;", logPrefix, err))
-		res := response.Response(http.StatusInternalServerError, messages.MsgFail, logId, nil)
-		res.Error = err.Error()
-		ctx.JSON(http.StatusInternalServerError, res)
+		response.WriteError(ctx, logId, err, http.StatusInternalServerError, "")
 		return
 	}
 

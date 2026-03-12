@@ -4,6 +4,7 @@ import { EventSubmission } from '../../types';
 import { toast } from 'react-toastify';
 import { X, Trophy, Award, Star, Search } from 'lucide-react';
 import { Button, Badge, ConfirmModal, Input } from '../../components/ui';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 interface SelectWinnerModalProps {
   eventId: string;
@@ -20,6 +21,7 @@ export const SelectWinnerModal: React.FC<SelectWinnerModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { getError, handleSilentError } = useErrorHandler();
   const [selectedSubmissionId, setSelectedSubmissionId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -77,9 +79,9 @@ export const SelectWinnerModal: React.FC<SelectWinnerModalProps> = ({
       } else {
         throw new Error(response.message || 'Failed to select winner');
       }
-    } catch (error: any) {
-      console.error('Failed to select winner:', error);
-      toast.error(error.message || 'Failed to select winner');
+    } catch (error) {
+      handleSilentError(error, `Selecting winner for event ${eventId}`);
+      toast.error(getError(error, 'Failed to select winner'));
     } finally {
       setIsSubmitting(false);
       setShowConfirm(false);
@@ -111,8 +113,8 @@ export const SelectWinnerModal: React.FC<SelectWinnerModalProps> = ({
         setSearchWarning('');
       }
     } catch (error) {
-      console.error('Failed to fetch submissions:', error);
-      toast.error('Gagal memuat submissions');
+      handleSilentError(error, `Fetching shortlisted submissions for event ${eventId}`);
+      toast.error(getError(error, 'Gagal memuat submissions'));
     } finally {
       setIsLoading(false);
     }

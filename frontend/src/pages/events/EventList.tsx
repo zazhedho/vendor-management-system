@@ -8,10 +8,12 @@ import { Button, Card, Table, Badge, ConfirmModal, ActionMenu, EmptyState } from
 import { useAuth } from '../../context/AuthContext';
 import { usePagination, useDebounce } from '../../hooks';
 import { toast } from 'react-toastify';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 export const EventList: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { getError, handleSilentError } = useErrorHandler();
   const { hasPermission } = useAuth();
   const canCreate = hasPermission('event', 'create');
   const canUpdate = hasPermission('event', 'update');
@@ -55,8 +57,9 @@ export const EventList: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       toast.success('Event status updated successfully');
     },
-    onError: () => {
-      toast.error('Failed to update event status');
+    onError: (error) => {
+      handleSilentError(error, 'Updating event status');
+      toast.error(getError(error, 'Failed to update event status'));
     },
   });
 

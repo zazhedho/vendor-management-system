@@ -5,10 +5,12 @@ import { Evaluation } from '../../types';
 import { ArrowLeft, Upload, Image as ImageIcon, Trash2, Star, X, Link as LinkIcon } from 'lucide-react';
 import { Button, Card, Input, Spinner, ConfirmModal } from '../../components/ui';
 import { toast } from 'react-toastify';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 export const VendorPhotoUpload: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const { getError, handleSilentError } = useErrorHandler();
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [pendingPhotos, setPendingPhotos] = useState<{ file: File; caption: string; preview: string }[]>([]);
@@ -32,8 +34,8 @@ export const VendorPhotoUpload: React.FC = () => {
         setGoogleDriveUrl(response.data.google_drive_url || '');
       }
     } catch (error) {
-      console.error('Failed to fetch evaluation:', error);
-      toast.error('Failed to load evaluation');
+      handleSilentError(error, `Fetching evaluation ${id}`);
+      toast.error(getError(error, 'Failed to load evaluation'));
     } finally {
       setIsLoading(false);
     }
@@ -96,9 +98,9 @@ export const VendorPhotoUpload: React.FC = () => {
           successCount++;
           URL.revokeObjectURL(photo.preview);
         }
-      } catch (error: any) {
-        console.error('Failed to upload photo:', error);
-        toast.error(error?.response?.data?.error || `Failed to upload ${photo.file.name}`);
+      } catch (error) {
+        handleSilentError(error, `Uploading evaluation photo ${photo.file.name}`);
+        toast.error(getError(error, `Failed to upload ${photo.file.name}`));
       }
     }
 
@@ -120,9 +122,9 @@ export const VendorPhotoUpload: React.FC = () => {
         toast.success('Photo deleted successfully');
         fetchEvaluation();
       }
-    } catch (error: any) {
-      console.error('Failed to delete photo:', error);
-      toast.error(error?.response?.data?.error || 'Failed to delete photo');
+    } catch (error) {
+      handleSilentError(error, `Deleting evaluation photo ${deletePhotoId}`);
+      toast.error(getError(error, 'Failed to delete photo'));
     } finally {
       setIsDeletingPhoto(false);
       setDeletePhotoId(null);
@@ -145,9 +147,9 @@ export const VendorPhotoUpload: React.FC = () => {
         toast.success('Google Drive link saved successfully');
         fetchEvaluation();
       }
-    } catch (error: any) {
-      console.error('Failed to save Google Drive URL:', error);
-      toast.error(error?.response?.data?.error || 'Failed to save Google Drive link');
+    } catch (error) {
+      handleSilentError(error, `Saving Google Drive URL for evaluation ${id}`);
+      toast.error(getError(error, 'Failed to save Google Drive link'));
     } finally {
       setIsSavingUrl(false);
     }

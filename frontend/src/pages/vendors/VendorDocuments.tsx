@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Vendor, VendorProfile, VendorProfileFile } from '../../types';
 import { Button, Card, Spinner, Badge } from '../../components/ui';
 import { toast } from 'react-toastify';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 const formatFileType = (type: string): string => {
   const upperCaseTypes: Record<string, string> = {
@@ -32,6 +33,7 @@ export const VendorDocuments: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { user, hasPermission } = useAuth();
+  const { getError, handleSilentError } = useErrorHandler();
 
   const isVendorRole = useMemo(() => user?.role === 'vendor', [user?.role]);
   const canVerifyDocs = useMemo(() => hasPermission('vendor', 'update_status'), [hasPermission]);
@@ -60,8 +62,9 @@ export const VendorDocuments: React.FC = () => {
           setVendor(vendorData?.id ? vendorData : null);
           setProfile(profileData);
         }
-      } catch (error: any) {
-        toast.error(error?.response?.data?.message || 'Gagal memuat data dokumen');
+      } catch (error) {
+        handleSilentError(error, `Fetching vendor documents ${id || 'current user'}`);
+        toast.error(getError(error, 'Gagal memuat data dokumen'));
       } finally {
         setIsLoading(false);
       }
@@ -99,10 +102,11 @@ export const VendorDocuments: React.FC = () => {
         toast.success('File uploaded successfully');
         await refreshProfile();
       } else {
-        toast.error('Failed to upload file');
+        toast.error(response.message || 'Failed to upload file');
       }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to upload file');
+    } catch (error) {
+      handleSilentError(error, `Uploading vendor document ${fileType}`);
+      toast.error(getError(error, 'Failed to upload file'));
     } finally {
       setUploadingFile(false);
       e.target.value = '';
@@ -120,10 +124,11 @@ export const VendorDocuments: React.FC = () => {
         toast.success('File deleted successfully');
         await refreshProfile();
       } else {
-        toast.error('Failed to delete file');
+        toast.error(response.message || 'Failed to delete file');
       }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to delete file');
+    } catch (error) {
+      handleSilentError(error, `Deleting vendor document ${deleteFileId}`);
+      toast.error(getError(error, 'Failed to delete file'));
     } finally {
       setIsDeletingFile(false);
       setDeleteFileId(null);
@@ -145,8 +150,9 @@ export const VendorDocuments: React.FC = () => {
         setVendor(vendorData?.id ? vendorData : null);
         setProfile(profileData);
       }
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Gagal memuat data dokumen');
+    } catch (error) {
+      handleSilentError(error, `Refreshing vendor documents ${id || 'current user'}`);
+      toast.error(getError(error, 'Gagal memuat data dokumen'));
     }
   };
 
@@ -160,8 +166,9 @@ export const VendorDocuments: React.FC = () => {
         toast.success('Status file diperbarui');
         await refreshProfile();
       }
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Gagal update status file');
+    } catch (error) {
+      handleSilentError(error, `Updating vendor document status ${fileId}`);
+      toast.error(getError(error, 'Gagal update status file'));
     } finally {
       setIsUpdatingFileStatus(false);
     }

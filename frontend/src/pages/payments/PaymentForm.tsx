@@ -12,7 +12,7 @@ export const PaymentForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditMode = !!id;
-  const { handleSilentError } = useErrorHandler();
+  const { getError, handleSilentError } = useErrorHandler();
 
   const [formData, setFormData] = useState({
     invoice_number: '',
@@ -77,7 +77,7 @@ export const PaymentForm: React.FC = () => {
       }
     } catch (error) {
       handleSilentError(error, `Fetching vendors (page ${page}, search: "${search}")`);
-      toast.error('Failed to load vendors');
+      toast.error(getError(error, 'Failed to load vendors'));
     } finally {
       setIsFetchingVendors(false);
       setIsLoadingData(false);
@@ -102,7 +102,7 @@ export const PaymentForm: React.FC = () => {
       }
     } catch (error) {
       handleSilentError(error, `Fetching payment ID ${id}`);
-      toast.error('Failed to load payment data');
+      toast.error(getError(error, 'Failed to load payment data'));
     }
   };
 
@@ -113,9 +113,9 @@ export const PaymentForm: React.FC = () => {
       await paymentsApi.deleteFile(id, deleteFileId);
       toast.success('File deleted successfully');
       setExistingFiles(existingFiles.filter(f => f.id !== deleteFileId));
-    } catch (error: any) {
+    } catch (error) {
       handleSilentError(error, `Deleting file ${deleteFileId}`);
-      toast.error(error?.response?.data?.error || 'Failed to delete file');
+      toast.error(getError(error, 'Failed to delete file'));
     } finally {
       setIsDeletingFile(false);
       setDeleteFileId(null);
@@ -227,9 +227,9 @@ export const PaymentForm: React.FC = () => {
 
       toast.success(isEditMode ? 'Payment updated successfully' : 'Payment created successfully');
       navigate('/payments');
-    } catch (error: any) {
+    } catch (error) {
       handleSilentError(error, `Saving payment (mode: ${isEditMode ? 'update' : 'create'})`);
-      toast.error(error.message || 'Failed to save payment');
+      toast.error(getError(error, 'Failed to save payment'));
     } finally {
       setIsLoading(false);
     }

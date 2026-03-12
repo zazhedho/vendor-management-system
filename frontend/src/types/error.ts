@@ -4,6 +4,7 @@ export interface ApiError {
   status?: number;
   field?: string;
   details?: Record<string, string[]>;
+  error?: unknown;
 }
 
 export interface ErrorHandlerOptions {

@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { Mail, Lock, User, Phone, ArrowRight, UserPlus, CheckCircle, XCircle } from 'lucide-react';
 import { AuthLayout } from '../../components/AuthLayout';
 import { Button, Input, Card } from '../../components/ui';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 export const Register: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -24,6 +25,7 @@ export const Register: React.FC = () => {
   });
   const { register } = useAuth();
   const navigate = useNavigate();
+  const { getError, handleSilentError } = useErrorHandler();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -70,8 +72,9 @@ export const Register: React.FC = () => {
       } else {
         toast.error(result.error || 'Registration failed');
       }
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || err.message || 'Registration failed');
+    } catch (error) {
+      handleSilentError(error, 'Registering account');
+      toast.error(getError(error, 'Registration failed'));
     } finally {
       setIsLoading(false);
     }

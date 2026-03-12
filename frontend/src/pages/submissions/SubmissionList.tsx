@@ -9,9 +9,11 @@ import { useDebounce } from '../../hooks';
 import { ScoreSubmissionModal } from './ScoreSubmissionModal';
 import { SelectWinnerModal } from './SelectWinnerModal';
 import { toast } from 'react-toastify';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 export const SubmissionList: React.FC = () => {
   const queryClient = useQueryClient();
+  const { getError, handleSilentError } = useErrorHandler();
   const { hasPermission } = useAuth();
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -72,8 +74,9 @@ export const SubmissionList: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['groupedSubmissions'] });
       toast.success(variables.isShortlisted ? 'Submission shortlisted' : 'Shortlist removed');
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.error || 'Failed to update shortlist');
+    onError: (error) => {
+      handleSilentError(error, 'Updating submission shortlist');
+      toast.error(getError(error, 'Failed to update shortlist'));
     },
   });
 
