@@ -95,6 +95,7 @@ export const VendorForm: React.FC = () => {
 
   const companyDocs = ['ktp', 'domisili', 'siup', 'nib', 'skt', 'npwp', 'sppkp', 'akta', 'bank_book'];
   const individualDocs = ['ktp', 'npwp', 'bank_book'];
+  const requiresDocumentBeforeCreate = !isEditMode && newFiles.length === 0;
 
   // Location states
   const [provinces, setProvinces] = useState<LocationItem[]>([]);
@@ -360,6 +361,12 @@ export const VendorForm: React.FC = () => {
     if (!profileData.business_field || profileData.business_field.trim() === '') {
       toast.error('Business Field is required');
       setCurrentStep(0); // Go back to step 1 where business field is
+      return;
+    }
+
+    if (requiresDocumentBeforeCreate) {
+      toast.error('Upload at least one document before creating a vendor');
+      setCurrentStep(3);
       return;
     }
 
@@ -910,14 +917,22 @@ export const VendorForm: React.FC = () => {
               Next Step
             </Button>
           ) : (
-            <Button
-              variant="primary"
-              onClick={handleSubmit}
-              isLoading={isLoading}
-              leftIcon={<Save size={16} />}
-            >
-              {isEditMode ? 'Update Vendor' : 'Create Vendor'}
-            </Button>
+            <div className="flex flex-col items-end gap-2">
+              {requiresDocumentBeforeCreate && (
+                <p className="text-sm text-warning-700">
+                  Upload at least one document to enable vendor creation.
+                </p>
+              )}
+              <Button
+                variant="primary"
+                onClick={handleSubmit}
+                isLoading={isLoading}
+                disabled={requiresDocumentBeforeCreate}
+                leftIcon={<Save size={16} />}
+              >
+                {isEditMode ? 'Update Vendor' : 'Create Vendor'}
+              </Button>
+            </div>
           )}
         </div>
       </div>
