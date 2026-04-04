@@ -9,22 +9,27 @@ import { VendorProfile, VendorProfileFile } from '../../types';
 import { Button, Input, Card, Stepper, Spinner, ConfirmModal } from '../../components/ui';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
 
-// Helper to format file type with proper capitalization
-const formatFileType = (type: string): string => {
-  const upperCaseTypes: Record<string, string> = {
-    ktp: 'KTP',
-    npwp: 'NPWP',
-    nib: 'NIB',
-    siup: 'SIUP',
-    akta: 'Akta',
-    bank_book: 'Bank Book',
-    sppkp: 'SPPKP',
-    domisili: 'Izin Domisili',
-    skt: 'SKT',
-    rekening: 'Rekening',
-  };
-  return upperCaseTypes[type.toLowerCase()] || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+const FILE_TYPE_LABELS: Record<string, string> = {
+  ktp: 'KTP',
+  npwp: 'NPWP',
+  nib: 'NIB',
+  siup: 'SIUP',
+  akta: 'Akta Pendirian',
+  bank_book: 'Buku Tabungan / SS M-Banking',
+  sppkp: 'SPPKP',
+  domisili: 'Izin Domisili',
+  skt: 'SKT',
+  rekening: 'Surat Pernyataan Rekening / Rekening Koran',
 };
+
+const INDIVIDUAL_REQUIRED_DOCS = ['ktp', 'npwp', 'bank_book'];
+const COMPANY_REQUIRED_DOCS = ['akta', 'npwp', 'skt', 'ktp', 'nib', 'rekening'];
+
+// Keep legacy document types visible on edit so existing files do not disappear.
+const COMPANY_OPTIONAL_DOCS = ['domisili', 'siup', 'sppkp', 'bank_book'];
+
+const formatFileType = (type: string): string =>
+  FILE_TYPE_LABELS[type.toLowerCase()] || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
 export const VendorForm: React.FC = () => {
   const navigate = useNavigate();
@@ -93,9 +98,27 @@ export const VendorForm: React.FC = () => {
   const [isDeletingFile, setIsDeletingFile] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-  const companyDocs = ['ktp', 'domisili', 'siup', 'nib', 'skt', 'npwp', 'sppkp', 'akta', 'bank_book'];
-  const individualDocs = ['ktp', 'npwp', 'bank_book'];
-  const requiresDocumentBeforeCreate = !isEditMode && newFiles.length === 0;
+  const requiredDocumentTypes =
+    vendorData.vendor_type === 'individual'
+      ? INDIVIDUAL_REQUIRED_DOCS
+      : vendorData.vendor_type === 'company'
+        ? COMPANY_REQUIRED_DOCS
+        : [];
+  const optionalDocumentTypes = vendorData.vendor_type === 'company' ? COMPANY_OPTIONAL_DOCS : [];
+  const existingDocumentTypes = profileFiles.map((file) => file.file_type);
+  const pendingDocumentTypes = newFiles.map((file) => file.type);
+  const documentTypes = Array.from(
+    new Set([
+      ...requiredDocumentTypes,
+      ...(isEditMode ? [...optionalDocumentTypes, ...existingDocumentTypes, ...pendingDocumentTypes] : []),
+    ])
+  );
+  const missingRequiredDocumentTypes = requiredDocumentTypes.filter(
+    (type) => !existingDocumentTypes.includes(type) && !pendingDocumentTypes.includes(type)
+  );
+  const requiresDocumentBeforeCreate =
+    !isEditMode && requiredDocumentTypes.length > 0 && missingRequiredDocumentTypes.length > 0;
+  const missingRequiredDocumentLabels = missingRequiredDocumentTypes.map(formatFileType);
 
   // Location states
   const [provinces, setProvinces] = useState<LocationItem[]>([]);
@@ -365,7 +388,7 @@ export const VendorForm: React.FC = () => {
     }
 
     if (requiresDocumentBeforeCreate) {
-      toast.error('Upload at least one document before creating a vendor');
+      toast.error(`Complete all mandatory documents: ${missingRequiredDocumentLabels.join(', ')}`);
       setCurrentStep(3);
       return;
     }
@@ -782,8 +805,8 @@ export const VendorForm: React.FC = () => {
             <h2 className="text-xl font-semibold mb-6">Document Uploads</h2>
             <p className="text-sm text-secondary-600 mb-4">
               {vendorData.vendor_type === 'individual'
-                ? 'Perorangan wajib unggah: KTP, NPWP, Buku Tabungan.'
-                : 'Perusahaan wajib unggah: KTP pemilik, Izin Domisili, SIUP/NIB, SKT, NPWP, SP-PKP, Akta Perusahaan, Rekening (halaman depan/buku tabungan).'}
+                ? 'Perorangan wajib unggah: KTP, NPWP, dan Buku Tabungan / SS M-Banking yang mencantumkan nama atau nomor rekening.'
+                : 'Perusahaan wajib unggah: Akta Pendirian, NPWP Perusahaan, SKT, KTP Pemilik, NIB, dan Surat Pernyataan Rekening / Rekening Koran.'}
             </p>
 
             {vendorData.vendor_type === '' && (
@@ -794,7 +817,7 @@ export const VendorForm: React.FC = () => {
 
             {/* Document Grid - show existing file OR upload slot for each type */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {(vendorData.vendor_type === 'individual' ? individualDocs : companyDocs).map((type) => {
+              {documentTypes.map((type) => {
                 const existingFile = profileFiles.find((f) => f.file_type === type);
                 const pendingFile = newFiles.find((f) => f.type === type);
 
@@ -920,7 +943,7 @@ export const VendorForm: React.FC = () => {
             <div className="flex flex-col items-end gap-2">
               {requiresDocumentBeforeCreate && (
                 <p className="text-sm text-warning-700">
-                  Upload at least one document to enable vendor creation.
+                  Lengkapi dokumen wajib: {missingRequiredDocumentLabels.join(', ')}.
                 </p>
               )}
               <Button

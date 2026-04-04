@@ -8,26 +8,26 @@ import { Button, Card, Spinner, Badge } from '../../components/ui';
 import { toast } from 'react-toastify';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
 
-const formatFileType = (type: string): string => {
-  const upperCaseTypes: Record<string, string> = {
-    ktp: 'KTP',
-    npwp: 'NPWP',
-    nib: 'NIB',
-    siup: 'SIUP',
-    akta: 'Akta',
-    bank_book: 'Bank Book',
-    sppkp: 'SPPKP',
-    tdp: 'TDP',
-    skdp: 'SKDP',
-    domisili: 'Izin Domisili',
-    skt: 'SKT',
-    rekening: 'Rekening',
-  };
-  return upperCaseTypes[type.toLowerCase()] || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+const FILE_TYPE_LABELS: Record<string, string> = {
+  ktp: 'KTP',
+  npwp: 'NPWP',
+  nib: 'NIB',
+  siup: 'SIUP',
+  akta: 'Akta Pendirian',
+  bank_book: 'Buku Tabungan / SS M-Banking',
+  sppkp: 'SPPKP',
+  tdp: 'TDP',
+  skdp: 'SKDP',
+  domisili: 'Izin Domisili',
+  skt: 'SKT',
+  rekening: 'Surat Pernyataan Rekening / Rekening Koran',
 };
 
-const companyDocs = ['ktp', 'domisili', 'siup', 'nib', 'skt', 'npwp', 'sppkp', 'akta', 'bank_book'];
-const individualDocs = ['ktp', 'npwp', 'bank_book'];
+const INDIVIDUAL_REQUIRED_DOCS = ['ktp', 'npwp', 'bank_book'];
+const COMPANY_REQUIRED_DOCS = ['akta', 'npwp', 'skt', 'ktp', 'nib', 'rekening'];
+
+const formatFileType = (type: string): string =>
+  FILE_TYPE_LABELS[type.toLowerCase()] || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
 export const VendorDocuments: React.FC = () => {
   const navigate = useNavigate();
@@ -199,7 +199,7 @@ export const VendorDocuments: React.FC = () => {
   }
 
   const docs = profile.files || [] as VendorProfileFile[];
-  const requiredDocs = vendor.vendor_type === 'individual' ? individualDocs : companyDocs;
+  const requiredDocs = vendor.vendor_type === 'individual' ? INDIVIDUAL_REQUIRED_DOCS : COMPANY_REQUIRED_DOCS;
 
   const uploadedCount = docs.filter((d) => d.file_url).length;
   const totalRequired = requiredDocs.length;
@@ -218,7 +218,7 @@ export const VendorDocuments: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
             <p className="text-sm text-secondary-600">Progress upload</p>
-            <p className="text-lg font-semibold text-secondary-900">{uploadedCount}/{totalRequired} dokumen disarankan</p>
+            <p className="text-lg font-semibold text-secondary-900">{uploadedCount}/{totalRequired} dokumen wajib</p>
           </div>
           <div className="w-full md:w-1/2 h-2 rounded-full bg-secondary-100 overflow-hidden">
             <div
@@ -233,8 +233,8 @@ export const VendorDocuments: React.FC = () => {
         <div className="mb-4">
           <p className="text-sm text-secondary-600">
             {vendor.vendor_type === 'individual'
-              ? 'Perorangan dianjurkan unggah: KTP, NPWP, Buku Tabungan.'
-              : 'Perusahaan dianjurkan unggah: KTP pemilik, Izin Domisili, SIUP/NIB, SKT, NPWP, SP-PKP, Akta Perusahaan, Rekening (halaman depan/buku tabungan).'}
+              ? 'Perorangan wajib unggah: KTP, NPWP, dan Buku Tabungan / SS M-Banking yang mencantumkan nama atau nomor rekening.'
+              : 'Perusahaan wajib unggah: Akta Pendirian, NPWP Perusahaan, SKT, KTP Pemilik, NIB, dan Surat Pernyataan Rekening / Rekening Koran.'}
           </p>
           {!canUpload && (
             <div className="mt-3 p-3 border border-secondary-200 rounded-lg bg-secondary-50 text-sm text-secondary-700">

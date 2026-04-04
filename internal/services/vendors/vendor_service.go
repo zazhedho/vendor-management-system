@@ -24,11 +24,29 @@ type ServiceVendor struct {
 	StorageProvider storage.StorageProvider
 }
 
+var allowedVendorProfileFileTypes = map[string]struct{}{
+	"ktp":       {},
+	"npwp":      {},
+	"bank_book": {},
+	"nib":       {},
+	"siup":      {},
+	"akta":      {},
+	"sppkp":     {},
+	"domisili":  {},
+	"skt":       {},
+	"rekening":  {},
+}
+
 func NewVendorService(vendorRepo interfacevendors.RepoVendorInterface, storageProvider storage.StorageProvider) *ServiceVendor {
 	return &ServiceVendor{
 		VendorRepo:      vendorRepo,
 		StorageProvider: storageProvider,
 	}
+}
+
+func isAllowedVendorProfileFileType(fileType string) bool {
+	_, ok := allowedVendorProfileFileTypes[fileType]
+	return ok
 }
 
 func (s *ServiceVendor) GetVendorByUserID(userId string) (map[string]interface{}, error) {
@@ -442,6 +460,11 @@ func (s *ServiceVendor) DeleteVendor(vendorId string) error {
 }
 
 func (s *ServiceVendor) UploadVendorProfileFile(ctx context.Context, profileId string, userId string, fileHeader *multipart.FileHeader, req dto.UploadVendorProfileFileRequest) (domainvendors.VendorProfileFile, error) {
+	req.FileType = strings.TrimSpace(strings.ToLower(req.FileType))
+	if !isAllowedVendorProfileFileType(req.FileType) {
+		return domainvendors.VendorProfileFile{}, errors.New("invalid file type")
+	}
+
 	// Verify vendor profile exists
 	profile, err := s.VendorRepo.GetVendorProfileByID(profileId)
 	if err != nil {

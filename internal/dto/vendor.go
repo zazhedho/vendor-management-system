@@ -63,7 +63,7 @@ type VendorProfileRequest struct {
 
 // For file uploads - separate from profile creation
 type UploadVendorProfileFileRequest struct {
-	FileType  string `json:"file_type" binding:"required,oneof=ktp npwp bank_book nib siup akta"`
+	FileType  string `json:"file_type" binding:"required,oneof=ktp npwp bank_book nib siup akta sppkp domisili skt rekening"`
 	Caption   string `json:"caption" binding:"omitempty,max=100"`
 	IssuedAt  string `json:"issued_at" binding:"omitempty"`
 	ExpiredAt string `json:"expired_at" binding:"omitempty"`
