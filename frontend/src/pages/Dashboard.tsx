@@ -31,8 +31,8 @@ export const Dashboard: React.FC = () => {
   const canListPayments = hasPermission('payment', 'list');
   const canManagePayments = hasPermission('payment', 'create') || hasPermission('payment', 'update') || hasPermission('payment', 'delete');
   const canViewMySubmissions = hasPermission('event', 'view_my_submissions') || hasPermission('event', 'submit_pitch');
+  const canViewEventSubmissions = hasPermission('event', 'list_submissions') || hasPermission('event', 'view_submissions');
   const canCreateEvents = hasPermission('event', 'create');
-  const canCreateVendors = hasPermission('vendor', 'update');
   const canCreatePayments = hasPermission('payment', 'create');
   const canViewVendorProfile = hasPermission('vendor', 'view');
 
@@ -88,6 +88,7 @@ export const Dashboard: React.FC = () => {
   }
 
   const recentEvents = Array.isArray(events) ? events.slice(0, 5) : [];
+  const submissionsHref = canViewMySubmissions && !canViewEventSubmissions ? '/vendor/submissions' : '/submissions';
   const recentActivities = Array.isArray(submissions) && submissions.length > 0
     ? submissions.slice(0, 4).map((submission: any, index: number) => ({
         id: `activity-${index}`,
@@ -95,7 +96,7 @@ export const Dashboard: React.FC = () => {
           ? `Submitted pitch for "${submission.event_title}"`
           : 'Submitted pitch for event',
         timestamp: submission.created_at || new Date().toISOString(),
-        href: '/submissions',
+        href: submissionsHref,
       }))
     : Array.isArray(events)
     ? events.slice(0, 4).map((event: any, index: number) => ({
@@ -137,7 +138,7 @@ export const Dashboard: React.FC = () => {
         value: stats.mySubmissions.toString(),
         icon: FileText,
         variant: 'primary' as const,
-        href: '/submissions',
+        href: submissionsHref,
         helper: 'Review submissions',
       });
     }
@@ -148,7 +149,7 @@ export const Dashboard: React.FC = () => {
         value: stats.wonEvents.toString(),
         icon: CheckCircle,
         variant: 'success' as const,
-        href: '/submissions',
+        href: submissionsHref,
         helper: 'See winning submissions',
       });
     }
@@ -233,7 +234,6 @@ export const Dashboard: React.FC = () => {
 
   const quickActions = [
     canCreateEvents ? { label: 'Create Event', href: '/events/new', icon: PlusCircle } : null,
-    canCreateVendors ? { label: 'Create Vendor', href: '/vendor/profile/new', icon: Users } : null,
     canCreatePayments ? { label: 'Create Payment', href: '/payments/new', icon: CreditCard } : null,
     canViewVendorProfile ? { label: 'Vendor Profile', href: '/vendor/profile', icon: FolderOpen } : null,
   ].filter(Boolean) as Array<{ label: string; href: string; icon: React.ComponentType<{ size?: number; className?: string }> }>;
