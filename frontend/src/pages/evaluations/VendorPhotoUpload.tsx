@@ -90,6 +90,7 @@ export const VendorPhotoUpload: React.FC = () => {
 
     setIsUploading(true);
     let successCount = 0;
+    const failedPhotos: typeof pendingPhotos = [];
 
     for (const photo of pendingPhotos) {
       try {
@@ -97,14 +98,17 @@ export const VendorPhotoUpload: React.FC = () => {
         if (response.status) {
           successCount++;
           URL.revokeObjectURL(photo.preview);
+        } else {
+          failedPhotos.push(photo);
         }
       } catch (error) {
         handleSilentError(error, `Uploading evaluation photo ${photo.file.name}`);
         toast.error(getError(error, `Failed to upload ${photo.file.name}`));
+        failedPhotos.push(photo);
       }
     }
 
-    setPendingPhotos([]);
+    setPendingPhotos(failedPhotos);
     setIsUploading(false);
 
     if (successCount > 0) {
@@ -173,8 +177,10 @@ export const VendorPhotoUpload: React.FC = () => {
   }
 
   const uploadedCount = evaluation.photos?.length || 0;
-  const canUploadMore = uploadedCount + pendingPhotos.length < 5;
-  const remainingSlots = 5 - uploadedCount - pendingPhotos.length;
+  const totalWithPending = uploadedCount + pendingPhotos.length;
+  const canSelectMorePhotos = totalWithPending < 5;
+  const hasReachedUploadedLimit = uploadedCount >= 5;
+  const remainingSlots = Math.max(0, 5 - totalWithPending);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -253,28 +259,34 @@ export const VendorPhotoUpload: React.FC = () => {
           {uploadedCount === 0 ? 'Upload Photos' : 'Add More Photos'}
         </h3>
 
-        {canUploadMore ? (
+        {!hasReachedUploadedLimit || pendingPhotos.length > 0 ? (
           <>
-            <div className="border-2 border-dashed border-secondary-300 rounded-lg p-8 text-center mb-4">
-              <ImageIcon size={48} className="mx-auto text-secondary-400 mb-4" />
-              <p className="text-secondary-600 mb-2">
-                Drag and drop photos here, or click to select
-              </p>
-              <p className="text-sm text-secondary-500 mb-4">
-                You can upload {remainingSlots} more photo(s). Max 2MB per image.
-              </p>
-              <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors">
-                <Upload size={16} />
-                Select Photos
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-              </label>
-            </div>
+            {canSelectMorePhotos ? (
+              <div className="border-2 border-dashed border-secondary-300 rounded-lg p-8 text-center mb-4">
+                <ImageIcon size={48} className="mx-auto text-secondary-400 mb-4" />
+                <p className="text-secondary-600 mb-2">
+                  Drag and drop photos here, or click to select
+                </p>
+                <p className="text-sm text-secondary-500 mb-4">
+                  You can upload {remainingSlots} more photo(s). Max 2MB per image.
+                </p>
+                <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors">
+                  <Upload size={16} />
+                  Select Photos
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            ) : (
+              <div className="mb-4 rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-800">
+                You have reached the 5-photo limit for this upload batch. Review the pending photos below, then upload them.
+              </div>
+            )}
 
             {/* Pending Photos */}
             {pendingPhotos.length > 0 && (

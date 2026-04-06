@@ -86,6 +86,7 @@ export const VendorEvaluationDetail = () => {
 
     setIsUploading(true);
     let successCount = 0;
+    const failedPhotos: typeof uploadingPhotos = [];
 
     for (const photo of uploadingPhotos) {
       try {
@@ -93,14 +94,17 @@ export const VendorEvaluationDetail = () => {
         if (response.status) {
           successCount++;
           URL.revokeObjectURL(photo.preview);
+        } else {
+          failedPhotos.push(photo);
         }
       } catch (error) {
         handleSilentError(error, `Uploading evaluation photo ${photo.file.name}`);
         toast.error(getError(error, `Failed to upload ${photo.file.name}`));
+        failedPhotos.push(photo);
       }
     }
 
-    setUploadingPhotos([]);
+    setUploadingPhotos(failedPhotos);
     setIsUploading(false);
 
     if (successCount > 0) {
@@ -167,7 +171,8 @@ export const VendorEvaluationDetail = () => {
   }
 
   const photosCount = evaluation.photos?.length || 0;
-  const canUploadMore = photosCount + uploadingPhotos.length < 5;
+  const totalWithPending = photosCount + uploadingPhotos.length;
+  const canUploadMore = totalWithPending < 5;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -261,6 +266,12 @@ export const VendorEvaluationDetail = () => {
             )}
           </div>
         </div>
+
+        {!canUploadMore && uploadingPhotos.length > 0 && (
+          <div className="mb-6 rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-800">
+            You have reached the 5-photo limit for this upload batch. Review the pending photos below, then upload them.
+          </div>
+        )}
 
         {/* Uploaded Photos */}
         {evaluation.photos && evaluation.photos.length > 0 && (
